@@ -54,4 +54,6 @@ cd web && npm ci && npm run dev
 
 ## Licence
 
-À définir.
+[GNU AGPL v3.0](LICENSE) — toute version modifiée mise à disposition en ligne doit publier son code source.
+
+Les données électorales proviennent de sources publiques sous [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence/).
