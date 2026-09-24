@@ -1,15 +1,18 @@
-# Plan de conception — Dataviz des résultats électoraux
+# Plan de conception — Atlas électoral
 
-> **Statut : brouillon v1, à discuter** · 24 septembre 2026
+> **Statut : brouillon v2** · 24 septembre 2026 · Dataviz des résultats électoraux français
 >
 > **Décidé le 24/09** :
+> - nom du site : **Atlas électoral** ;
 > - publics : grand public, journalistes et analystes, élus et militants, chercheurs et étudiants ;
 > - projet autonome, repris de zéro ;
-> - hébergement 100 % statique et gratuit ;
+> - hébergement 100 % statique, **0 € strict** (pas de nom de domaine payant) ;
 > - scrutins récents d'abord, municipales 2026 comprises (elles sont publiées) ;
 > - grille politique en 3 couches (nuance → famille → bloc), référence du ministère d'abord, UXD en extrême droite, cas limites selon le libellé officiel ;
+> - présidentielle : chaque candidat prend la nuance de son mouvement aux législatives suivantes ; écologistes selon la nuance (VEC → gauche, ECO → divers) ; régionalistes → divers ;
 > - charte sobre et neutre ;
-> - publication de nos données nettoyées : plus tard.
+> - données locales archivées hors du dépôt ; publication de nos données nettoyées : plus tard ;
+> - prochaine étape : un prototype de carte.
 >
 > Méthode : profilage des données (`data:explore-data`), décision d'architecture au format ADR (`engineering:architecture`), cadrage produit (`product-management:write-spec`), principes de visualisation (`dataviz`), audit du prototype (`api-coverage-auditor`, `feature-dev:code-explorer`), recherche des sources et des hébergeurs vérifiée par de vraies requêtes HTTP. Les chiffres « mesurés » viennent de requêtes DuckDB sur les fichiers de `Data/` (annexe A).
 
@@ -40,10 +43,10 @@
 - **Objectif** : explorer les résultats de toutes les élections françaises, de la France entière jusqu'au bureau de vote, sur carte et en graphiques, avec des nuances politiques lisibles et comparables d'un scrutin à l'autre.
 - **Constat clé** : les résultats pèsent très peu. Les 53 tours de scrutin de 1999 à 2024 représentent 27 millions de lignes et tiennent en **64 Mo** une fois bien modélisés. Les quelque 7 Go présents sur le disque viennent de géométries dupliquées, de bases dérivées et de données hors sujet.
 - **Les sources officielles font une bonne partie du travail** : les fichiers de data.gouv.fr se lisent par morceaux depuis n'importe quel site (CORS ouvert, requêtes Range), y compris un fichier de tuiles officiel des 68 806 bureaux de vote. Le pipeline lit les résultats à distance sans rien copier, et la carte peut se brancher directement sur la géométrie officielle.
-- **Architecture proposée** : un site 100 % statique sur Cloudflare Pages. Il sert nos résultats compacts (un Parquet de 1,5 à 3 Mo par scrutin) et s'appuie sur la géométrie officielle des bureaux et sur les tuiles administratives de l'IGN. Coût : 0 €. Un nom de domaine (environ 10 € par an) reste en option.
+- **Architecture proposée** : un site 100 % statique sur Cloudflare Pages. Il sert nos résultats compacts (un Parquet de 1,5 à 3 Mo par scrutin) et s'appuie sur la géométrie officielle des bureaux et sur les tuiles administratives de l'IGN. Coût : 0 €, sans nom de domaine payant.
 - **Première version** : présidentielle 2022, européennes et législatives 2024, municipales 2026, jusqu'au bureau de vote. L'historique 1999–2021 suivra au niveau de la commune. Cible : en ligne avant la présidentielle d'avril 2027.
 - **Point dur** : il n'existe aucun contour de bureau postérieur à 2022, et aucune mise à jour n'est prévue. En métropole, 98,2 % des inscrits de 2024 se rattachent quand même à un contour ; le reste s'affiche au niveau de la commune (§ 7.3).
-- **Reste à trancher** : l'hébergement des tuiles en production et le domaine, le nom du projet, la règle pour les candidats à la présidentielle (§ 15).
+- **Prochaine étape** : un prototype de carte branché sur les tuiles officielles, pour valider le pari technique le plus risqué (§ 13).
 
 ## 2. Problème, publics, objectifs
 
@@ -194,7 +197,7 @@ Règles communes :
 
 ## 5. ADR-001 — Architecture des données et hébergement
 
-**Statut** : proposé. L'hébergement statique gratuit est acté (24/09) ; la configuration de production reste à valider.
+**Statut** : accepté le 24/09 (option D, hébergement à 0 € strict).
 **Date** : 24/09/2026 · **Décideur** : porteur du projet
 
 ### Contexte
@@ -247,9 +250,9 @@ Il faut afficher des cartes jusqu'au bureau de vote (environ 70 000 polygones) p
 - **B** refait des tuiles que data.gouv publie déjà.
 - **D** garde la robustesse de B pour ce qui compte (les chiffres) et emprunte aux ressources officielles ce qu'elles fournissent déjà bien.
 
-### Décision proposée
+### Décision
 
-**Option D.**
+**Option D**, acceptée le 24/09.
 
 ### Hébergement : comparatif (recherche du 24/09/2026)
 
@@ -257,7 +260,7 @@ Il faut afficher des cartes jusqu'au bureau de vote (environ 70 000 polygones) p
 |---|---|---|
 | GitHub Pages | Site de 1 Go au plus, fichiers de 100 Mio au plus, bande passante indicative de 100 Go par mois ; les fichiers Git LFS ne sont pas servis | Écarté : trop juste pour les tuiles |
 | Cloudflare Pages | 25 Mio par fichier, 20 000 fichiers par déploiement, bande passante illimitée pour les fichiers statiques | **Retenu pour le site et les Parquet** (1,5 à 3 Mo chacun) |
-| Cloudflare R2 | 10 Go stockés, 1 million d'écritures et 10 millions de lectures par mois, sortie de données gratuite, CORS et requêtes Range pris en charge | **Retenu pour la copie des tuiles** (351 Mo) |
+| Cloudflare R2 | 10 Go stockés, 1 million d'écritures et 10 millions de lectures par mois, sortie de données gratuite, CORS et requêtes Range pris en charge | Non retenu : un usage en production suppose un nom de domaine, écarté par la décision « 0 € strict » |
 | Netlify | Offre à crédits depuis 2026 : 300 crédits par mois, la bande passante coûtant 20 crédits par Go (environ 15 Go par mois), puis suspension du site | Écarté : trop juste pour un soir d'élection |
 | Hugging Face Datasets | Requêtes Range prises en charge, mais un bogue CORS signalé empêche les lectures Range depuis un navigateur | Écarté |
 
@@ -266,9 +269,9 @@ Il faut afficher des cartes jusqu'au bureau de vote (environ 70 000 polygones) p
 | Étape | Site et résultats | Tuiles des bureaux |
 |---|---|---|
 | Bêta | Cloudflare Pages | PMTiles officiel lu en direct sur data.gouv |
-| Production (avant la présidentielle 2027) | Cloudflare Pages | Copie sur R2 derrière un domaine personnalisé (environ 10 € par an), **ou**, pour rester à 0 € strict, nos propres tuiles découpées en fichiers de moins de 25 Mio servis par Cloudflare Pages |
+| Production (avant la présidentielle 2027) | Cloudflare Pages | **Décidé : 0 € strict.** Nos propres tuiles, découpées en fichiers de moins de 25 Mio (par exemple par région) et servies par Cloudflare Pages ; le PMTiles officiel reste la source de secours |
 
-Point à vérifier : à ma connaissance, l'adresse publique gratuite d'un bucket R2 (`r2.dev`) est limitée en débit et réservée au développement ; un usage en production passe par un domaine personnalisé.
+Pourquoi pas R2 : à ma connaissance, l'adresse publique gratuite d'un bucket R2 (`r2.dev`) est limitée en débit et réservée au développement ; un usage en production passe par un nom de domaine. Le site vivra à l'adresse gratuite fournie par Cloudflare Pages (`*.pages.dev`).
 
 Sources : docs.github.com (limites de GitHub Pages), developers.cloudflare.com (limites de Pages, tarifs de R2), docs.netlify.com et journal des changements de Netlify (avril 2026), forum Hugging Face.
 
@@ -291,7 +294,7 @@ flowchart LR
     P["Python + DuckDB<br/>lecture HTTP par morceaux"]
     Q["Tests : conservation,<br/>réconciliation, jointures"]
   end
-  subgraph HOST["Cloudflare Pages (+ R2 en production)"]
+  subgraph HOST["Cloudflare Pages"]
     S["SPA"]
     F["Parquet par scrutin<br/>1,5 à 3 Mo"]
   end
@@ -307,7 +310,7 @@ flowchart LR
 
 ### Actions
 
-1. [ ] Valider la mise en ligne proposée et trancher la question du domaine (§ 15)
+1. [x] Mise en ligne : Cloudflare Pages, 0 € strict (décidé le 24/09)
 2. [ ] Lire les CGU de `cartes.gouv.fr` (tuiles IGN et géocodage : quotas, mention obligatoire)
 3. [ ] Brancher un premier prototype de carte sur le PMTiles officiel et mesurer le temps d'affichage
 4. [ ] Écrire le manifeste `sources.lock.json`
@@ -439,9 +442,9 @@ La correspondance entre ces couches vit dans `referentiels/nuances.csv`. Ce fich
 | Régionalistes | REG | — | — |
 | Divers | DIV | LDIV | Lassalle (à confirmer) |
 
-**Encore ouvert** :
-- **Candidats à la présidentielle, qui n'ont pas de nuance.** Règle proposée : reprendre la nuance attribuée par le ministère aux candidats de leur mouvement aux législatives qui suivent, par exemple DSV pour Debout la France, d'où Dupont-Aignan à droite.
-- **Bloc des familles écologistes et régionalistes**, si la circulaire ne le donne pas.
+**Également décidé le 24/09** :
+- **Candidats à la présidentielle, qui n'ont pas de nuance** : ils prennent la nuance attribuée par le ministère aux candidats de leur mouvement aux législatives qui suivent (par exemple DSV pour Debout la France, d'où Dupont-Aignan à droite).
+- **Blocs, quand la circulaire n'en donne pas** : VEC (Les Écologistes, membres de l'union de la gauche) → gauche ; ECO (écologistes hors union) → divers ; REG (régionalistes) → divers.
 
 ### 8.3 Couleurs
 
@@ -525,7 +528,7 @@ Nouvelle base, mais avec des outils déjà maîtrisés :
 | État | L'URL comme source de vérité, plus un petit store | Permaliens gratuits |
 | Style | Tailwind v4 | — |
 | Tests | Vitest ; Playwright pour les parcours ; pytest pour le pipeline | — |
-| Hébergement | Cloudflare Pages (+ R2 pour la copie des tuiles) | Voir l'ADR-001 |
+| Hébergement | Cloudflare Pages, 0 € strict | Voir l'ADR-001 |
 
 Budgets : moins de 450 Ko de JavaScript initial compressé (MapLibre compris) et 3 Mo de données au plus par scrutin. Lighthouse mobile d'au moins 90.
 
@@ -569,24 +572,24 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 
 | Phase | Contenu | Période visée |
 |---|---|---|
-| 0 — Cadrage et ménage | Décisions restantes du § 15, tag `prototype-v0`, ménage de `Data/`, squelette du dépôt, `CLAUDE.md` du projet, maquettes (§ 16) | Fin septembre – mi-octobre 2026 |
+| 0 — Prototype et ménage | **Prototype de carte d'abord** (tuiles officielles, présidentielle 2022, hyparquet, feature-state), archivage de `Data/` hors du dépôt, tag `prototype-v0`, squelette du dépôt, `CLAUDE.md` du projet, maquettes (§ 16) | Fin septembre – mi-octobre 2026 |
 | 1 — Pipeline v1 | Manifeste des sources, modèle du § 6, référentiels (codes outre-mer, COG, nuances de la v1, municipales 2026), tests bloquants | Octobre |
 | 2 — Géographie | Carte branchée sur le PMTiles officiel et les tuiles IGN, couche des circonscriptions, encarts outre-mer, mesure des temps d'affichage | Octobre – novembre |
 | 3 — MVP front | Exigences P0, **bêta publique** | Novembre – mi-décembre |
 | 4 — Profondeur | Comparateur, évolution, symboles proportionnels, adresse vers bureau, exports, correctifs de contours | Janvier 2027 |
 | 5 — Historique | 1999–2021 au niveau commune, COG, séries longues | Février 2027 |
-| 6 — Présidentielle 2027 | Copie de production des tuiles, ingestion rapide dès la publication, tests de charge | Mars – avril 2027 |
+| 6 — Présidentielle 2027 | Tuiles de production découpées (moins de 25 Mio par fichier), ingestion rapide dès la publication, tests de charge | Mars – avril 2027 |
 
 ## 14. Risques
 
 | Risque | Impact | Parade |
 |---|---|---|
 | Les URL data.gouv changent ou le jeu est restructuré | Build cassé | Liens pérennes `/api/1/datasets/r/…`, manifeste épinglé, alerte CI |
-| Le fichier de tuiles officiel devient indisponible, un soir d'élection par exemple | Carte des bureaux vide | Copie de secours sur R2 ou en fichiers découpés (§ 5) |
+| Le fichier de tuiles officiel devient indisponible, un soir d'élection par exemple | Carte des bureaux vide | En production, nos propres tuiles découpées sur Cloudflare Pages (§ 5) |
 | Contours figés en 2022 et reconstruits à partir des adresses | Bureaux non joints, attribution locale approximative | Affichage au niveau commune, correctifs locaux, mention « contours indicatifs » |
 | Grille de blocs contestée | Crédibilité | Nuance officielle toujours affichée ; grille publique, sourcée, versionnée |
 | Biais de surface des cartes en aplats | Lecture trompeuse | Mode « Voix » ; nombre d'inscrits toujours visible |
-| Quotas gratuits dépassés (R2, services de l'IGN) | Facturation ou refus de service | Cache CDN devant R2 ; quotas de l'IGN par visiteur ; alertes de consommation |
+| Quotas gratuits dépassés (services de l'IGN) | Refus de service | Pas de quota de bande passante sur les fichiers statiques de Cloudflare Pages ; quotas de l'IGN par visiteur |
 | L'hébergeur gratuit change ses conditions | Coupure | Formats standard (Parquet, PMTiles) portables vers un autre hébergeur |
 | Données personnelles | Juridique | Uniquement des données publiées par l'État ; aucune collecte, aucun traceur tiers |
 | Règles électorales qui changent (municipales 2026 : extension du scrutin de liste, réforme de Paris, Lyon et Marseille, à vérifier) | Modèle inadapté | Mode de scrutin et niveau de candidature décrits dans `scrutins.json` |
@@ -595,11 +598,12 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 
 | # | Question | Statut | Bloquant pour |
 |---|---|---|---|
-| Q1 | Grille des blocs | **Tranché le 24/09** (§ 8.2). Restent la règle pour les candidats à la présidentielle et le bloc des écologistes et des régionalistes | Phase 3 (mode « Tête ») |
-| Q2 | Mise en ligne | Proposé : Cloudflare Pages ; tuiles officielles en direct pour la bêta. Pour la production : domaine personnalisé (environ 10 € par an) avec R2, ou tuiles découpées à 0 € | Phase 6 |
+| Q1 | Grille des blocs | **Tranché le 24/09** (§ 8.2), y compris la présidentielle, les écologistes et les régionalistes | — |
+| Q2 | Mise en ligne | **Tranché** : Cloudflare Pages à 0 € strict ; tuiles officielles en direct pour la bêta, puis nos tuiles découpées | — |
 | Q3 | Contours de bureaux après 2022 | **Réponse** : aucun, et aucune mise à jour prévue. Stratégie au § 7.3 | — |
 | Q4 | Municipales 2026 | **Tranché** : dans la v1 ; les données sont publiées | Phase 1 |
-| Q5 | Nom du projet, domaine | Charte **tranchée** (sobre et neutre) ; nom et domaine à trouver | Phase 3 |
+| Q5 | Nom, domaine, charte | **Tranché** : « Atlas électoral », pas de domaine payant, charte sobre et neutre | — |
+| Q7 | Renommer le dépôt GitHub (`transparence-publique-elections` → `atlas-electoral`) ? | Ouvert | — |
 | Q6 | Publication de nos données sur data.gouv | **Tranché** : plus tard | P2 |
 
 ## 16. Outillage Claude : skills, plugins, connecteurs
@@ -616,7 +620,7 @@ Recherche du 24/09 dans la marketplace des plugins, le catalogue de skills et le
 | Design | `design:accessibility-review` | Activé | Audit WCAG 2.1 AA / RGAA des maquettes, puis du site |
 | Design | `frontend-design:frontend-design` | Activé | Qualité d'implémentation des écrans |
 | Design | Skills Figma | Présents ; le connecteur Figma demande une autorisation | Seulement si tu travailles dans Figma |
-| Données | Serveur MCP officiel data.gouv.fr | À ajouter : `claude mcp add --transport http datagouv https://mcp.data.gouv.fr/mcp` | Chercher des jeux et interroger l'API tabulaire pendant le développement |
+| Données | Serveur MCP officiel data.gouv.fr | Connecté le 24/09 (`claude mcp add --transport http datagouv https://mcp.data.gouv.fr/mcp`) | Chercher des jeux et interroger l'API tabulaire pendant le développement |
 | Données | `data:validate-data` | Activé | Relecture des sorties du pipeline |
 | Développement | `feature-dev:feature-dev`, `engineering:testing-strategy` | Activés | Développement guidé par fonctionnalité, stratégie de tests |
 | Développement | `claude-md-management` | Activé | Écrire le `CLAUDE.md` du projet (règles, conventions) |
@@ -624,7 +628,7 @@ Recherche du 24/09 dans la marketplace des plugins, le catalogue de skills et le
 | Qualité | `code-review`, `security-review`, `simplify` | Activés | Revue avant chaque fusion |
 | Qualité | Playwright (serveur MCP) | Activé | Parcours de bout en bout, captures d'écran, contrôles visuels |
 | Mise en ligne | `engineering:deploy-checklist` | Activé | Check-list avant la bêta et avant la présidentielle |
-| Mise en ligne | Connecteur Cloudflare Developer Platform | Proposé, non connecté | Créer le bucket R2 et suivre les déploiements depuis Claude |
+| Mise en ligne | Connecteur Cloudflare Developer Platform | Proposé, non connecté | Suivre les déploiements Cloudflare Pages depuis Claude |
 | Option | Connecteur Felt Maps | Non connecté | Contrôle visuel rapide des jointures géographiques |
 
 Écartés : Canva, Wix et Adobe (autres usages), Hugging Face (bogue CORS sur les lectures Range).
