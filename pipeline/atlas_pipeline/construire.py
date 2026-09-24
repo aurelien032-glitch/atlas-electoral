@@ -13,7 +13,7 @@ conservée. Pour chaque scrutin, écrit dans publication/v1/<scrutin>/ :
 ainsi que publication/v1/scrutins.json (catalogue) et sources.lock.json (versions des sources).
 
 Usage, depuis le dossier pipeline/ :
-    python -m atlas_pipeline.construire                  # tous les scrutins de la v1
+    python -m atlas_pipeline.construire                  # tous les scrutins (1999 à 2026)
     python -m atlas_pipeline.construire 2022_pres_t1     # un ou plusieurs scrutins
 """
 import argparse
@@ -26,11 +26,12 @@ from pathlib import Path
 
 import duckdb
 
-from .config import (CONTOURS_CODES, LIEN_PERENNE, PASSAGE_COMMUNES, PUBLICATION, REFERENTIELS, RESSOURCES,
-                     SCRUTINS_V1, SEUIL_CARTE_BUREAUX, Scrutin)
+from .config import (CIRCONSCRIPTIONS_DES_DONNEES, CONTOURS_CODES, LIEN_PERENNE, PASSAGE_COMMUNES, PUBLICATION,
+                     REFERENTIELS, RESSOURCES, SCRUTINS, SEUIL_CARTE_BUREAUX, Scrutin)
 from .sources import verrouiller
 
-EXPRESSION_PORTEE = {"national": "'FR'", "circonscription": "circonscription", "commune": "code_commune"}
+EXPRESSION_PORTEE = {"national": "'FR'", "circonscription": "circonscription", "departement": "departement",
+                     "commune": "code_commune"}
 
 # Le champ code_departement mélange les codes du ministère (ZA…) et de l'INSEE (971…) selon les
 # scrutins : on le déduit du code commune INSEE, qui est homogène.
@@ -123,7 +124,8 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
     con.sql(f"""
         CREATE OR REPLACE TEMP TABLE g AS
         SELECT s.id_brut_miom AS code_bv, s.code_commune, coalesce(p.actuel, s.code_commune) AS commune,
-               {DEPARTEMENT} AS departement, s.inscrits, s.votants, s.blancs, s.nuls, s.exprimes
+               {DEPARTEMENT} AS departement, s.libelle_departement, s.code_circonscription,
+               s.inscrits, s.votants, s.blancs, s.nuls, s.exprimes
         FROM '{url_general}' s LEFT JOIN passage p ON p.ancien = s.code_commune
         WHERE s.id_election = '{scrutin.id}'""")
     con.sql(f"""
@@ -137,7 +139,22 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
     # 1 bis. Législatives : la circonscription de chaque ligne vient du fichier officiel par
     #        circonscription (département, panneau, nom, prénom). Un bureau n'en a qu'une.
     niveaux = dict(NIVEAUX)
-    if scrutin.circonscriptions:
+    if scrutin.circonscriptions == CIRCONSCRIPTIONS_DES_DONNEES:
+        # 2012-2022 : code des données (« 04 ») et département ; Saint-Barthélemy et Saint-Martin
+        # partagent une circonscription (« ZX-01 »), comme dans les fichiers officiels.
+        con.sql("""
+            CREATE OR REPLACE TEMP TABLE g AS
+            SELECT *, CASE WHEN departement IN ('977', '978') THEN 'ZX' ELSE departement END
+                      || '-' || lpad(code_circonscription, 2, '0') AS circonscription
+            FROM g""")
+        sans = con.sql("SELECT count(*) FROM g WHERE code_circonscription IS NULL").fetchone()[0]
+        if sans:
+            raise SystemExit(f"{scrutin.id} : {sans} bureau(x) sans code de circonscription")
+        con.sql("""
+            CREATE OR REPLACE TEMP TABLE brut AS
+            SELECT b.*, g.circonscription FROM brut b JOIN g USING (code_bv)""")
+        niveaux["circonscription"] = "circonscription"
+    elif scrutin.circonscriptions:
         charger_circonscriptions(con, LIEN_PERENNE.format(id=RESSOURCES[scrutin.circonscriptions]))
         con.sql(f"""
             CREATE OR REPLACE TEMP TABLE brut AS
@@ -175,10 +192,12 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
                any_value(liste) AS liste, any_value(libelle_abrege_liste) AS liste_abregee,
                any_value(nuance) AS nuance_officielle, sum(voix)::BIGINT AS voix_total
         FROM brut_cle GROUP BY cle""")
-    circo = ("c.portee AS circonscription, o.elu" if scrutin.circonscriptions
+    officiel = bool(scrutin.circonscriptions) and scrutin.circonscriptions != CIRCONSCRIPTIONS_DES_DONNEES
+    circo = ("c.portee AS circonscription, o.elu" if officiel
+             else "c.portee AS circonscription, NULL::BOOLEAN AS elu" if scrutin.circonscriptions
              else "NULL::VARCHAR AS circonscription, NULL::BOOLEAN AS elu")
     elus = ("LEFT JOIN circo_candidats o ON o.circonscription = c.portee AND o.panneau = c.panneau "
-            "AND o.nom = upper(c.nom) AND o.prenom = upper(c.prenom)" if scrutin.circonscriptions else "")
+            "AND o.nom = upper(c.nom) AND o.prenom = upper(c.prenom)" if officiel else "")
     con.sql(f"""
         CREATE OR REPLACE TEMP TABLE candidats AS
         SELECT c.*, {circo},
@@ -187,7 +206,8 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
                     WHEN a.nuance IS NOT NULL THEN 'attribuée' ELSE 'aucune' END AS origine_nuance,
                n.famille, n.bloc, coalesce(n.cas_limite = 'oui' OR a.cas_limite = 'oui', false) AS cas_limite
         FROM cand c
-        LEFT JOIN ref_candidats a ON '{scrutin.id}' LIKE a.election || '%' AND upper(c.nom) = upper(a.nom)
+        LEFT JOIN ref_candidats a ON '{scrutin.id}' LIKE a.election || '%'
+              AND upper(coalesce(c.nom, c.liste_abregee, c.liste)) = upper(a.nom)
         LEFT JOIN ref_nuances n ON n.code = coalesce(c.nuance_officielle, a.nuance, 'NC')
         {elus}""")
     manquantes = [r[0] for r in con.sql("SELECT DISTINCT nuance FROM candidats WHERE famille IS NULL").fetchall()]
@@ -258,6 +278,13 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
         ORDER BY a.niveau, a.code""", dossier / "agregats.parquet")
     ecrire(con, "SELECT niveau, code, cand, voix FROM agr_voix ORDER BY niveau, code, cand",
            dossier / "agregats_voix.parquet")
+    if scrutin.circonscriptions == CIRCONSCRIPTIONS_DES_DONNEES:
+        # Même libellé que pour 2024, à partir du nom du département donné par les données.
+        con.sql("""
+            CREATE OR REPLACE TEMP TABLE circo_officielles AS
+            SELECT circonscription, any_value(libelle_departement) AS dep_libelle,
+                   right(circonscription, 2)::INTEGER AS numero
+            FROM g GROUP BY circonscription""")
     if scrutin.circonscriptions:
         # Libellé (« Rhône, 1re circonscription ») et emprise approchée : celle des communes de ses bureaux.
         ecrire(con, """
@@ -277,15 +304,22 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
     c["candidatures"] = con.sql("SELECT count(*) FROM cand").fetchone()[0]
     c["lignes_voix_source"] = con.sql("SELECT count(*) FROM brut").fetchone()[0]
     c["lignes_voix"] = con.sql(f"SELECT count(*) FROM {chemin_sql(dossier / 'voix.parquet')}").fetchone()[0]
+    # Jusqu'en 2015, les données comptent les blancs avec les nuls (colonne blancs vide) : on garde
+    # cette information telle quelle plutôt que d'inventer une répartition.
     c["participation_incoherente"] = con.sql(
-        "SELECT count(*) FROM g WHERE votants <> blancs + nuls + exprimes").fetchone()[0]
+        "SELECT count(*) FROM g WHERE votants <> coalesce(blancs, 0) + nuls + exprimes").fetchone()[0]
+    c["blancs_distincts"] = con.sql("SELECT count(blancs) > 0 FROM g").fetchone()[0]
     # Plus de votants que d'inscrits : rare mais possible (électeurs admis par décision de justice
     # le jour du vote) ou erreur de saisie. Toléré et tracé ; l'interface le signale.
     c["votants_superieurs_aux_inscrits"] = con.sql(
         "SELECT count(*) FROM g WHERE votants > inscrits").fetchone()[0]
-    c["somme_voix_differente_des_exprimes"] = con.sql("""
-        SELECT count(*) FROM g JOIN (SELECT code_bv, sum(voix) AS s FROM brut GROUP BY 1) v USING (code_bv)
-        WHERE v.s <> g.exprimes""").fetchone()[0]
+    # Panachage (municipales jusqu'en 2020, petites communes) : chaque électeur vote pour plusieurs
+    # candidats, la somme des voix dépasse normalement les exprimés ; ce n'est pas une anomalie.
+    panachage = "true" if scrutin.panachage else "false"
+    c["somme_voix_differente_des_exprimes"], c["bureaux_panachage"] = con.sql(f"""
+        SELECT count(*) FILTER (WHERE v.s <> g.exprimes AND NOT ({panachage} AND v.s > g.exprimes)),
+               count(*) FILTER (WHERE {panachage} AND v.s > g.exprimes)
+        FROM g JOIN (SELECT code_bv, sum(voix) AS s FROM brut GROUP BY 1) v USING (code_bv)""").fetchone()
     if c["lignes_voix"] != c["lignes_voix_source"]:
         raise SystemExit(f"{scrutin.id} : lignes de voix perdues ({c['lignes_voix_source']} → {c['lignes_voix']})")
     if c["bureaux"] != c["bureaux_distincts"]:
@@ -295,6 +329,7 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
     c["communes_recodees"] = con.sql("SELECT count(DISTINCT code_commune) FROM g WHERE commune <> code_commune").fetchone()[0]
     if scrutin.circonscriptions:
         c["circonscriptions"] = con.sql("SELECT count(DISTINCT circonscription) FROM g").fetchone()[0]
+    if officiel:
         # Réconciliation avec les totaux officiels par circonscription (tolérée et tracée).
         c["circonscriptions_ecart_officiel"] = con.sql("""
             SELECT count(*) FROM circo_officielles o
@@ -310,7 +345,7 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
         jointure = {
             "millesime_contours": 2022,
             "taux_inscrits_metropole": round(taux, 4),
-            "niveau_carte": "bureau" if taux >= SEUIL_CARTE_BUREAUX else "commune",
+            "niveau_carte": "bureau" if scrutin.carte_au_bureau and taux >= SEUIL_CARTE_BUREAUX else "commune",
         }
 
     totaux = con.sql("SELECT sum(inscrits), sum(votants), sum(blancs), sum(nuls), sum(exprimes) FROM g").fetchone()
@@ -320,7 +355,8 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
         "date": scrutin.date,
         "portee": scrutin.portee,
         "compteurs": c,
-        "totaux": dict(zip(("inscrits", "votants", "blancs", "nuls", "exprimes"), map(int, totaux))),
+        "totaux": dict(zip(("inscrits", "votants", "blancs", "nuls", "exprimes"),
+                           (None if v is None else int(v) for v in totaux))),
         "jointure_contours": jointure,
         "fichiers": {f.name: {"octets": f.stat().st_size, "sha256": empreinte(f)}
                      for f in sorted(dossier.glob("*.parquet"))},
@@ -335,10 +371,10 @@ def main(argv=None) -> None:
     parser.add_argument("scrutins", nargs="*", help="identifiants à construire (défaut : toute la v1)")
     parser.add_argument("--sortie", type=Path, default=PUBLICATION)
     args = parser.parse_args(argv)
-    inconnus = set(args.scrutins) - {s.id for s in SCRUTINS_V1}
+    inconnus = set(args.scrutins) - {s.id for s in SCRUTINS}
     if inconnus:
         parser.error(f"scrutins inconnus : {sorted(inconnus)}")
-    choisis = [s for s in SCRUTINS_V1 if not args.scrutins or s.id in args.scrutins]
+    choisis = [s for s in SCRUTINS if not args.scrutins or s.id in args.scrutins]
 
     args.sortie.mkdir(parents=True, exist_ok=True)
     verrou = verrouiller(args.sortie / "sources.lock.json")
@@ -375,7 +411,7 @@ def main(argv=None) -> None:
         "genere_le": verrou["releve_le"],
         "sources": {nom: {k: s[k] for k in ("url", "etag", "derniere_modification")}
                     for nom, s in verrou["sources"].items()},
-        "scrutins": [existants[s.id] for s in SCRUTINS_V1 if s.id in existants],
+        "scrutins": [existants[s.id] for s in SCRUTINS if s.id in existants],
     }
     chemin.write_text(json.dumps(catalogue, ensure_ascii=False, indent=2), encoding="utf-8")
 

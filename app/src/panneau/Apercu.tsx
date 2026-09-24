@@ -3,6 +3,7 @@ import type { Mesure } from '../calculs/parts'
 import { BLOCS_COLORES, DU_BLOC, LIBELLE_BLOC, type BlocColore } from '../carte/couleurs'
 import type { Cible } from '../cibles'
 import { nomCandidature } from '../donnees/libelles'
+import { grouper } from '../donnees/scrutins'
 import type { Bloc, ScrutinCatalogue } from '../donnees/types'
 import { formatEcart, formatNombre, formatPart } from '../format'
 import { partsAuNiveau, type Mode } from '../modes'
@@ -36,7 +37,11 @@ function ChoixScrutin({ ctx, actions, libelle = 'Scrutin' }: { ctx: Contexte; ac
     <label className="champ">
       <span>{libelle}</span>
       <select value={ctx.scrutin.id} onChange={(e) => actions.scrutin(e.target.value)}>
-        {ctx.scrutins.map((s) => <option key={s.id} value={s.id}>{s.libelle}</option>)}
+        {grouper(ctx.scrutins).map((g) => (
+          <optgroup key={g.code} label={g.libelle}>
+            {g.scrutins.map((s) => <option key={s.id} value={s.id}>{s.libelle}</option>)}
+          </optgroup>
+        ))}
       </select>
     </label>
   )
@@ -194,7 +199,11 @@ function ApercuEvolutionBloc({ ctx, bloc, evolution, actions }: Props) {
       <label className="champ">
         <span>De</span>
         <select value={evolution?.de.id ?? ''} onChange={(e) => actions.de(e.target.value)}>
-          {ctx.scrutins.filter((s) => s.id !== ctx.scrutin.id).map((s) => <option key={s.id} value={s.id}>{s.libelle}</option>)}
+          {grouper(ctx.scrutins.filter((s) => s.id !== ctx.scrutin.id)).map((g) => (
+            <optgroup key={g.code} label={g.libelle}>
+              {g.scrutins.map((s) => <option key={s.id} value={s.id}>{s.libelle}</option>)}
+            </optgroup>
+          ))}
         </select>
       </label>
       <ChoixScrutin ctx={ctx} actions={actions} libelle="À" />

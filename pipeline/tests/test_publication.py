@@ -39,8 +39,9 @@ def test_aucune_ligne_de_voix_perdue(scrutin):
 
 @pytest.mark.parametrize("scrutin", SCRUTINS)
 def test_votants_egaux_a_blancs_nuls_et_exprimes(con, scrutin):
+    # Avant 2016, blancs et nuls sont comptés ensemble (colonne blancs vide).
     n = con.sql(f"""SELECT count(*) FROM {fichier(scrutin, 'bureaux.parquet')}
-                    WHERE votants <> blancs + nuls + exprimes""").fetchone()[0]
+                    WHERE votants <> coalesce(blancs, 0) + nuls + exprimes""").fetchone()[0]
     assert n == 0
 
 
@@ -147,7 +148,9 @@ def test_circonscriptions_des_legislatives(con, scrutin):
     # Chaque candidature a sa circonscription (fichier officiel par circonscription), et nos totaux par
     # circonscription égalent les totaux officiels (inscrits et exprimés).
     c = manifeste(scrutin)["compteurs"]
-    assert c["circonscriptions_ecart_officiel"] == 0
+    # Réconciliation seulement quand la circonscription vient du fichier officiel (2024) ; de 2012 à 2022,
+    # elle vient des données elles-mêmes.
+    assert c.get("circonscriptions_ecart_officiel", 0) == 0
     sans = con.sql(f"SELECT count(*) FROM {fichier(scrutin, 'candidats.parquet')} WHERE circonscription IS NULL").fetchone()[0]
     assert sans == 0
     agregees = con.sql(f"""SELECT count(*) FROM {fichier(scrutin, 'agregats.parquet')}

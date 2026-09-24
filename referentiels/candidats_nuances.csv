@@ -11,3 +11,48 @@ election,nom,nuance,cas_limite,justification
 2022_pres,HIDALGO,SOC,non,Parti socialiste
 2022_pres,POUTOU,EXG,non,Nouveau Parti anticapitaliste
 2022_pres,ARTHAUD,EXG,non,Lutte ouvrière
+2017_pres,MACRON,REN,non,"En marche !, devenue Renaissance"
+2017_pres,LE PEN,RN,non,"Front national, devenu Rassemblement national"
+2017_pres,FILLON,LR,non,Les Républicains
+2017_pres,MÉLENCHON,FI,oui,La France insoumise (bloc extrême gauche selon la circulaire de février 2026)
+2017_pres,HAMON,SOC,non,Parti socialiste
+2017_pres,DUPONT-AIGNAN,DSV,non,"Debout la France (droite souverainiste), comme en 2022"
+2017_pres,LASSALLE,DIV,oui,"Résistons ! : pas de nuance propre, comme en 2022"
+2017_pres,POUTOU,EXG,non,Nouveau Parti anticapitaliste
+2017_pres,ASSELINEAU,DIV,oui,"Union populaire républicaine : divers, comme sa liste de 2024 classée LDIV par le ministère"
+2017_pres,ARTHAUD,EXG,non,Lutte ouvrière
+2017_pres,CHEMINADE,DIV,non,Solidarité et progrès : divers
+2019_euro,PRENEZ LE POUVOIR,LRN,non,Rassemblement national (Jordan Bardella)
+2019_euro,RENAISSANCE,LREN,non,La République en marche et MoDem (Nathalie Loiseau)
+2019_euro,EUROPE ÉCOLOGIE,LVEC,non,Europe Écologie Les Verts (Yannick Jadot)
+2019_euro,UNION DROITE-CENTRE,LLR,non,Les Républicains (François-Xavier Bellamy)
+2019_euro,LA FRANCE INSOUMISE,LFI,oui,La France insoumise (Manon Aubry)
+2019_euro,ENVIE D'EUROPE,LSOC,non,Parti socialiste et Place publique (Raphaël Glucksmann)
+2019_euro,DEBOUT LA FRANCE,LDSV,non,Debout la France : droite souverainiste
+2019_euro,LISTE CITOYENNE,GEN,non,Génération.s (Benoît Hamon)
+2019_euro,LES EUROPÉENS,LUDI,non,UDI (Jean-Christophe Lagarde)
+2019_euro,POUR L'EUROPE DES GENS,LCOM,non,Parti communiste français (Ian Brossat)
+2019_euro,PARTI ANIMALISTE,ANM,non,"Parti animaliste, classé divers par le ministère en 2024"
+2019_euro,URGENCE ÉCOLOGIE,LECO,oui,Écologistes hors EELV (Dominique Bourg) : comme ECO
+2019_euro,ENSEMBLE POUR LE FREXIT,LDIV,oui,"Union populaire républicaine, classée LDIV par le ministère en 2024"
+2019_euro,LUTTE OUVRIÈRE,LEXG,non,Lutte ouvrière
+2019_euro,ENSEMBLE PATRIOTES,LEXD,oui,"Les Patriotes (Florian Philippot), classés LEXD par le ministère en 2024"
+2019_euro,ALLIANCE JAUNE,LDIV,non,Gilets jaunes (Francis Lalanne) : divers
+2019_euro,LES OUBLIES DE L'EUROPE,LDIV,non,Divers
+2019_euro,PARTI PIRATE,LDIV,non,Classé LDIV par le ministère en 2024
+2019_euro,EUROPE AU SERVICE PEUPLES,LEXG,oui,Parti ouvrier indépendant démocratique : extrême gauche
+2019_euro,ESPERANTO,LDIV,non,Classé LDIV par le ministère en 2024
+2019_euro,PARTI FED. EUROPÉEN,LDIV,non,Divers
+2019_euro,DÉCROISSANCE 2019,LEXG,oui,"Comme « Paix et décroissance », classée LEXG par le ministère en 2024"
+2019_euro,ALLONS ENFANTS,LDIV,non,Divers
+2019_euro,À VOIX ÉGALES,LDIV,non,Divers
+2019_euro,PACE,LDIV,non,Classé LDIV par le ministère en 2024
+2019_euro,INITIATIVE CITOYENNE,LDIV,non,Divers
+2019_euro,UDLEF,LDIV,non,Divers
+2019_euro,LISTE DE LA RECONQUÊTE,LEXD,oui,Dissidence française (Vincent Vauclin) : extrême droite ; sans lien avec Reconquête (2021)
+2019_euro,UNE FRANCE ROYALE,LDIV,oui,Alliance royale : divers
+2019_euro,DÉMOCRATIE REPRÉSENTATIVE,LDIV,non,Classée LDIV par le ministère en 2024
+2019_euro,ÉVOLUTION CITOYENNE,LDIV,non,Gilets jaunes : divers
+2019_euro,LA LIGNE CLAIRE,LEXD,oui,Renaud Camus : extrême droite
+2019_euro,RÉVOLUTIONNAIRE,LEXG,non,"Parti révolutionnaire Communistes, classé LEXG par le ministère en 2024"
+2019_euro,NEUTRE ET ACTIF,LDIV,non,Divers

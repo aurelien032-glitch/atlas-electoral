@@ -1289,6 +1289,7 @@ ancien,actuel,source
 26354,26086,commune déléguée ou associée
 26366,26179,événement
 26371,26289,événement
+26383,26020,correction : La Répara-Auriples : code erroné des données de 1999 à 2007
 27007,27049,commune déléguée ou associée
 27024,27198,événement
 27029,27025,événement
@@ -4235,7 +4236,19 @@ ancien,actuel,source
 93059,93066,commune déléguée ou associée
 95259,95040,événement
 95282,95169,événement
+97123,97701,correction : Saint-Barthélemy : collectivité depuis 2007
+97127,97801,correction : Saint-Martin : collectivité depuis 2007
 97351,97301,événement
 97354,97352,événement
 97355,97306,événement
 97359,97310,événement
+98800,98818,correction : Nouméa : code postal des données de 2008
+98834,98832,correction : Yaté : code postal des données de 2008
+98835,98805,correction : Dumbéa : code postal des données de 2008
+98850,98812,correction : Koumac : code postal des données de 2008
+98860,98811,correction : Koné : code postal des données de 2008
+98870,98803,correction : Bourail : code postal des données de 2008
+98880,98813,correction : La Foa : code postal des données de 2008
+98881,98806,correction : Farino : code postal des données de 2008
+98882,98828,correction : Sarraméa : code postal des données de 2008
+98890,98821,correction : Païta : code postal des données de 2008

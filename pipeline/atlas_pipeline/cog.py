@@ -17,6 +17,27 @@ import duckdb
 
 from .config import LIEN_PERENNE, PASSAGE_COMMUNES, RESSOURCES
 
+# Codes des résultats que les événements du COG ne relient pas à une commune de 2026 : vérifiés un à un.
+CORRECTIONS = {
+    # Communes de Guadeloupe devenues collectivités d'outre-mer le 23 février 2007 (même territoire).
+    "97123": ("97701", "Saint-Barthélemy : collectivité depuis 2007"),
+    "97127": ("97801", "Saint-Martin : collectivité depuis 2007"),
+    # Code erroné dans des fichiers anciens du ministère ; la commune porte le code 26020 depuis 1992.
+    "26383": ("26020", "La Répara-Auriples : code erroné des données de 1999 à 2007"),
+    # Municipales 2008 en Nouvelle-Calédonie : codes postaux au lieu des codes INSEE (base officielle
+    # des codes postaux de La Poste, un code postal par commune).
+    "98800": ("98818", "Nouméa : code postal des données de 2008"),
+    "98834": ("98832", "Yaté : code postal des données de 2008"),
+    "98835": ("98805", "Dumbéa : code postal des données de 2008"),
+    "98850": ("98812", "Koumac : code postal des données de 2008"),
+    "98860": ("98811", "Koné : code postal des données de 2008"),
+    "98870": ("98803", "Bourail : code postal des données de 2008"),
+    "98880": ("98813", "La Foa : code postal des données de 2008"),
+    "98881": ("98806", "Farino : code postal des données de 2008"),
+    "98882": ("98828", "Sarraméa : code postal des données de 2008"),
+    "98890": ("98821", "Païta : code postal des données de 2008"),
+}
+
 
 def construire() -> dict[str, int]:
     con = duckdb.connect()
@@ -46,12 +67,15 @@ def construire() -> dict[str, int]:
                 break
         if code in actuelles:
             lignes.append((ancien, code, source))
+    connus = {ligne[0] for ligne in lignes}
+    lignes += [(ancien, actuel, f"correction : {motif}") for ancien, (actuel, motif) in CORRECTIONS.items()
+               if ancien not in connus]
 
     PASSAGE_COMMUNES.parent.mkdir(parents=True, exist_ok=True)
     con.sql("CREATE TABLE passage (ancien VARCHAR, actuel VARCHAR, source VARCHAR)")
     con.executemany("INSERT INTO passage VALUES (?, ?, ?)", lignes)
     con.sql(f"COPY (SELECT * FROM passage ORDER BY ancien) TO '{PASSAGE_COMMUNES.as_posix()}' (HEADER, DELIMITER ',')")
-    return dict(con.sql("SELECT source, count(*) FROM passage GROUP BY 1").fetchall())
+    return dict(con.sql("SELECT split_part(source, ' :', 1), count(*) FROM passage GROUP BY 1").fetchall())
 
 
 def main() -> None:

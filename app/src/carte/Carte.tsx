@@ -58,11 +58,15 @@ const STYLE: StyleSpecification = {
     },
     departements: { type: 'geojson', data: `${RACINE_DONNEES}/geo/departements.geojson`, promoteId: 'code' },
     contour: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
+    // Chargée seulement pour les législatives (setData), par fusion des contours des bureaux.
+    circonscriptions: { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, promoteId: 'code' },
   },
   layers: [
     { id: 'fond', type: 'background', paint: { 'background-color': FOND_CARTE } },
     { id: 'communes', type: 'fill', source: 'communes', maxzoom: ZOOM_BUREAUX, paint: REMPLISSAGE },
     { id: 'communes-hachures', type: 'fill', source: 'communes', maxzoom: ZOOM_BUREAUX, paint: HACHURES },
+    { id: 'circonscriptions', type: 'fill', source: 'circonscriptions', maxzoom: ZOOM_BUREAUX, paint: REMPLISSAGE, layout: { visibility: 'none' } },
+    { id: 'circonscriptions-hachures', type: 'fill', source: 'circonscriptions', maxzoom: ZOOM_BUREAUX, paint: HACHURES, layout: { visibility: 'none' } },
     { id: 'bureaux', type: 'fill', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: ZOOM_BUREAUX, paint: REMPLISSAGE },
     { id: 'bureaux-hachures', type: 'fill', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: ZOOM_BUREAUX, paint: HACHURES },
     {
@@ -70,11 +74,16 @@ const STYLE: StyleSpecification = {
       paint: { 'line-color': '#ffffff', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.2, 14, 1] },
     },
     {
+      id: 'circonscriptions-contours', type: 'line', source: 'circonscriptions',
+      paint: { 'line-color': '#3a3a36', 'line-opacity': 0.55, 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.3, 12, 1.4] },
+    },
+    {
       id: 'departements', type: 'line', source: 'departements',
       paint: { 'line-color': '#3a3a36', 'line-opacity': 0.7, 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.4, 10, 1.4] },
     },
     { id: 'departements-selection', type: 'line', source: 'departements', paint: siSelection(2.5) },
     { id: 'communes-selection', type: 'line', source: 'communes', paint: siSelection(2.5) },
+    { id: 'circonscriptions-selection', type: 'line', source: 'circonscriptions', paint: siSelection(2.5) },
     { id: 'bureaux-selection', type: 'line', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: ZOOM_BUREAUX, paint: siSelection(3) },
     { id: 'contour-selection', type: 'line', source: 'contour', paint: { 'line-color': ENCRE, 'line-width': 2.5 } },
   ],
@@ -82,7 +91,7 @@ const STYLE: StyleSpecification = {
 
 /** Territoire sous le pointeur, avec sa position à l'écran pour l'infobulle. */
 export interface Survol {
-  niveau: 'bureau' | 'commune'
+  niveau: 'bureau' | 'commune' | 'circonscription'
   code: string
   x: number
   y: number
@@ -101,6 +110,8 @@ interface Props {
   contours: BureauContour[]
   /** Carte au bureau de vote ; sinon chaque bureau prend la couleur de sa commune. */
   auBureau: boolean
+  /** Scrutin législatif : charge et montre la couche des circonscriptions. */
+  circonscriptions: boolean
   selection: Selection | undefined
   /** Contour détaillé de la commune sélectionnée, quand il est arrivé : il remplace le contour simplifié. */
   contour: Feature | undefined
@@ -119,11 +130,11 @@ function marges() {
 
 const FRANCE_METROPOLITAINE: [[number, number], [number, number]] = [[-5.2, 41.3], [9.6, 51.1]]
 
-// Territoire à surligner ; une circonscription n'a pas de contour publié (seulement une emprise).
+// Territoire à surligner (les circonscriptions ont leur couche, chargée pour les législatives).
 function cible(selection: Selection): FeatureIdentifier | null {
   if (selection.niveau === 'bureau') return { source: 'bureaux', sourceLayer: COUCHE_BUREAUX, id: selection.code }
-  if (selection.niveau === 'circonscription') return null
-  return { source: selection.niveau === 'commune' ? 'communes' : 'departements', id: selection.code }
+  const source = { commune: 'communes', circonscription: 'circonscriptions', departement: 'departements' }[selection.niveau]
+  return { source, id: selection.code }
 }
 
 // Hachures à 45°, dessinées une fois : une texture qui se lit sans la couleur.
@@ -140,7 +151,7 @@ function motifHachures(pas = 8, ratio = 2) {
   return { width: n, height: n, data }
 }
 
-export function Carte({ coloriage, contours, auBureau, selection, contour, cadrage, libelle, onSurvol, onClic }: Props) {
+export function Carte({ coloriage, contours, auBureau, circonscriptions, selection, contour, cadrage, libelle, onSurvol, onClic }: Props) {
   const conteneur = useRef<HTMLDivElement>(null)
   const refCarte = useRef<CarteMapLibre | null>(null)
   const refSelection = useRef<Selection | undefined>(undefined)
@@ -176,13 +187,29 @@ export function Carte({ coloriage, contours, auBureau, selection, contour, cadra
     }
   }, [])
 
+  // Circonscriptions : la couche (6 Mo) n'est chargée qu'aux législatives.
+  useEffect(() => {
+    const carte = refCarte.current
+    if (!carte || !prete) return
+    carte.getSource<GeoJSONSource>('circonscriptions')?.setData(
+      circonscriptions ? `${RACINE_DONNEES}/geo/circonscriptions.geojson` : { type: 'FeatureCollection', features: [] },
+    )
+    carte.setLayoutProperty('circonscriptions-contours', 'visibility', circonscriptions ? 'visible' : 'none')
+  }, [prete, circonscriptions])
+
   // Résultats du mode courant → feature-state. Changer de mode ou de scrutin ne recharge aucune géométrie.
   useEffect(() => {
     const carte = refCarte.current
     if (!carte || !prete || !coloriage) return
     carte.removeFeatureState({ source: 'communes' })
+    carte.removeFeatureState({ source: 'circonscriptions' })
     carte.removeFeatureState({ source: 'bureaux', sourceLayer: COUCHE_BUREAUX })
     for (const [code, etat] of coloriage.communes) carte.setFeatureState({ source: 'communes', id: code }, { ...etat })
+    // Aux législatives, la vue nationale montre les circonscriptions à la place des communes.
+    const parCirconscription = (coloriage.circonscriptions?.size ?? 0) > 0
+    for (const [code, etat] of coloriage.circonscriptions ?? []) carte.setFeatureState({ source: 'circonscriptions', id: code }, { ...etat })
+    for (const couche of ['circonscriptions', 'circonscriptions-hachures']) carte.setLayoutProperty(couche, 'visibility', parCirconscription ? 'visible' : 'none')
+    for (const couche of ['communes', 'communes-hachures']) carte.setLayoutProperty(couche, 'visibility', parCirconscription ? 'none' : 'visible')
     const bureau = (code: string, etat: object) => carte.setFeatureState({ source: 'bureaux', sourceLayer: COUCHE_BUREAUX, id: code }, etat)
     if (coloriage.bureaux) {
       for (const [code, etat] of coloriage.bureaux) bureau(code, { ...etat })
@@ -226,7 +253,9 @@ export function Carte({ coloriage, contours, auBureau, selection, contour, cadra
       const p = e.features?.[0]?.properties
       if (!p) return null
       const position = { x: e.point.x, y: e.point.y, largeur: carte.getContainer().clientWidth }
-      if (e.features?.[0]?.layer.id === 'communes') return { niveau: 'commune', code: p.code, ...position }
+      const couche = e.features?.[0]?.layer.id
+      if (couche === 'communes') return { niveau: 'commune', code: p.code, ...position }
+      if (couche === 'circonscriptions') return { niveau: 'circonscription', code: p.code, ...position }
       return auBureau ? { niveau: 'bureau', code: p.codeBureauVote, ...position } : { niveau: 'commune', code: p.codeCommune, ...position }
     }
     const survol = (e: MapLayerMouseEvent) => onSurvol(territoire(e))
@@ -239,14 +268,14 @@ export function Carte({ coloriage, contours, auBureau, selection, contour, cadra
       onSurvol(null)
     }
     const entrer = () => { carte.getCanvas().style.cursor = 'pointer' }
-    for (const couche of ['bureaux', 'communes']) {
+    for (const couche of ['bureaux', 'communes', 'circonscriptions']) {
       carte.on('mousemove', couche, survol)
       carte.on('mouseenter', couche, entrer)
       carte.on('mouseleave', couche, quitter)
       carte.on('click', couche, clic)
     }
     return () => {
-      for (const couche of ['bureaux', 'communes']) {
+      for (const couche of ['bureaux', 'communes', 'circonscriptions']) {
         carte.off('mousemove', couche, survol)
         carte.off('mouseenter', couche, entrer)
         carte.off('mouseleave', couche, quitter)

@@ -14,7 +14,8 @@ import {
   usePassage, useTerritoires, useVoix,
 } from './donnees/requetes'
 import { communeDu, emprise, indexer, titreDe } from './donnees/territoires'
-import type { Agregat, BureauContour, Resultat, ScrutinCatalogue, Territoire } from './donnees/types'
+import { scrutinParDefaut, scrutinPrecedent } from './donnees/scrutins'
+import type { Agregat, BureauContour, Resultat, Territoire } from './donnees/types'
 import { formatEcart, formatPart, formatPourcent } from './format'
 import {
   LIBELLES_EVOLUTION, classesLegende, coloriageClasses, coloriageTete, couleursPour, ecartsAuNiveau, partDe,
@@ -31,12 +32,6 @@ import { ecrireSelection, lireVue, type Selection } from './vue'
 const METHODOLOGIE = 'https://github.com/aurelien032-glitch/atlas-electoral/blob/main/docs/PLAN.md'
 const FRANCE_METROPOLITAINE: [number, number, number, number] = [-5.2, 41.3, 9.6, 51.1]
 
-/** Scrutin de départ par défaut du mode Évolution : le précédent dans le catalogue (ou le suivant). */
-function scrutinVoisin(scrutins: ScrutinCatalogue[], courant: ScrutinCatalogue) {
-  const i = scrutins.findIndex((s) => s.id === courant.id)
-  return scrutins[i - 1] ?? scrutins[i + 1]
-}
-
 interface EtatCarte {
   coloriage: Coloriage
   legende: DescriptionLegende
@@ -47,6 +42,7 @@ interface PropsZone {
   coloriage: Coloriage | null
   contours: BureauContour[]
   auBureau: boolean
+  circonscriptions: boolean
   selection: Selection | undefined
   contour: Feature | undefined
   cadrage: Cadrage | null
@@ -75,7 +71,7 @@ export default function App() {
 
   const catalogue = useCatalogue()
   const scrutins = useMemo(() => catalogue.data?.scrutins ?? [], [catalogue.data])
-  const scrutin = scrutins.find((s) => s.id === vue.scrutin) ?? scrutins[0]
+  const scrutin = scrutins.find((s) => s.id === vue.scrutin) ?? scrutinParDefaut(scrutins)
   const id = scrutin?.id
   const auBureau = scrutin?.jointure_contours?.niveau_carte === 'bureau'
   // L'évolution se lit à la commune : les numéros de bureaux changent d'un scrutin à l'autre.
@@ -94,7 +90,7 @@ export default function App() {
   const contourCommune = useContourCommune(selection?.niveau === 'commune' ? selection.code : undefined)
 
   const scrutinDe = vue.mode === 'evolution' && scrutin
-    ? scrutins.find((s) => s.id === vue.de && s.id !== scrutin.id) ?? scrutinVoisin(scrutins, scrutin)
+    ? scrutins.find((s) => s.id === vue.de && s.id !== scrutin.id) ?? scrutinPrecedent(scrutins, scrutin)
     : undefined
   const agregatsDe = useAgregats(scrutinDe?.id)
   const candidatsDe = useCandidats(scrutinDe?.id)
@@ -170,7 +166,7 @@ export default function App() {
       }
       case 'evolution': {
         if (!evolution) return null
-        const valeurs = valeursEvolution(evolution.avant, evolution.apres)
+        const valeurs = valeursEvolution(evolution.avant, evolution.apres) // communes seulement
         return {
           coloriage: coloriageClasses(valeurs, SEUILS_EVOLUTION, PALETTE_EVOLUTION),
           valeurs,
@@ -202,13 +198,14 @@ export default function App() {
   const resultats = useMemo(() => ({
     bureaux: new Map<string, Resultat>((bureaux.data ?? []).map((b) => [b.code_bv, b])),
     communes: new Map<string, Resultat>((agregats.data ?? []).filter((a) => a.niveau === 'commune').map((a) => [a.code, a])),
+    circonscriptions: new Map<string, Resultat>((agregats.data ?? []).filter((a) => a.niveau === 'circonscription').map((a) => [a.code, a])),
   }), [bureaux.data, agregats.data])
 
   const contenuInfobulle = useCallback((survol: Survol) => {
     const titre = titreDe({ niveau: survol.niveau, code: survol.code }, index)
     const lignes: string[] = []
     if (vue.mode === 'tete') {
-      const r = resultats[survol.niveau === 'bureau' ? 'bureaux' : 'communes'].get(survol.code)
+      const r = resultats[({ bureau: 'bureaux', commune: 'communes', circonscription: 'circonscriptions' } as const)[survol.niveau]].get(survol.code)
       const tete = r?.tete != null ? parCand.get(r.tete) : undefined
       if (!r || r.exprimes === 0 || !tete) lignes.push('Aucun résultat rattaché')
       else if (r.egalite) lignes.push('Égalité en tête')
@@ -217,7 +214,9 @@ export default function App() {
         lignes.push(`En tête : ${nomCandidature(tete)}`, `${LIBELLE_BLOC[tete.bloc]} · avance ${palier(avance).libelle}, ${formatEcart(avance / 100).replace('+', '')} pts`)
       }
     } else if (etatCarte?.valeurs) {
-      const v = survol.niveau === 'bureau' ? etatCarte.valeurs.bureaux?.get(survol.code) : etatCarte.valeurs.communes.get(survol.code)
+      const v = survol.niveau === 'bureau'
+        ? etatCarte.valeurs.bureaux?.get(survol.code)
+        : survol.niveau === 'circonscription' ? etatCarte.valeurs.circonscriptions?.get(survol.code) : etatCarte.valeurs.communes.get(survol.code)
       if (v === undefined) lignes.push('Aucun résultat rattaché')
       else if (v === null) lignes.push(vue.mode === 'evolution' ? 'Non comparable' : 'Aucune candidature du bloc')
       else lignes.push(vue.mode === 'evolution' ? `${formatEcart(v)} points` : formatPourcent(v))
@@ -372,6 +371,7 @@ export default function App() {
           coloriage={etatCarte?.coloriage ?? null}
           contours={contours.data ?? []}
           auBureau={carteAuBureau}
+          circonscriptions={scrutin?.portee === 'circonscription'}
           selection={selection}
           contour={contourCommune.data}
           cadrage={cadrage ?? cadrageInitial}

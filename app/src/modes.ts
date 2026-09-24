@@ -17,12 +17,16 @@ export const LIBELLE_MODE: Record<Mode, string> = {
 export interface Valeurs {
   communes: Map<string, Mesure>
   bureaux: Map<string, Mesure> | null
+  /** Législatives : valeurs par circonscription, pour la vue nationale. */
+  circonscriptions?: Map<string, Mesure>
 }
 
 /** États à appliquer sur la carte. Sans bureaux, chaque bureau prend l'état de sa commune. */
 export interface Coloriage {
   communes: Map<string, Etat>
   bureaux: Map<string, Etat> | null
+  /** Législatives : la vue nationale colore les circonscriptions plutôt que les communes. */
+  circonscriptions?: Map<string, Etat>
 }
 
 /** Part (0 à 1) des candidatures retenues dans chaque territoire d'un niveau d'agrégation. */
@@ -71,6 +75,7 @@ export function valeursScore(
   return {
     communes: enPoints(partsAuNiveau(agregats, agregatsVoix, 'commune', retenue)),
     bureaux: bureaux && enPoints(partsBureaux(bureaux.liste, bureaux.voix, retenue)),
+    circonscriptions: enPoints(partsAuNiveau(agregats, agregatsVoix, 'circonscription', retenue)),
   }
 }
 
@@ -91,6 +96,7 @@ export function valeursParticipation(agregats: readonly Agregat[], bureaux: read
   return {
     communes: taux(agregats.filter((a) => a.niveau === 'commune'), (a) => a.code),
     bureaux: bureaux && taux(bureaux, (b) => b.code_bv),
+    circonscriptions: taux(agregats.filter((a) => a.niveau === 'circonscription'), (a) => a.code),
   }
 }
 
@@ -135,7 +141,11 @@ export function couleursPour(rampe: readonly string[], classes: number): string[
 
 export function coloriageClasses(valeurs: Valeurs, seuils: readonly number[], couleurs: readonly string[]): Coloriage {
   const etats = (m: Map<string, Mesure>) => new Map([...m].map(([code, v]) => [code, etatClasse(v, seuils, couleurs)]))
-  return { communes: etats(valeurs.communes), bureaux: valeurs.bureaux && etats(valeurs.bureaux) }
+  return {
+    communes: etats(valeurs.communes),
+    bureaux: valeurs.bureaux && etats(valeurs.bureaux),
+    circonscriptions: valeurs.circonscriptions && etats(valeurs.circonscriptions),
+  }
 }
 
 export function coloriageTete(agregats: readonly Agregat[], bureaux: readonly Bureau[] | null, blocDe: (cand: number) => Bloc): Coloriage {
@@ -150,6 +160,7 @@ export function coloriageTete(agregats: readonly Agregat[], bureaux: readonly Bu
   return {
     communes: etats(agregats.filter((a) => a.niveau === 'commune'), (a) => a.code),
     bureaux: bureaux && etats(bureaux, (b) => b.code_bv),
+    circonscriptions: etats(agregats.filter((a) => a.niveau === 'circonscription'), (a) => a.code),
   }
 }
 

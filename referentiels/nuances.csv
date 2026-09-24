@@ -56,3 +56,132 @@ ENS,individuelle,Ensemble (2022-2024),CENT,Centre,analogie LUC,oui,Nuance antér
 LENS,liste,Ensemble (2024),CENT,Centre,analogie LUC,oui,Nuance antérieure à la grille 2026 : rattachée à l'union du centre (LUC)
 UXD,individuelle,Union de l'extrême droite (2024),EXD,Extrême droite,analogie LUXD,oui,Nuance antérieure à la grille 2026 : rattachée à l'union de l'extrême droite (LUXD)
 NC,individuelle,Sans nuance attribuée,NC,Non classé,règle du projet,non,Candidature ou liste à laquelle le ministère n'a attribué aucune nuance
+MELE,candidat,"Jean-Luc Mélenchon (présidentielle 2012, Front de gauche)",EXG,Extrême gauche,analogie FI,oui,"Nuance antérieure à la grille 2026 (2012…) : Décidé le 24/09 (Front de gauche selon le parti) : comme La France insoumise, qu'il a fondée ensuite"
+BESA,candidat,"Olivier Besancenot (présidentielles 2002, 2007)",EXG,Extrême gauche,analogie EXG,non,Nuance antérieure à la grille 2026 (2002…) : Ligue communiste révolutionnaire
+LAGU,candidat,"Arlette Laguiller (présidentielles 2002, 2007)",EXG,Extrême gauche,analogie EXG,non,Nuance antérieure à la grille 2026 (2002…) : Lutte ouvrière
+LXG,liste,Liste d'extrême gauche,EXG,Extrême gauche,analogie LEXG,non,Nuance antérieure à la grille 2026 (2004…) : Extrême gauche
+POUT,candidat,Philippe Poutou (présidentielle 2012),EXG,Extrême gauche,analogie EXG,non,Nuance antérieure à la grille 2026 (2012…) : Nouveau Parti anticapitaliste
+LCR,individuelle,Ligue communiste révolutionnaire,EXG,Extrême gauche,analogie EXG,non,Nuance antérieure à la grille 2026 (2002…) : Extrême gauche
+LO,individuelle,Lutte ouvrière,EXG,Extrême gauche,analogie EXG,non,Nuance antérieure à la grille 2026 (2002…) : Extrême gauche
+DXG,individuelle,Divers extrême gauche,EXG,Extrême gauche,analogie EXG,non,Nuance antérieure à la grille 2026 (2022…) : Extrême gauche
+ARTH,candidat,Nathalie Arthaud (présidentielle 2012),EXG,Extrême gauche,analogie EXG,non,Nuance antérieure à la grille 2026 (2012…) : Lutte ouvrière
+GLUC,candidat,Daniel Gluckstein (présidentielle 2002),EXG,Extrême gauche,analogie EXG,non,Nuance antérieure à la grille 2026 (2002…) : Parti des travailleurs
+SCHI,candidat,Gérard Schivardi (présidentielle 2007),EXG,Extrême gauche,analogie EXG,non,Nuance antérieure à la grille 2026 (2007…) : Parti des travailleurs
+BC-FI,binôme,Binôme La France insoumise,EXG,Extrême gauche,analogie FI,oui,Nuance antérieure à la grille 2026 (2021…) : Comme La France insoumise (bloc extrême gauche selon la circulaire 2026)
+PG,individuelle,Parti de Gauche,EXG,Extrême gauche,analogie FI,oui,Nuance antérieure à la grille 2026 (2011…) : Décidé le 24/09 (Front de gauche selon le parti) : prédécesseur de La France insoumise
+LPG,liste,Liste du Parti de Gauche,EXG,Extrême gauche,analogie LFI,oui,Nuance antérieure à la grille 2026 (2014…) : Décidé le 24/09 (Front de gauche selon le parti) : prédécesseur de La France insoumise
+BC-EXG,binôme,Binôme d'extrême gauche,EXG,Extrême gauche,analogie EXG,non,Nuance antérieure à la grille 2026 (2015…) : Binôme : même classement que la nuance individuelle
+BC-PG,binôme,Binôme Parti de gauche,EXG,Extrême gauche,analogie FI,oui,Nuance antérieure à la grille 2026 (2015…) : Décidé le 24/09 (Front de gauche selon le parti) : prédécesseur de La France insoumise
+HOLL,candidat,François Hollande (présidentielle 2012),GAU,Gauche,analogie SOC,non,Nuance antérieure à la grille 2026 (2012…) : Parti socialiste
+ROYA,candidat,Ségolène Royal (présidentielle 2007),GAU,Gauche,analogie SOC,non,Nuance antérieure à la grille 2026 (2007…) : Parti socialiste
+LGA,liste,Liste d'union de la gauche (2004),GAU,Gauche,analogie LUG,non,Nuance antérieure à la grille 2026 (2004…) : Union de la gauche
+BC-SOC,binôme,Binôme Parti socialiste,GAU,Gauche,analogie SOC,non,Nuance antérieure à la grille 2026 (2015…) : Parti socialiste
+BC-UG,binôme,Binôme union de la gauche,GAU,Gauche,analogie LUG,non,Nuance antérieure à la grille 2026 (2015…) : Union de la gauche
+LPS,liste,Liste du Parti socialiste (2004),GAU,Gauche,analogie LSOC,non,Nuance antérieure à la grille 2026 (2004…) : Parti socialiste
+LUGE,liste,Liste d'union à gauche avec des écologiste,GAU,Gauche,analogie LUG,non,Nuance antérieure à la grille 2026 (2021…) : Union de la gauche
+JOSP,candidat,Lionel Jospin (présidentielle 2002),GAU,Gauche,analogie SOC,non,Nuance antérieure à la grille 2026 (2002…) : Parti socialiste
+BC-DVG,binôme,Binôme divers gauche,GAU,Gauche,analogie DVG,non,Nuance antérieure à la grille 2026 (2015…) : Divers gauche
+GAU,liste,Liste PS-PRG-MDC « Bâtir notre Europe » (européennes 1999),GAU,Gauche,analogie LUG,non,Nuance antérieure à la grille 2026 (1999…) : Union de la gauche
+BC-UGE,binôme,Binôme union de la gauche et des écologistes,GAU,Gauche,analogie LUG,non,Nuance antérieure à la grille 2026 (2021…) : Union de la gauche
+LFG,liste,Liste Front de Gauche,GAU,Gauche,analogie LUG,oui,Nuance antérieure à la grille 2026 (2014…) : Décidé le 24/09 (Front de gauche selon le parti) : union du PCF et du PG
+LCOP,liste,Liste du PCF et du Parti de gauche,GAU,Gauche,analogie LUG,oui,Nuance antérieure à la grille 2026 (2009…) : Décidé le 24/09 (Front de gauche selon le parti) : union du PCF et du PG
+FG,individuelle,Front de gauche,GAU,Gauche,analogie LUG,oui,"Nuance antérieure à la grille 2026 (2012…) : Décidé le 24/09 (Front de gauche selon le parti) : union du PCF et du PG, rattachée à l'union de la gauche"
+LVE,liste,Liste Les Verts (2004),GAU,Écologistes,analogie LVEC,non,"Nuance antérieure à la grille 2026 (2004…) : Les Verts, devenus Les Écologistes"
+CHEV,candidat,Jean-Pierre Chevènement (présidentielle 2002),GAU,Gauche,analogie DVG,oui,"Nuance antérieure à la grille 2026 (2002…) : Campagne « ni droite ni gauche », venu du PS : divers gauche"
+MAME,candidat,Noël Mamère (présidentielle 2002),GAU,Écologistes,analogie VEC,non,Nuance antérieure à la grille 2026 (2002…) : Les Verts
+BC-FG,binôme,Binôme Front de gauche,GAU,Gauche,analogie LUG,oui,Nuance antérieure à la grille 2026 (2015…) : Décidé le 24/09 (Front de gauche selon le parti) : union du PCF et du PG
+PRG,individuelle,Parti radical de gauche,GAU,Gauche,analogie RDG,non,Nuance antérieure à la grille 2026 (2001…) : Parti radical de gauche
+HUE,candidat,Robert Hue (présidentielle 2002),GAU,Gauche,analogie COM,non,Nuance antérieure à la grille 2026 (2002…) : Parti communiste français
+LPC,liste,Liste du Parti communiste,GAU,Gauche,analogie LCOM,non,Nuance antérieure à la grille 2026 (2004…) : Parti communiste français
+JOLY,candidat,Eva Joly (présidentielle 2012),GAU,Écologistes,analogie VEC,non,Nuance antérieure à la grille 2026 (2012…) : Europe Écologie Les Verts
+BC-COM,binôme,Binôme Parti communiste,GAU,Gauche,analogie COM,non,Nuance antérieure à la grille 2026 (2015…) : Parti communiste français
+BUFF,candidat,Marie-George Buffet (présidentielle 2007),GAU,Gauche,analogie COM,non,Nuance antérieure à la grille 2026 (2007…) : Parti communiste français
+TAUB,candidat,Christiane Taubira (présidentielle 2002),GAU,Gauche,analogie RDG,non,Nuance antérieure à la grille 2026 (2002…) : Parti radical de gauche
+LVEG,liste,Liste EELV et gauche,GAU,Écologistes,analogie LVEC,non,Nuance antérieure à la grille 2026 (2015…) : Écologistes et gauche
+VOYN,candidat,Dominique Voynet (présidentielle 2007),GAU,Écologistes,analogie VEC,non,Nuance antérieure à la grille 2026 (2007…) : Les Verts
+LDG,liste,Liste divers gauche,GAU,Gauche,analogie LDVG,non,Nuance antérieure à la grille 2026 (2004…) : Divers gauche
+LGC,liste,Liste gauche-centristes,GAU,Gauche,analogie LDVG,oui,Nuance antérieure à la grille 2026 (2008…) : Union menée par la gauche avec des centristes
+BOVE,candidat,José Bové (présidentielle 2007),GAU,Gauche,analogie DVG,oui,Nuance antérieure à la grille 2026 (2007…) : Candidat des collectifs antilibéraux : divers gauche
+BC-VEC,binôme,Binôme Europe Écologie Les Verts,GAU,Écologistes,analogie VEC,non,Nuance antérieure à la grille 2026 (2015…) : Les Écologistes
+PREP,individuelle,"Pôle républicain (Chevènement, 2002)",GAU,Gauche,analogie DVG,oui,Nuance antérieure à la grille 2026 (2002…) : Gauche souverainiste : divers gauche
+BC-RDG,binôme,Binôme Parti radical de gauche,GAU,Gauche,analogie RDG,non,Nuance antérieure à la grille 2026 (2015…) : Parti radical de gauche
+BC-UCG,binôme,Binôme union au centre et à gauche (2021),GAU,Gauche,analogie LDVG,oui,Nuance antérieure à la grille 2026 (2021…) : Union au centre et à gauche : rattachée à la gauche
+MDC,individuelle,Mouvement des citoyens (Chevènement),GAU,Gauche,analogie DVG,oui,Nuance antérieure à la grille 2026 (2001…) : Gauche souverainiste : divers gauche
+LRDG,liste,Parti radical de gauche,GAU,Gauche,analogie RDG,non,Nuance antérieure à la grille 2026 (2015…) : Parti radical de gauche
+REM,individuelle,La République en marche,CENT,Centre,analogie REN,non,Nuance antérieure à la grille 2026 (2017…) : Devenue Renaissance
+BAYR,candidat,"François Bayrou (présidentielles 2002, 2007, 2012)",CENT,Centre,analogie MDM,non,Nuance antérieure à la grille 2026 (2002…) : UDF puis MoDem : centre
+UDF,individuelle,Union pour la démocratie française,CENT,Centre,analogie UDI,oui,"Nuance antérieure à la grille 2026 (1999…) : Décidé le 24/09 : centre, comme ses héritiers MoDem et UDI"
+LCMD,liste,Liste centre-MoDem,CENT,Centre,analogie LMDM,non,Nuance antérieure à la grille 2026 (2008…) : MoDem
+UDFD,individuelle,UDF-Mouvement Démocrate,CENT,Centre,analogie MDM,non,Nuance antérieure à la grille 2026 (2007…) : Devenu le MoDem
+LUDF,liste,Liste UDF (2004),CENT,Centre,analogie LUDI,oui,Nuance antérieure à la grille 2026 (2004…) : Décidé le 24/09 : centre
+BC-DVC,binôme,Binôme divers centre,CENT,Centre,analogie DVC,non,Nuance antérieure à la grille 2026 (2021…) : Divers centre
+NCE,individuelle,Nouveau Centre,CENT,Centre,analogie UDI,oui,Nuance antérieure à la grille 2026 (2012…) : Décidé le 24/09 : centre (devenu l'UDI)
+BC-UDI,binôme,Binôme UDI,CENT,Centre,analogie UDI,non,Nuance antérieure à la grille 2026 (2015…) : Union des démocrates et indépendants
+PRV,individuelle,Parti radical,CENT,Centre,analogie PR,non,Nuance antérieure à la grille 2026 (2012…) : Parti radical
+CEN,individuelle,Le Centre pour la France,CENT,Centre,analogie MDM,non,Nuance antérieure à la grille 2026 (2012…) : MoDem
+LREM,liste,La République en marche,CENT,Centre,analogie LREN,non,Nuance antérieure à la grille 2026 (2020…) : Devenue Renaissance
+BC-UC,binôme,Binôme union du centre,CENT,Centre,analogie LUC,non,Nuance antérieure à la grille 2026 (2015…) : Union du centre
+BC-REM,binôme,Binôme La République en marche,CENT,Centre,analogie REN,non,Nuance antérieure à la grille 2026 (2021…) : Renaissance
+ALLI,individuelle,Alliance centriste,CENT,Centre,analogie UDI,oui,Nuance antérieure à la grille 2026 (2012…) : Décidé le 24/09 : centre (rejointe l'UDI)
+MODM,individuelle,MODEM,CENT,Centre,analogie MDM,non,Nuance antérieure à la grille 2026 (2011…) : Mouvement démocrate
+BC-MDM,binôme,Binôme MoDem,CENT,Centre,analogie MDM,non,Nuance antérieure à la grille 2026 (2015…) : Mouvement démocrate
+UMP,individuelle,Union pour un Mouvement Populaire,DTE,Droite,analogie LR,non,Nuance antérieure à la grille 2026 (2002…) : Devenue Les Républicains
+SARK,candidat,"Nicolas Sarkozy (présidentielles 2007, 2012)",DTE,Droite,analogie LR,non,Nuance antérieure à la grille 2026 (2007…) : UMP
+CHIR,candidat,Jacques Chirac (présidentielle 2002),DTE,Droite,analogie LR,non,"Nuance antérieure à la grille 2026 (2002…) : RPR, puis UMP"
+LMAJ,liste,Liste de la majorité,DTE,Droite,analogie LUD,oui,Nuance antérieure à la grille 2026 (2008…) : Décidé le 24/09 (majorité de l'époque) : droite (UMP et alliés)
+LDR,liste,Liste d'union de la droite (2004),DTE,Droite,analogie LUD,non,Nuance antérieure à la grille 2026 (2004…) : Union de la droite
+BC-UD,binôme,Binôme union de la droite,DTE,Droite,analogie LUD,non,Nuance antérieure à la grille 2026 (2015…) : Union de la droite
+LUMP,liste,Liste Union pour un Mouvement Populaire,DTE,Droite,analogie LLR,non,Nuance antérieure à la grille 2026 (2004…) : Devenue Les Républicains
+BC-DVD,binôme,Binôme divers droite,DTE,Droite,analogie DVD,non,Nuance antérieure à la grille 2026 (2015…) : Divers droite
+BC-UMP,binôme,Binôme UMP,DTE,Droite,analogie LR,non,Nuance antérieure à la grille 2026 (2015…) : Les Républicains
+RPR,individuelle,Rassemblement pour la République,DTE,Droite,analogie LR,non,Nuance antérieure à la grille 2026 (2001…) : Fondu dans l'UMP en 2002
+BC-UCD,binôme,Binôme union au centre et à droite (2021),DTE,Droite,analogie LUD,oui,Nuance antérieure à la grille 2026 (2021…) : Union menée par la droite avec des centristes
+LUCD,liste,Liste d'union au centre et à droite,DTE,Droite,analogie LUD,oui,Nuance antérieure à la grille 2026 (2021…) : Union menée par la droite avec des centristes
+DTE,liste,Liste RPR-DL « Union pour l'Europe » (européennes 1999),DTE,Droite,analogie LLR,non,Nuance antérieure à la grille 2026 (1999…) : Droite parlementaire
+BC-LR,binôme,Binôme Les Républicains,DTE,Droite,analogie LR,non,Nuance antérieure à la grille 2026 (2021…) : Les Républicains
+LDD,liste,Liste divers droite,DTE,Droite,analogie LDVD,non,Nuance antérieure à la grille 2026 (2004…) : Divers droite
+MADE,candidat,Alain Madelin (présidentielle 2002),DTE,Droite,analogie LR,non,"Nuance antérieure à la grille 2026 (2002…) : Démocratie libérale, fondue dans l'UMP"
+MAJ,individuelle,Majorité présidentielle,DTE,Droite,analogie DVD,oui,"Nuance antérieure à la grille 2026 (2007…) : Décidé le 24/09 (majorité de l'époque) : droite, majorité de Nicolas Sarkozy"
+LMC,liste,Liste majorité-centristes,DTE,Droite,analogie LUD,oui,Nuance antérieure à la grille 2026 (2008…) : Décidé le 24/09 (majorité de l'époque) : droite
+M-NC,individuelle,Majorité présidentielle,DTE,Droite,analogie DVD,oui,Nuance antérieure à la grille 2026 (2008…) : Décidé le 24/09 (majorité de l'époque) : droite
+LDLF,liste,Debout la France,DTE,Droite,analogie LDSV,non,Nuance antérieure à la grille 2026 (2015…) : Droite souverainiste
+VILL,candidat,Philippe de Villiers (présidentielle 2007),DTE,Droite,analogie DSV,oui,Nuance antérieure à la grille 2026 (2007…) : Mouvement pour la France : droite souverainiste
+DL,individuelle,Démocratie libérale,DTE,Droite,analogie LR,non,Nuance antérieure à la grille 2026 (2001…) : Fondue dans l'UMP en 2002
+DUPO,candidat,Nicolas Dupont-Aignan (présidentielle 2012),DTE,Droite,analogie DSV,non,"Nuance antérieure à la grille 2026 (2012…) : Debout la République : droite souverainiste, comme en 2022"
+MPF,individuelle,Mouvement pour la France,DTE,Droite,analogie DSV,oui,Nuance antérieure à la grille 2026 (2002…) : Droite souverainiste
+M,individuelle,Autres candidats majorité présidentielle,DTE,Droite,analogie DVD,oui,Nuance antérieure à la grille 2026 (2011…) : Décidé le 24/09 (majorité de l'époque) : droite
+RPF,individuelle,Rassemblement pour la France (Pasqua),DTE,Droite,analogie DSV,oui,Nuance antérieure à la grille 2026 (2001…) : Droite souverainiste
+BOUT,candidat,Christine Boutin (présidentielle 2002),DTE,Droite,analogie DVD,non,Nuance antérieure à la grille 2026 (2002…) : Forum des républicains sociaux : divers droite
+DLF,individuelle,Debout la France,DTE,Droite,analogie DSV,non,"Nuance antérieure à la grille 2026 (2017…) : Droite souverainiste, comme en 2022"
+BC-DLF,binôme,Binôme Debout la France,DTE,Droite,analogie DSV,non,Nuance antérieure à la grille 2026 (2015…) : Droite souverainiste
+BC-DSV,binôme,Binôme droite souverainiste,DTE,Droite,analogie DSV,non,Nuance antérieure à la grille 2026 (2021…) : Droite souverainiste
+LFN,liste,Liste du Front national,EXD,Extrême droite,analogie LRN,non,Nuance antérieure à la grille 2026 (2004…) : Devenu le Rassemblement national
+LEPE,candidat,"Jean-Marie Le Pen (2002, 2007), Marine Le Pen (2012)",EXD,Extrême droite,analogie RN,non,Nuance antérieure à la grille 2026 (2002…) : Front national
+FN,individuelle,Front National,EXD,Extrême droite,analogie RN,non,Nuance antérieure à la grille 2026 (2001…) : Devenu le Rassemblement national
+BC-FN,binôme,Binôme Front national,EXD,Extrême droite,analogie RN,non,Nuance antérieure à la grille 2026 (2015…) : Rassemblement national
+BC-RN,binôme,Binôme Rassemblement national,EXD,Extrême droite,analogie RN,non,Nuance antérieure à la grille 2026 (2021…) : Rassemblement national
+FRN,liste,Liste du Front national (européennes 1999),EXD,Extrême droite,analogie LRN,non,Nuance antérieure à la grille 2026 (1999…) : Rassemblement national
+MEGR,candidat,Bruno Mégret (présidentielle 2002),EXD,Extrême droite,analogie EXD,non,Nuance antérieure à la grille 2026 (2002…) : Mouvement national républicain
+MNR,individuelle,Mouvement national républicain (Mégret),EXD,Extrême droite,analogie EXD,non,Nuance antérieure à la grille 2026 (2001…) : Extrême droite
+MNA,liste,Liste du Mouvement national (européennes 1999),EXD,Extrême droite,analogie LEXD,non,Nuance antérieure à la grille 2026 (1999…) : Mouvement national républicain
+LXD,liste,Liste d'extrême droite,EXD,Extrême droite,analogie LEXD,non,Nuance antérieure à la grille 2026 (2004…) : Extrême droite
+BC-EXD,binôme,Binôme d'extrême droite,EXD,Extrême droite,analogie EXD,non,Nuance antérieure à la grille 2026 (2015…) : Extrême droite
+BC-UXD,binôme,Binôme union de l'extrême droite,EXD,Extrême droite,analogie UXD,oui,Nuance antérieure à la grille 2026 (2021…) : Comme UXD : union de l'extrême droite
+DXD,individuelle,Divers extrême droite,EXD,Extrême droite,analogie EXD,non,Nuance antérieure à la grille 2026 (2022…) : Extrême droite
+CPNT,individuelle,Chasse Pêche Nature Traditions,DIV,Divers,analogie DIV,oui,"Nuance antérieure à la grille 2026 (1999…) : Mouvement ruraliste, parfois allié à la droite : divers"
+LAUT,liste,Autre liste,DIV,Divers,analogie LDIV,non,Nuance antérieure à la grille 2026 (2008…) : Divers
+SAIN,candidat,"Jean Saint-Josse (présidentielle 2002, CPNT)",DIV,Divers,analogie DIV,oui,Nuance antérieure à la grille 2026 (2002…) : Comme CPNT : divers
+BC-DIV,binôme,Binôme divers,DIV,Divers,analogie DIV,non,Nuance antérieure à la grille 2026 (2015…) : Divers
+LDV,liste,Liste divers,DIV,Divers,analogie LDIV,non,Nuance antérieure à la grille 2026 (2004…) : Divers
+BC-ECO,binôme,Binôme écologiste,DIV,Écologistes,analogie ECO,oui,"Nuance antérieure à la grille 2026 (2021…) : Comme ECO : bloc divers, famille écologistes"
+LCP,liste,"Liste Chasse, pêche, nature, traditions (2004)",DIV,Divers,analogie LDIV,oui,Nuance antérieure à la grille 2026 (2004…) : Comme CPNT : divers
+AUT,individuelle,Autres,DIV,Divers,analogie DIV,non,Nuance antérieure à la grille 2026 (2008…) : Divers
+LEC,liste,Liste écologiste (2004),DIV,Écologistes,analogie LECO,oui,"Nuance antérieure à la grille 2026 (2004…) : Écologistes hors EELV : bloc divers, comme ECO"
+LEPA,candidat,"Corinne Lepage (présidentielle 2002, Cap21)",DIV,Écologistes,analogie ECO,oui,Nuance antérieure à la grille 2026 (2002…) : Écologiste centriste : comme ECO
+NIHO,candidat,"Frédéric Nihous (présidentielle 2007, CPNT)",DIV,Divers,analogie DIV,oui,Nuance antérieure à la grille 2026 (2007…) : Comme CPNT : divers
+LRG,liste,Liste régionaliste (2004),DIV,Régionalistes,analogie LREG,oui,"Nuance antérieure à la grille 2026 (2004…) : Comme REG : bloc divers, famille régionalistes"
+CHEM,candidat,Jacques Cheminade (présidentielle 2012),DIV,Divers,analogie DIV,non,Nuance antérieure à la grille 2026 (2012…) : Solidarité et progrès : divers
+BC-REG,binôme,Binôme régionaliste,DIV,Régionalistes,analogie REG,oui,"Nuance antérieure à la grille 2026 (2021…) : Comme REG : bloc divers, famille régionalistes"
+LGJ,liste,Gilets jaunes,DIV,Divers,analogie LDIV,non,Nuance antérieure à la grille 2026 (2020…) : Divers
+BC-GJ,binôme,Binôme gilets jaunes,DIV,Divers,analogie DIV,non,Nuance antérieure à la grille 2026 (2021…) : Divers
+LNC,liste,Non Communiqué,NC,Non classé,analogie NC,non,Nuance antérieure à la grille 2026 (2020…) : Liste sans nuance communiquée : non classée

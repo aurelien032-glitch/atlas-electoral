@@ -153,7 +153,9 @@ export function Detail({ ctx, selection, resultat, lignes, parent, circonscripti
         <div><strong>{formatPart(resultat.votants / resultat.inscrits)}</strong><span>de participation</span></div>
         <div><strong>{formatNombre(resultat.exprimes)}</strong><span>suffrages exprimés</span></div>
         <p className="chiffres-note">
-          {formatNombre(resultat.votants)} votants, dont {formatNombre(resultat.blancs)} bulletins blancs et {formatNombre(resultat.nuls)} nuls
+          {formatNombre(resultat.votants)} votants, dont {resultat.blancs === null
+            ? `${formatNombre(resultat.nuls)} bulletins blancs et nuls (comptés ensemble avant 2016)`
+            : `${formatNombre(resultat.blancs)} bulletins blancs et ${formatNombre(resultat.nuls)} nuls`}
         </p>
       </div>
       {resultat.votants > resultat.inscrits && (

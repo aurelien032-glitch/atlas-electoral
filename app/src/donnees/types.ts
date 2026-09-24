@@ -9,7 +9,7 @@ export interface ScrutinCatalogue {
   date: string
   /** Territoire où se présente une candidature : la France, une circonscription ou une commune. */
   portee: 'national' | 'circonscription' | 'commune'
-  totaux: { inscrits: number; votants: number; blancs: number; nuls: number; exprimes: number }
+  totaux: { inscrits: number; votants: number; blancs: number | null; nuls: number; exprimes: number }
   jointure_contours: {
     millesime_contours: number
     taux_inscrits_metropole: number
@@ -27,7 +27,8 @@ export interface Catalogue {
 export interface Resultat {
   inscrits: number
   votants: number
-  blancs: number
+  /** Null jusqu'en 2015 : les blancs sont alors comptés avec les nuls. */
+  blancs: number | null
   nuls: number
   exprimes: number
   tete: number | null

@@ -2,6 +2,7 @@
 import react from '@vitejs/plugin-react'
 import { createReadStream, existsSync, statSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { pipeline } from 'node:stream'
 import { extname, join, normalize, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
@@ -20,7 +21,9 @@ function servirPublication(requete: IncomingMessage, reponse: ServerResponse, su
   const chemin = normalize(join(PUBLICATION, relatif))
   if (!chemin.startsWith(PUBLICATION + sep) || !existsSync(chemin) || !statSync(chemin).isFile()) return suite()
   reponse.setHeader('Content-Type', TYPES[extname(chemin)] ?? 'application/octet-stream')
-  createReadStream(chemin).pipe(reponse)
+  // pipeline ferme le fichier même si le navigateur abandonne la requête : sous Windows, un fichier
+  // resté ouvert empêcherait le pipeline de données de le remplacer (« Accès refusé »).
+  pipeline(createReadStream(chemin), reponse, () => {})
 }
 
 function publicationDuPipeline(): Plugin {

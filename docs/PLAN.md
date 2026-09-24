@@ -19,7 +19,8 @@
 > - contours administratifs : versions simplifiées d'Etalab, les tuiles IGN étant trop lourdes (§ 4.1) ;
 > - maquettes : direction **« A · Éditorial »** retenue (Newsreader et Source Sans 3, papier chaud) ; mode Score dans la **teinte du bloc** de la cible ; mode Évolution en **orange ↔ violet** (d'après ColorBrewer PuOr) ;
 > - direction A codée dans `app/` (§ 11) : modes Tête, Score, Participation et Évolution, détail d'un territoire jusqu'au bureau ; choix d'affichage validés (Q11) ;
-> - circonscriptions des législatives (Q8) et communes fusionnées (Q10) : traitées le 24/09 (§ 10).
+> - circonscriptions des législatives (Q8) et communes fusionnées (Q10) : traitées le 24/09 (§ 10) ;
+> - **historique** : 56 tours de 1999 à 2026 publiés, classement des nuances historiques validé (§ 8.4) ; circonscriptions dessinées sur la carte ; étude chronologie et projection 2027 : [docs/etude-chronologie-et-projection.md](etude-chronologie-et-projection.md) (Q12).
 >
 > Méthode : profilage des données (`data:explore-data`), décision d'architecture au format ADR (`engineering:architecture`), cadrage produit (`product-management:write-spec`), principes de visualisation (`dataviz`), audit du prototype (`api-coverage-auditor`, `feature-dev:code-explorer`), recherche des sources et des hébergeurs vérifiée par de vraies requêtes HTTP. Les chiffres « mesurés » viennent de requêtes DuckDB sur les fichiers de `Data/` (annexe A).
 
@@ -513,6 +514,24 @@ Règles qui en découlent :
 - au plus 3 ou 4 couleurs sur une même carte « Tête », les autres forces en gris ;
 - toujours doubler la couleur : étiquettes, légende, vue tableau, texture optionnelle.
 
+### 8.4 Nuances historiques (décidé le 24/09)
+
+129 codes de nuance des scrutins de 1999 à 2021 (et des législatives 2022) absents de la grille 2026 sont
+rattachés au code de leur parti dans cette grille (colonne `source` = « analogie … » de
+`referentiels/nuances.csv`), ou, à défaut, au classement que le ministère a lui-même fait en 2024 (listes
+Asselineau, Philippot, animaliste…). Arbitrages de l'utilisateur :
+- **Front de gauche selon le parti** : Jean-Luc Mélenchon en 2012 et le Parti de gauche comme La France
+  insoumise (extrême gauche) ; les listes Front de gauche (union du PCF et du PG) à gauche ;
+- **UDF, Nouveau Centre, Alliance centriste au centre**, comme leurs héritiers MoDem et UDI ;
+- **« Majorité présidentielle » selon l'époque** : 2007-2011, majorité de Nicolas Sarkozy → droite ; depuis
+  2017 (REM, Ensemble) → centre ;
+- cas limites validés : CPNT → divers ; MPF et RPF → droite (souverainiste) ; Chevènement (MDC, Pôle
+  républicain) → gauche ; José Bové → gauche.
+
+Candidats et listes sans nuance officielle, rattachés par `referentiels/candidats_nuances.csv` : présidentielle
+2017 (11 candidats, même règle qu'en 2022) et européennes 2019 (34 listes, rattachées par leur libellé).
+Tous les classements hérités sont signalés comme cas limites quand l'analogie se discute.
+
 ## 9. Visualisations et parcours
 
 **Charte (décidée le 24/09) : sobre et neutre.** Fond clair, typographie très lisible, couleur réservée aux données. On ne reprend pas les codes visuels de l'État : le DSFR et la police Marianne sont réservés aux sites publics, et le site ne doit pas passer pour un site officiel.
@@ -589,6 +608,15 @@ HTTP        COG
 - **Circonscriptions (Q8).** Source retenue : les fichiers officiels du ministère « résultats définitifs par circonscription » (data.gouv, un par tour). Chaque ligne de voix y trouve sa circonscription par département, panneau, nom et prénom : **100 % d'appariement** (4 009 candidatures au 1er tour, 1 094 au 2d, soit exactement les nombres officiels ; les candidatures de Saint-Barthélemy et Saint-Martin, qui partagent une circonscription, ne sont plus dédoublées). Un bureau n'appartient qu'à une circonscription (contrôle bloquant). Les **totaux par circonscription égalent les totaux officiels** (inscrits et exprimés) dans les 577 circonscriptions ; 76 élus au 1er tour, 501 au 2d. Publiés : niveau `circonscription` des agrégats, colonnes `circonscription` et `elu` des candidatures, `circonscriptions.parquet` (libellé « Rhône, 2e circonscription » et emprise approchée).
 - **Communes fusionnées (Q10).** Table de passage vers le COG 2026 de l'INSEE (`referentiels/passage_communes_2026.csv`, 4 240 anciens codes : commune déléguée ou associée → sa commune de rattachement, sinon la chaîne des fusions ; `python -m atlas_pipeline.cog`). Les agrégats par commune et la correspondance bureau → commune passent au COG 2026 ; les bureaux gardent leur code. Part des inscrits sans commune 2026 : de 0,15 % à 0,02 % (reste Wallis-et-Futuna, agrégé sous un code propre).
 - 69 tests pytest (conservation, réconciliation par circonscription, 577 circonscriptions, 76 élus au 1er tour, passage vers des communes de 2026…).
+
+**Historique, ajouté le 24/09** : 56 tours publiés (1999 à 2026), 137 Mo, construits en 4 min par lecture distante.
+- **Cartes à la commune avant 2022** : les contours de bureaux datent de 2022 ; avant, un même code de bureau ne garantit pas le même périmètre. 7 tours sont cartographiés au bureau (2022 et après).
+- **Blancs et nuls** : jusqu'en 2015, les données les comptent ensemble ; la colonne des blancs reste vide plutôt que d'inventer une répartition, et l'interface l'écrit.
+- **Circonscriptions de 2012 à 2022** : code des données agrégées (département et numéro) ; en 2002 et 2007 (découpage de 1986), pas de circonscription : candidatures identifiées par département.
+- **Européennes 2004 à 2014** (huit grandes circonscriptions), cantonales, départementales, régionales : candidatures identifiées par département.
+- **Panachage** (municipales 2008 à 2020, petites communes) : chaque électeur vote pour plusieurs candidats ; la somme des voix y dépasse les exprimés, comptée à part (`bureaux_panachage`) et non comme anomalie. En 2014 et 2020, ces communes font environ 400 000 candidatures individuelles (12 à 13 Mo par tour, au-delà du budget de 3 Mo) : question Q13.
+- **Corrections de codes** (table de passage) : Saint-Barthélemy et Saint-Martin (collectivités depuis 2007), La Répara-Auriples (code erroné des données anciennes), codes postaux calédoniens des municipales 2008 (vérifiés dans la base officielle de La Poste).
+- **Contours des circonscriptions** (`python -m atlas_pipeline.circonscriptions`) : fusion des contours officiels des bureaux par circonscription, simplifiée à 60 m : 559 circonscriptions (hors Français de l'étranger et collectivités d'outre-mer sans contour), 6,1 Mo (1,8 Mo compressés). Aux législatives, la vue nationale colore les circonscriptions ; leurs limites restent tracées à tous les zooms.
 
 ## 11. Pile technique
 
@@ -701,6 +729,8 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 | Q9 | Totaux officiels des autres tours pour la réconciliation : sources à relever (Conseil constitutionnel, ministère) | Ouvert | Tests |
 | Q10 | Communes fusionnées depuis le scrutin : les contours sont au COG 2026, les résultats 2022 et 2024 au COG de leur année, d'où quelques communes blanches. Appliquer la table de passage du COG dans le pipeline ? | **Traité le 24/09** : table de passage vers le COG 2026 (INSEE) ; 0,02 % d'inscrits sans commune 2026 (§ 10) | — |
 | Q11 | Choix d'affichage proposés en codant la direction A : hachures pour « pas de candidat » et « non comparable » ; évolution lue à la commune ; participation en sarcelle ; colonne de comparaison seulement quand elle a un sens (scrutin national, ou bureau comparé à sa commune) ; noms de famille en casse d'usage (« LE PEN » → « Le Pen »), noms de listes inchangés | **Tranché le 24/09** : tous validés | — |
+| Q12 | Projection 2027 : garder le périmètre actuel (pas de projection) ou ajouter un simulateur de scénarios clairement étiqueté, après la bêta ? Voir l'étude | Ouvert | Phase 4 |
+| Q13 | Municipales 2014 et 2020, petites communes au panachage (≈ 400 000 candidatures individuelles, 12 à 13 Mo par tour) : tout garder, garder à part (chargé au détail d'une commune) ou ne garder que la participation ? | Ouvert | Budget des données |
 | Q6 | Publication de nos données sur data.gouv | **Tranché** : plus tard | P2 |
 
 ## 16. Outillage Claude : skills, plugins, connecteurs

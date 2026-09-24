@@ -16,8 +16,12 @@ export function nomPropre(nom: string): string {
     .join('')
 }
 
-/** Nom affiché d'une candidature : la liste si c'en est une, sinon le candidat. */
+/**
+ * Nom affiché d'une candidature : la liste si c'en est une, sinon le candidat (prénom et nom en casse
+ * d'usage : les données de 2002 écrivent « JACQUES CHIRAC »). Les listes sans nom (européennes 1999)
+ * sont désignées par leur nuance.
+ */
 export function nomCandidature(c: Candidature): string {
-  const nom = c.nom ? nomPropre(c.nom) : null
-  return c.liste_abregee ?? c.liste ?? ([c.prenom, nom].filter(Boolean).join(' ') || `Candidature ${c.panneau ?? ''}`)
+  const personne = [c.prenom && nomPropre(c.prenom), c.nom && nomPropre(c.nom)].filter(Boolean).join(' ')
+  return c.liste_abregee ?? c.liste ?? (personne || `Liste ${c.nuance}${c.panneau ? ` (panneau ${c.panneau})` : ''}`)
 }

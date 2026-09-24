@@ -22,6 +22,7 @@ Le prototype v0 (FastAPI + DuckDB) est conservé sous le tag `prototype-v0` : ne
 cd pipeline && python -m atlas_pipeline.construire && python -m pytest   # données + 65 tests
 cd pipeline && python -m atlas_pipeline.geo                              # contours Etalab + index des territoires
 cd pipeline && python -m atlas_pipeline.cog                              # passage des communes vers le COG 2026
+cd pipeline && python -m atlas_pipeline.circonscriptions --source <GeoJSON des bureaux>  # contours (≈ 4 min)
 cd app && npm run dev        # sert aussi ../publication sous /data
 cd app && npx tsc -b && npm run lint && npm test && npm run build          # avant tout commit
 ```
@@ -43,6 +44,8 @@ cd app && npx tsc -b && npm run lint && npm test && npm run build          # ava
   « résultats par circonscription » (département, panneau, nom, prénom). Une candidature y est identifiée par
   sa circonscription (« 69-02 ») ; un bureau n'a qu'une circonscription (contrôle bloquant) ; les totaux par
   circonscription doivent égaler les totaux officiels.
+- 56 tours (1999-2026), dans `config.SCRUTINS`. Avant 2022, carte à la commune (`carte_au_bureau`). Jusqu'en
+  2015, blancs et nuls sont comptés ensemble (colonne `blancs` vide) : ne jamais inventer de répartition.
 - Les agrégats par commune sont au **COG 2026** (`referentiels/passage_communes_2026.csv`) ; les bureaux gardent
   le code de commune de l'année du vote (le client passe par `communeDu(code, passage)`).
 
