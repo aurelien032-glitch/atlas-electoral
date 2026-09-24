@@ -64,8 +64,8 @@ export function Chronologie({ lignes, erreur, scrutins, courant, niveau, precisi
 
   const notes = [
     'Premiers tours, en % des suffrages exprimés (participation : en % des inscrits).',
-    "Blocs de la grille de 2026, appliquée à tous les scrutins : l'offre politique change d'un scrutin à l'autre.",
-    'Divers et non classés : dans les données.',
+    "Blocs de la grille de 2026, appliquée à tous les scrutins. L'offre électorale change d'un scrutin à l'autre.",
+    'Candidatures divers et non classées : dans le tableau « Voir les données ».',
   ]
   const agrege = niveau === 'france' || niveau === 'departement' || niveau === 'circonscription'
   if (type === 'muni' && agrege) {

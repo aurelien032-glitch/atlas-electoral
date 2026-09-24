@@ -295,7 +295,7 @@ export default function App() {
         bureau: 'bureaux', commune: 'communes', arrondissement: 'arrondissements', circonscription: 'circonscriptions',
       } as const)[survol.niveau]].get(survol.code)
       const tete = r?.tete != null ? parCand.get(r.tete) : undefined
-      if (!r || r.exprimes === 0 || !tete) lignes.push('Aucun résultat rattaché')
+      if (!r || r.exprimes === 0 || !tete) lignes.push('Pas de résultat à ce scrutin')
       else if (r.egalite) lignes.push('Égalité en tête')
       else {
         const avance = r.avance_x10000 ?? 0
@@ -306,7 +306,7 @@ export default function App() {
         : survol.niveau === 'circonscription' ? etatCarte.valeurs.circonscriptions?.get(survol.code)
           : survol.niveau === 'arrondissement' ? etatCarte.valeurs.arrondissements?.get(survol.code)
             : etatCarte.valeurs.communes.get(survol.code)
-      if (v === undefined) lignes.push('Aucun résultat rattaché')
+      if (v === undefined) lignes.push('Pas de résultat à ce scrutin')
       else if (v === null) lignes.push(vue.mode === 'evolution' ? 'Non comparable' : 'Aucune candidature du bloc')
       else lignes.push(vue.mode === 'evolution' ? `${formatEcart(v)} ${unitePoints(v)}` : formatPourcent(v))
     }
@@ -475,8 +475,17 @@ export default function App() {
         </header>
         <Recherche entrees={entreesRecherche} postaux={postaux} onActiver={activerRecherche} onChoisir={allerA} />
         <div id="panneau-corps" className="panneau-corps">
-          {erreur && <p className="alerte">Données indisponibles : {erreur.message}</p>}
-          {chargement && !erreur && <p className="note">Chargement…</p>}
+          {erreur && (
+            <div className="alerte" role="alert">
+              <p>
+                Les résultats n'ont pas pu être chargés : la connexion a peut-être été interrompue. Rechargez la page ;
+                si le problème persiste, réessayez plus tard.
+              </p>
+              <button type="button" className="lien" onClick={() => window.location.reload()}>Recharger la page</button>
+              <p className="detail-erreur">Détail : {erreur.message}</p>
+            </div>
+          )}
+          {chargement && !erreur && <p className="note">Chargement des résultats…</p>}
           {vue.page === 'methodologie' && catalogue.data && scrutin && (
             <Methodologie
               catalogue={catalogue.data} scrutin={scrutin} noms={index.noms} onScrutin={actions.scrutin}
@@ -511,9 +520,9 @@ export default function App() {
           )}
           {vue.page !== 'methodologie' && etatCarte && <Legende description={etatCarte.legende} className="legende-panneau" />}
           {!chargement && <p className="sources">
-            Résultats : ministère de l'Intérieur, via data.gouv.fr. Contours des bureaux : data.gouv.fr (REU 2022,
-            indicatifs). Limites administratives : IGN, simplifiées par Etalab (COG 2026). Blocs : circulaire du ministère
-            de l'Intérieur de février 2026, appliquée à tous les scrutins.
+            Résultats : ministère de l'Intérieur, via data.gouv.fr. Contours des bureaux : data.gouv.fr (répertoire
+            électoral de 2022, indicatifs). Limites administratives : IGN, simplifiées par Etalab (communes au 1er janvier
+            2026). Blocs : circulaire du ministère de l'Intérieur de février 2026, appliquée à tous les scrutins.
           </p>}
         </div>
       </aside>

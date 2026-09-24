@@ -52,7 +52,7 @@ const STYLE: StyleSpecification = {
       type: 'vector',
       url: `pmtiles://${TUILES_BUREAUX}`,
       promoteId: 'codeBureauVote',
-      attribution: 'Contours des bureaux : data.gouv.fr (REU 2022)',
+      attribution: 'Contours des bureaux : data.gouv.fr (2022, indicatifs)',
     },
     communes: {
       type: 'geojson',

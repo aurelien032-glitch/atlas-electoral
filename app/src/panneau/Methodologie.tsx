@@ -214,7 +214,7 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
                 </table>
               </div>
             )
-            : <p className="note">{grille.error ? 'Grille indisponible.' : 'Chargement…'}</p>}
+            : <p className="note">{grille.error ? 'Grille indisponible pour le moment.' : 'Chargement…'}</p>}
           <p className="note-bas">
             <a href={`${RACINE_DONNEES}/referentiels/nuances.csv`} download>Télécharger la grille (CSV)</a> ; elle est
             versionnée dans le dépôt du projet, où chaque choix est justifié.
@@ -260,7 +260,7 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
               </details>
             </>
           )
-          : <p className="note">{manifeste.error ? 'Manifeste indisponible.' : 'Chargement…'}</p>}
+          : <p className="note">{manifeste.error ? 'Rapport qualité indisponible pour le moment.' : 'Chargement…'}</p>}
       </Section>
 
       <Section titre="Limites connues">
@@ -268,7 +268,7 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
           <li>Les contours des bureaux sont indicatifs : reconstitués en 2022 à partir des adresses, ils peuvent s'écarter du découpage réel, et les bureaux créés depuis n'y figurent pas.</li>
           <li>Paris, Lyon et Marseille : les données ne descendent qu'à la ville ; les résultats par arrondissement sont calculés d'après le numéro des bureaux, qui commence par celui de l'arrondissement (règle vérifiée sur tous les scrutins, à un ou deux bureaux près, laissés à la ville). Jusqu'en 2020, les municipales s'y votaient par secteur : chaque arrondissement montre les listes du sien, et la ville n'a pas de liste « en tête ».</li>
           <li>Nouvelle-Calédonie, Polynésie française, Wallis-et-Futuna : pas de contours de bureaux, résultats à la commune.</li>
-          <li>L'offre politique change d'un scrutin à l'autre : une évolution de bloc peut tenir à l'absence d'une candidature.</li>
+          <li>L'offre électorale change d'un scrutin à l'autre : une évolution de bloc peut tenir à l'absence d'une candidature.</li>
           <li>Seule la présidentielle 2022 est, à ce jour, rapprochée des totaux officiels proclamés.</li>
           <li>Scrutins nationaux antérieurs à 2012 (présidentielles et législatives de 2002 et 2007, européennes de 1999 à 2009) : la source ne contient pas les résultats de certains territoires d'outre-mer ni, selon les cas, des Français de l'étranger ; le rapport qualité de chaque scrutin les nomme. De 2012 à 2022, nos résultats nationaux par candidat égalent la proclamation officielle.</li>
         </ul>

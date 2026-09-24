@@ -165,6 +165,8 @@ a:hover, .lien:hover { color: var(--encre-2); }
 .note-bas, .sources { margin: 0; font-size: 12px; line-height: 1.5; color: var(--encre-2); }
 .sources { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--filet); }
 .alerte { margin: 0; font-size: 14px; color: var(--alerte); }
+.alerte p { margin: 0 0 6px; }
+.alerte .detail-erreur { font-size: 12px; color: var(--encre-2); }
 
 /* Carte et éléments posés dessus. */
 .zone-carte { position: relative; min-width: 0; }

@@ -104,7 +104,7 @@ export function Detail({ ctx, selection, resultat, lignes, parent, circonscripti
       </div>
     </>
   )
-  if (!resultat) return <>{entete}<p className="note">Aucun résultat rattaché à ce territoire pour ce scrutin.</p></>
+  if (!resultat) return <>{entete}<p className="note">Pas de résultat pour ce territoire à ce scrutin : il n'y votait pas, ou la source ne le contient pas.</p></>
   if (resultat.exprimes === 0) return <>{entete}<p className="note">Aucun suffrage exprimé.</p></>
 
   const candidature = (cand: number) => ctx.parCand.get(cand) ?? supplementaires?.get(cand)

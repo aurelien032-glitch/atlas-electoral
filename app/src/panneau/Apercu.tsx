@@ -94,7 +94,7 @@ function ApercuTete({ ctx, actions }: Props) {
   let phrase: string
   let lignes: LigneResultat[]
   if (national) {
-    const tetes = compterTetes(ctx.agregats, 'departement', (cand) => cand, ctx.index.departements).slice(0, 3)
+    const tetes = compterTetes(ctx.agregats, 'departement', (cand) => cand, ctx.index.departements)
     phrase = tetes.length === 0 ? '' : `${enumerer(tetes.map(([cand, n], i) =>
       i === 0 ? `${nom(cand)} arrive en tête dans ${n} ${pluriel(n, 'département')}` : `${nom(cand)} dans ${n}`))}.`
     lignes = [...ctx.candidats].sort((a, b) => b.voix_total - a.voix_total).map((c) => ({
@@ -104,7 +104,7 @@ function ApercuTete({ ctx, actions }: Props) {
   } else {
     const blocDe = (cand: number): Bloc => ctx.parCand.get(cand)?.bloc ?? 'NC'
     const parCirconscription = ctx.scrutin.portee === 'circonscription'
-    const tetes = compterTetes(ctx.agregats, parCirconscription ? 'circonscription' : 'commune', blocDe).slice(0, 3)
+    const tetes = compterTetes(ctx.agregats, parCirconscription ? 'circonscription' : 'commune', blocDe)
     phrase = `Bloc en tête, par ${parCirconscription ? 'circonscription' : 'commune'} : ${enumerer(tetes.map(([b, n]) => `${LIBELLE_BLOC[b].toLowerCase()} dans ${formatNombre(n)}`))}.`
     const elus = ctx.candidats.filter((c) => c.elu)
     if (elus.length > 0) {
@@ -168,7 +168,7 @@ function ApercuScore({ ctx, cibles, cible, actions }: Props) {
     </label>
   )
   if (!cible || !ctx.agregatsVoix) {
-    return <><ChoixScrutin ctx={ctx} actions={actions} />{selecteur}<p className="note">Chargement…</p></>
+    return <><ChoixScrutin ctx={ctx} actions={actions} />{selecteur}<p className="note">Chargement des résultats…</p></>
   }
   const france = partsAuNiveau(ctx.agregats, ctx.agregatsVoix, 'france', cible.retenue).get('FR')
   const { hauts, bas } = extremes(partsAuNiveau(ctx.agregats, ctx.agregatsVoix, 'departement', cible.retenue), ctx.index.departements)
@@ -232,7 +232,7 @@ function ApercuEvolutionBloc({ ctx, bloc, evolution, actions }: Props) {
       <ChoixScrutin ctx={ctx} actions={actions} libelle="À" />
     </>
   )
-  if (!evolution) return <>{choix}<p className="note">Chargement…</p></>
+  if (!evolution) return <>{choix}<p className="note">Chargement des résultats…</p></>
   const [avant, apres] = evolution.france
   const { hauts, bas } = extremes(evolution.departements, ctx.index.departements)
   const baisses = bas.filter(([, v]) => v < 0)

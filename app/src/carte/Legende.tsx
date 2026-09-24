@@ -45,7 +45,7 @@ export function Legende({ description, className }: { description: DescriptionLe
             <span>Non classé <small>: candidatures sans nuance du ministère, dans les petites communes</small></span>
           </li>
           <li><span className="pastilles"><Pastille couleur={GRIS.egalite} /></span>Égalité en tête</li>
-          <li><span className="pastilles"><SansResultat /></span>Aucun résultat rattaché</li>
+          <li><span className="pastilles"><SansResultat /></span>Pas de résultat</li>
         </ul>
         {description.couvertureCommune !== null && (
           <p className="legende-note">
@@ -75,7 +75,7 @@ export function Legende({ description, className }: { description: DescriptionLe
             <span className="nombre discret">{formatNombre(description.sansObjet)}</span>
           </li>
         )}
-        <li><SansResultat /><span className="libelle">Aucun résultat rattaché</span></li>
+        <li><SansResultat /><span className="libelle">Pas de résultat</span></li>
       </ul>
     </section>
   )
