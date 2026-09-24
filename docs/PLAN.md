@@ -685,6 +685,20 @@ Budgets : moins de 450 Ko de JavaScript initial compressé (MapLibre compris) et
 5. **Accessibilité** : vue tableau, navigation au clavier, contrastes suffisants, mobile.
 6. **Transparence** : page méthodologie, sources, grille des nuances, rapport qualité.
 
+**Revue avant la bêta (24/09)** : la mise en ligne est prête (CI et déploiement : [docs/mise-en-ligne.md](mise-en-ligne.md)) ;
+il reste, pour ouvrir au public :
+
+| Exigence P0 | État | Reste à faire |
+|---|---|---|
+| 1. Scrutins et carte | **Fait** : 56 tours, modes Tête, Score, Participation (et Évolution), France → commune → bureau | Mesurer le recoloriage (moins d'une seconde) sur le site en ligne |
+| 1. Bureaux sans contour | Partiel : comptés dans leur commune et dans le panneau ; couverture écrite dans la légende des cartes à la commune | Donner aussi, sur les cartes au bureau, la part des inscrits sans contour |
+| 1. Paris, Lyon, Marseille | À faire | Les données ne descendent qu'à la commune (bureaux « 75056_… ») : rattacher les bureaux aux arrondissements et secteurs, et vérifier la réforme de 2025 pour les municipales 2026 |
+| 2. Panneau territoire | Partiel : participation, barres triées, couleur du bloc | Afficher la nuance officielle et le bloc de chaque candidature (aujourd'hui, seulement pour les cas limites) |
+| 3. Recherche et permaliens | Partiel : nom et code INSEE ; chaque vue a son lien | Recherche par code postal (base officielle de La Poste) |
+| 4. Exhaustivité | Partiel : outre-mer et Français de l'étranger dans les données et la recherche ; total France égal au total officiel pour la présidentielle 2022 | Accès direct à l'outre-mer sur la carte (encarts ou raccourcis), Français de l'étranger dans l'aperçu, totaux officiels des autres tours (Q9) |
+| 5. Accessibilité | Largement fait : tableaux, clavier dans le panneau, palettes validées, mobile | Audit Lighthouse et lecteur d'écran ; la carte elle-même n'est pas utilisable au clavier (le panneau et la recherche le sont) |
+| 6. Transparence | Partiel : sources citées sous chaque vue, grille dans `referentiels/`, manifestes par scrutin | Page méthodologie dans le site (aujourd'hui, ce plan sur GitHub), grille des nuances consultable, rapport qualité par scrutin |
+
 **P1 — juste après**
 
 - Carte d'évolution et comparateur de scrutins.

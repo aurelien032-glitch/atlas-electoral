@@ -1,0 +1,17 @@
+# En-têtes HTTP du site sur Cloudflare Pages (docs/mise-en-ligne.md). `npm run preview` les applique
+# aussi, pour vérifier la politique de sécurité en local avant de publier.
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://data-pipeline-open.s3.sbg.io.cloud.ovh.net https://geo.api.gouv.fr; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Cross-Origin-Opener-Policy: same-origin
+
+# Fichiers du build, nommés d'après leur contenu : jamais modifiés, gardés en cache un an.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Données publiées : mêmes noms d'une publication à l'autre, donc revalidées à chaque visite (ETag).
+/data/*
+  Cache-Control: public, max-age=0, must-revalidate

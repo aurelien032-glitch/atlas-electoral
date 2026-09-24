@@ -1,6 +1,6 @@
 /// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react'
-import { createReadStream, existsSync, statSync } from 'node:fs'
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { pipeline } from 'node:stream'
 import { extname, join, normalize, sep } from 'node:path'
@@ -26,6 +26,35 @@ function servirPublication(requete: IncomingMessage, reponse: ServerResponse, su
   pipeline(createReadStream(chemin), reponse, () => {})
 }
 
+/**
+ * Aperçu de production (`npm run preview`) : applique les en-têtes de public/_headers, ceux que
+ * Cloudflare Pages enverra, pour vérifier en local la politique de sécurité (CSP) avant de publier.
+ */
+function entetesDePages(): Plugin {
+  const regles: { motif: RegExp; entetes: [string, string][] }[] = []
+  const texte = readFileSync(fileURLToPath(new URL('public/_headers', import.meta.url)), 'utf8')
+  for (const ligne of texte.split(/\r?\n/)) {
+    if (!ligne.trim() || ligne.trim().startsWith('#')) continue
+    if (!/^\s/.test(ligne)) {
+      const motif = ligne.trim().replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')
+      regles.push({ motif: new RegExp(`^${motif}$`), entetes: [] })
+    } else {
+      const i = ligne.indexOf(':')
+      regles.at(-1)?.entetes.push([ligne.slice(0, i).trim(), ligne.slice(i + 1).trim()])
+    }
+  }
+  return {
+    name: 'entetes-de-pages',
+    configurePreviewServer: (serveur) => {
+      serveur.middlewares.use((requete, reponse, suite) => {
+        const chemin = (requete.url ?? '/').split('?')[0]
+        for (const r of regles) if (r.motif.test(chemin)) for (const [nom, valeur] of r.entetes) reponse.setHeader(nom, valeur)
+        suite()
+      })
+    },
+  }
+}
+
 function publicationDuPipeline(): Plugin {
   return {
     name: 'publication-du-pipeline',
@@ -35,7 +64,7 @@ function publicationDuPipeline(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), publicationDuPipeline()],
+  plugins: [react(), entetesDePages(), publicationDuPipeline()],
   // MapLibre 6 est découpé en trois modules ES (principal, worker, code partagé) : le pré-bundling de
   // Vite les sépare mal, on le laisse donc de côté ; le worker est compilé comme module ES.
   optimizeDeps: { exclude: ['maplibre-gl'] },

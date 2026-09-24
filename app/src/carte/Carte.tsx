@@ -170,8 +170,10 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
       maxZoom: 16,
     })
     carte.addControl(new NavigationControl({ showCompass: false }), 'top-right')
-    carte.on('styleimagemissing', (e) => {
-      if (e.id === 'hachures' && !carte.hasImage('hachures')) carte.addImage('hachures', motifHachures(), { pixelRatio: 2 })
+    // Motif des hachures, dessiné à la première demande (depuis MapLibre 6.11, l'événement
+    // « styleimagemissing » arrive trop tard pour servir cette demande-là).
+    carte.setMissingStyleImageResolver((id) => {
+      if (id === 'hachures' && !carte.hasImage('hachures')) carte.addImage('hachures', motifHachures(), { pixelRatio: 2 })
     })
     // Les résultats peuvent être appliqués dès que les sources existent : inutile d'attendre le
     // premier rendu complet ('load'), qui tarde quand l'onglet est en arrière-plan.

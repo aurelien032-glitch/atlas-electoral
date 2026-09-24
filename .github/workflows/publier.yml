@@ -1,0 +1,89 @@
+# Publication, déclenchée à la main (onglet Actions, « Run workflow ») : reconstruit toutes les données
+# à partir des sources officielles, les contrôle, construit le site et le déploie sur Cloudflare Pages.
+# Rien n'est déployé si un contrôle échoue. Réglages préalables : docs/mise-en-ligne.md.
+name: Publier
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Deux publications ne se chevauchent jamais : la seconde attend la première.
+concurrency:
+  group: publication
+  cancel-in-progress: false
+
+env:
+  PROJET_PAGES: atlas-electoral
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: pipeline/requirements.txt
+      - run: pip install -r pipeline/requirements.txt
+
+      - name: Contours administratifs et index des territoires (Etalab)
+        working-directory: pipeline
+        run: python -m atlas_pipeline.geo
+      - name: Contours des circonscriptions (GeoJSON officiel des bureaux, lu en flux)
+        working-directory: pipeline
+        run: python -m atlas_pipeline.circonscriptions
+      - name: Résultats des 56 tours et séries (Parquet officiels, lus à distance)
+        working-directory: pipeline
+        run: python -m atlas_pipeline.construire
+      - name: Contrôles sur les fichiers publiés
+        working-directory: pipeline
+        run: python -m pytest --junitxml=../publication/controles.xml
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Site
+        working-directory: app
+        run: |
+          npm ci
+          npm run build
+      - name: Données déposées à côté du site (/data/v1)
+        run: |
+          mkdir -p app/dist/data
+          cp -r publication/v1 app/dist/data/v1
+          echo "$(find app/dist -type f | wc -l) fichiers, $(du -sh app/dist | cut -f1)"
+
+      - name: Rapport qualité (manifestes et contrôles)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-qualite
+          path: |
+            publication/controles.xml
+            publication/v1/scrutins.json
+            publication/v1/sources.lock.json
+            publication/v1/*/scrutin.json
+            publication/v1/series/series.json
+          if-no-files-found: warn
+
+      - name: Déploiement sur Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Secrets CLOUDFLARE_API_TOKEN et CLOUDFLARE_ACCOUNT_ID absents : voir docs/mise-en-ligne.md"
+            exit 1
+          fi
+          npx --yes wrangler@4 pages project list | grep -q "$PROJET_PAGES" \
+            || npx --yes wrangler@4 pages project create "$PROJET_PAGES" --production-branch=main
+          npx --yes wrangler@4 pages deploy app/dist --project-name="$PROJET_PAGES" --branch=main \
+            --commit-hash="$GITHUB_SHA" --commit-message="Publication $GITHUB_RUN_NUMBER"

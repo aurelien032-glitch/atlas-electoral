@@ -26,7 +26,12 @@ cd pipeline && python -m atlas_pipeline.cog                              # passa
 cd pipeline && python -m atlas_pipeline.circonscriptions --source <GeoJSON des bureaux>  # contours (≈ 4 min)
 cd app && npm run dev        # sert aussi ../publication sous /data
 cd app && npx tsc -b && npm run lint && npm test && npm run build          # avant tout commit
+cd app && npm run preview    # build de production avec les en-têtes de public/_headers (CSP)
 ```
+
+Mise en ligne : [docs/mise-en-ligne.md](docs/mise-en-ligne.md). Workflows `Vérifications` (chaque envoi) et
+`Publier` (à la main : reconstruit tout depuis les sources, contrôle, déploie sur Cloudflare Pages). Tout
+nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/public/_headers`.
 
 ## Règles de données
 
