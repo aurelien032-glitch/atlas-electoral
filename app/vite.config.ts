@@ -55,6 +55,29 @@ function entetesDePages(): Plugin {
   }
 }
 
+/**
+ * Build : les deux polices (titres et texte) sont préchargées dès le HTML. Sans cela, le navigateur ne les
+ * découvre qu'en appliquant la feuille de style, et le texte change de police (et de place) en cours de route.
+ */
+function prechargerPolices(): Plugin {
+  let base = '/'
+  return {
+    name: 'precharger-polices',
+    apply: 'build',
+    configResolved: (config) => { base = config.base },
+    transformIndexHtml: {
+      order: 'post',
+      handler: (_html, contexte) => Object.keys(contexte.bundle ?? {})
+        .filter((fichier) => /(newsreader|source-sans-3)-latin-wght-normal-.*\.woff2$/.test(fichier))
+        .map((fichier) => ({
+          tag: 'link',
+          attrs: { rel: 'preload', as: 'font', type: 'font/woff2', href: `${base}${fichier}`, crossorigin: '' },
+          injectTo: 'head' as const,
+        })),
+    },
+  }
+}
+
 function publicationDuPipeline(): Plugin {
   return {
     name: 'publication-du-pipeline',
@@ -64,7 +87,7 @@ function publicationDuPipeline(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), entetesDePages(), publicationDuPipeline()],
+  plugins: [react(), entetesDePages(), publicationDuPipeline(), prechargerPolices()],
   // MapLibre 6 est découpé en trois modules ES (principal, worker, code partagé) : le pré-bundling de
   // Vite les sépare mal, on le laisse donc de côté ; le worker est compilé comme module ES.
   optimizeDeps: { exclude: ['maplibre-gl'] },

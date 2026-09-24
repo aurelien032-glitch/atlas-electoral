@@ -81,6 +81,14 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   chaque bureau prend la couleur de sa commune.
 - MapLibre 6 est en ESM seul : garder `optimizeDeps.exclude: ['maplibre-gl']`, `worker.format: 'es'` et
   `setWorkerUrl(urlWorker)` (import `?worker&url`), sinon le worker ne se charge pas.
+- La carte (et la feuille de style de MapLibre) est chargée en différé (`React.lazy`) : le panneau s'affiche
+  d'abord. Ses styles arrivant après les nôtres, nos réglages des classes `maplibregl-*` passent par
+  `.zone-carte` pour l'emporter.
+- Ne jamais passer à la carte un tableau ou un objet recréé à chaque rendu (`?? []`) : son effet de coloriage
+  se relancerait à chaque mise à jour (plusieurs secondes sur un téléphone). Les états ne sont posés que
+  s'ils changent ; ceux des bureaux, à l'approche du zoom des bureaux.
+- Les Parquet sont téléchargés sur la page (préchargements de `index.html`) puis décodés dans un worker
+  (`donnees/decodeur.worker.ts`) : décoder l'index des territoires ou 70 000 bureaux bloquerait la page.
 - Appliquer les résultats dès `style.load`, pas `load` (qui attend un rendu complet, bloqué en arrière-plan).
 - Le feature-state porte `couleur`, `opacite`, `hachure` et `selection`. Sans état, un territoire n'est pas
   peint (« sans résultat ») ; les hachures marquent une valeur sans objet (pas de candidat du bloc, pas

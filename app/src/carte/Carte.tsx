@@ -4,6 +4,8 @@ import {
   type FeatureIdentifier, type GeoJSONSource, type MapLayerMouseEvent,
 } from 'maplibre-gl'
 import urlWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
+// Styles des contrôles de la carte : chargés avec elle, pas avant (ils ne bloquent plus le premier affichage).
+import 'maplibre-gl/dist/maplibre-gl.css'
 import type { Feature } from 'geojson'
 import { Protocol } from 'pmtiles'
 import { useEffect, useRef, useState } from 'react'
@@ -11,6 +13,7 @@ import { RACINE_DONNEES } from '../donnees/requetes'
 import { arrondissementDu, estArrondissement } from '../donnees/territoires'
 import type { BureauContour } from '../donnees/types'
 import type { Coloriage } from '../modes'
+import type { Etat } from './etats'
 import type { Selection } from '../vue'
 import { FOND_CARTE, TRAIT_HACHURES } from './couleurs'
 
@@ -158,6 +161,24 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
   const conteneur = useRef<HTMLDivElement>(null)
   const refCarte = useRef<CarteMapLibre | null>(null)
   const refSelection = useRef<Selection | undefined>(undefined)
+  const refPoses = useRef(new Map<string, ReadonlyMap<string, Etat>>())
+
+  /**
+   * États d'une source, posés en ne touchant qu'aux territoires qui changent : MapLibre met près d'une
+   * seconde (plusieurs sur un téléphone) à poser 35 000 états, souvent identiques d'un coloriage à l'autre
+   * (les bureaux qui arrivent après les communes, par exemple).
+   */
+  function poser(carte: CarteMapLibre, source: 'communes' | 'circonscriptions', etats: ReadonlyMap<string, Etat>) {
+    const avant = refPoses.current.get(source) ?? new Map<string, Etat>()
+    for (const code of avant.keys()) if (!etats.has(code)) carte.removeFeatureState({ source, id: code })
+    for (const [code, etat] of etats) {
+      const a = avant.get(code)
+      if (!a || a.couleur !== etat.couleur || a.opacite !== etat.opacite || a.hachure !== etat.hachure) {
+        carte.setFeatureState({ source, id: code }, { ...etat })
+      }
+    }
+    refPoses.current.set(source, etats)
+  }
   const [prete, setPrete] = useState(false)
 
   useEffect(() => {
@@ -206,31 +227,40 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
   useEffect(() => {
     const carte = refCarte.current
     if (!carte || !prete || !coloriage) return
-    carte.removeFeatureState({ source: 'communes' })
-    carte.removeFeatureState({ source: 'circonscriptions' })
-    carte.removeFeatureState({ source: 'bureaux', sourceLayer: COUCHE_BUREAUX })
-    for (const [code, etat] of coloriage.communes) carte.setFeatureState({ source: 'communes', id: code }, { ...etat })
     // Paris, Lyon et Marseille : leurs arrondissements, dessinés par-dessus la ville, ont leurs propres résultats.
-    for (const [code, etat] of coloriage.arrondissements ?? []) carte.setFeatureState({ source: 'communes', id: code }, { ...etat })
+    poser(carte, 'communes', new Map([...coloriage.communes, ...(coloriage.arrondissements ?? [])]))
     // Aux législatives, la vue nationale montre les circonscriptions à la place des communes.
     const parCirconscription = (coloriage.circonscriptions?.size ?? 0) > 0
-    for (const [code, etat] of coloriage.circonscriptions ?? []) carte.setFeatureState({ source: 'circonscriptions', id: code }, { ...etat })
+    poser(carte, 'circonscriptions', coloriage.circonscriptions ?? new Map())
+    carte.removeFeatureState({ source: 'bureaux', sourceLayer: COUCHE_BUREAUX })
     for (const couche of ['circonscriptions', 'circonscriptions-hachures']) carte.setLayoutProperty(couche, 'visibility', parCirconscription ? 'visible' : 'none')
     for (const couche of ['communes', 'communes-hachures']) carte.setLayoutProperty(couche, 'visibility', parCirconscription ? 'none' : 'visible')
-    const bureau = (code: string, etat: object) => carte.setFeatureState({ source: 'bureaux', sourceLayer: COUCHE_BUREAUX, id: code }, etat)
-    if (coloriage.bureaux) {
-      for (const [code, etat] of coloriage.bureaux) bureau(code, { ...etat })
-    } else {
-      for (const { code_bv, code_commune } of contours) {
-        const arrondissement = arrondissementDu(code_bv)
-        const etat = (arrondissement && coloriage.arrondissements?.get(arrondissement)) || coloriage.communes.get(code_commune)
-        if (etat) bureau(code_bv, { ...etat })
-      }
-    }
     carte.setLayoutProperty('bureaux-contours', 'visibility', auBureau ? 'visible' : 'none')
-    // Retirer les états a aussi effacé la sélection : on la remet.
+    // Retirer des états a pu effacer la sélection : on la remet.
     const surlignee = refSelection.current && cible(refSelection.current)
     if (surlignee) carte.setFeatureState(surlignee, { selection: true })
+
+    // Les 70 000 bureaux ne se voient qu'à partir du zoom des bureaux : leurs états (plusieurs secondes sur
+    // un téléphone) ne sont posés qu'à l'approche de ce zoom, une fois par coloriage.
+    let bureauxPoses = false
+    const poserBureaux = () => {
+      if (bureauxPoses || carte.getZoom() < ZOOM_BUREAUX - 1) return
+      bureauxPoses = true
+      const bureau = (code: string, etat: object) => carte.setFeatureState({ source: 'bureaux', sourceLayer: COUCHE_BUREAUX, id: code }, etat)
+      if (coloriage.bureaux) {
+        for (const [code, etat] of coloriage.bureaux) bureau(code, { ...etat })
+      } else {
+        for (const { code_bv, code_commune } of contours) {
+          const arrondissement = arrondissementDu(code_bv)
+          const etat = (arrondissement && coloriage.arrondissements?.get(arrondissement)) || coloriage.communes.get(code_commune)
+          if (etat) bureau(code_bv, { ...etat })
+        }
+      }
+      if (refSelection.current?.niveau === 'bureau') bureau(refSelection.current.code, { selection: true })
+    }
+    poserBureaux()
+    carte.on('zoomend', poserBureaux)
+    return () => { carte.off('zoomend', poserBureaux) }
   }, [prete, coloriage, contours, auBureau])
 
   useEffect(() => {

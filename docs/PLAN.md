@@ -655,6 +655,12 @@ Nouvelle base, mais avec des outils déjà maîtrisés :
 
 Budgets : moins de 450 Ko de JavaScript initial compressé (MapLibre compris) et 3 Mo de données au plus par scrutin. Lighthouse mobile d'au moins 90.
 
+**Audit du 24/09 (Lighthouse et traces Chrome, téléphone émulé : 4G, processeur ralenti 4 fois)** : accessibilité 97, bonnes pratiques 100, SEO 91 → corrigés : `robots.txt`, lien d'attribution de la carte souligné. Vitesse :
+- **décalage de mise en page (CLS) 0,47 → 0** : volet mobile de hauteur fixe, sources affichées après les chiffres ;
+- **chiffres du scrutin demandés à 4 s au lieu de 10** : MapLibre chargé en différé (JavaScript initial 120 → 103 Ko compressés, carte 276 Ko ensuite), catalogue, index des territoires et polices préchargés dès le HTML, Parquet décodés dans un worker, historique, encarts et bureaux demandés après les chiffres, contours des bureaux seulement pour les cartes à la commune, recherche préparée à la première saisie ;
+- **coloriage** : une boucle relançait tout le coloriage à chaque rendu (jusqu'à 15 s de fil bloqué sur mobile) ; les 35 000 états des communes ne sont plus posés que s'ils changent, ceux des 70 000 bureaux à l'approche de leur zoom ;
+- limite de la mesure : le Chrome de test dessine sans carte graphique (WebGL logiciel), le rendu de la carte y est bien plus lent que sur un vrai téléphone ; à remesurer sur le site en ligne.
+
 **Squelette réalisé le 24/09** (`app/`) :
 - sélecteur de scrutin dans l'URL (`?scrutin=…`), carte « Tête » par bloc avec trois paliers d'intensité, légende, détail du territoire survolé ;
 - vue nationale par commune, bureaux à partir du zoom 9, bascule automatique au niveau commune pour les municipales 2026 ;

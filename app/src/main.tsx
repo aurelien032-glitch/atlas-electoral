@@ -1,7 +1,6 @@
 import '@fontsource-variable/newsreader/wght.css'
 import '@fontsource-variable/source-sans-3/wght.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import 'maplibre-gl/dist/maplibre-gl.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'

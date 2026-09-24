@@ -1,6 +1,6 @@
 import type { Feature } from 'geojson'
-import { useCallback, useMemo, useState } from 'react'
-import { Carte, type Cadrage, type Survol } from './carte/Carte'
+import { Suspense, lazy, useCallback, useMemo, useState } from 'react'
+import type { Cadrage, Survol } from './carte/Carte'
 import { Encarts } from './carte/Encarts'
 import {
   LIBELLE_BLOC, PALETTE_EVOLUTION, RAMPE_PARTICIPATION, RAMPE_SCORE, SEUILS_EVOLUTION, palier, type BlocColore,
@@ -50,6 +50,12 @@ function voixDuPanachage(lignes: readonly VoixPanachage[]) {
   return [...sommes].map(([cand, voix]) => ({ cand, voix }))
 }
 const FRANCE_METROPOLITAINE: [number, number, number, number] = [-5.2, 41.3, 9.6, 51.1]
+
+// MapLibre (270 Ko compressés) arrive après l'application : le panneau et ses chiffres s'affichent sans
+// attendre que la carte soit prête.
+const Carte = lazy(() => import('./carte/Carte').then((m) => ({ default: m.Carte })))
+// Référence stable : un tableau vide recréé à chaque rendu relancerait tout le coloriage de la carte.
+const AUCUN_CONTOUR: BureauContour[] = []
 /** Territoires hors de la métropole, accessibles depuis l'aperçu : départements et collectivités d'outre-mer,
  * Français établis hors de France (« ZZ »). */
 const HORS_METROPOLE = ['971', '972', '973', '974', '976', '975', '977', '978', '986', '987', '988', 'ZZ']
@@ -83,7 +89,9 @@ function ZoneCarte({ contenu, encarts, onChoisirEncart, onCadrer, ...props }: Pr
   const bulle = survol && contenu(survol)
   return (
     <div className="zone-carte-fond">
-      <Carte {...props} onSurvol={setSurvol} />
+      <Suspense fallback={null}>
+        <Carte {...props} onSurvol={setSurvol} />
+      </Suspense>
       {encarts && !props.selection && (
         <Encarts
           encarts={encarts} coloriage={props.coloriage} onSurvol={setSurvol} onChoisir={onChoisirEncart} onCadrer={onCadrer}
@@ -112,11 +120,14 @@ export default function App() {
 
   const agregats = useAgregats(id)
   const candidats = useCandidats(id)
-  const bureaux = useBureaux(auBureau || selection?.niveau === 'bureau' ? id : undefined)
+  const chiffresPrets = agregats.isSuccess && candidats.isSuccess
+  // Bureaux (70 000 lignes) : après les chiffres du panneau, pour ne pas leur disputer le réseau.
+  const bureaux = useBureaux(chiffresPrets && (auBureau || selection?.niveau === 'bureau') ? id : undefined)
   const agregatsVoix = useAgregatsVoix(vue.mode === 'score' || vue.mode === 'evolution' || selection ? id : undefined)
   const voix = useVoix((vue.mode === 'score' && carteAuBureau) || selection?.niveau === 'bureau' ? id : undefined)
-  const contours = useContours()
-  const encarts = useEncarts()
+  // Correspondance bureau → commune : seulement pour les cartes à la commune.
+  const contours = useContours(scrutin !== undefined && !carteAuBureau)
+  const encarts = useEncarts(chiffresPrets)
   const territoires = useTerritoires()
   const passage = usePassage()
   const circonscriptions = useCirconscriptions(scrutin?.portee === 'circonscription' ? id : undefined)
@@ -151,7 +162,7 @@ export default function App() {
   const niveauSerie = !selection ? 'france'
     : selection.niveau === 'bureau' ? (arrondissementDuBureau ? 'arrondissement' : 'commune') : selection.niveau
   const codeSerie = !selection ? 'FR' : arrondissementDuBureau ?? communeChoisie ?? selection.code
-  const seriesTerritoires = useSeriesTerritoires(niveauSerie !== 'commune')
+  const seriesTerritoires = useSeriesTerritoires(niveauSerie !== 'commune' && chiffresPrets)
   const seriesCommunes = useSeriesCommunes(niveauSerie === 'commune' ? departementDe(codeSerie) : undefined)
   const serie = niveauSerie === 'commune' ? seriesCommunes : seriesTerritoires
   const lignesSerie = useMemo(
@@ -159,15 +170,17 @@ export default function App() {
     [serie.data, codeSerie, niveauSerie],
   )
   const cibles = useMemo(() => optionsCibles(scrutin, candidats.data), [scrutin, candidats.data])
-  // Recherche : à pertinence égale, les communes qui comptent le plus d'inscrits passent devant.
+  // Recherche, préparée à la première utilisation du champ (normaliser 35 000 noms prend du temps) : à
+  // pertinence égale, les communes qui comptent le plus d'inscrits passent devant.
+  const [rechercheActive, setRechercheActive] = useState(false)
+  const activerRecherche = useCallback(() => setRechercheActive(true), [])
   const entreesRecherche = useMemo(() => {
+    if (!rechercheActive) return []
     const inscrits = new Map((agregats.data ?? []).filter((a) => a.niveau === 'commune').map((a) => [a.code, a.inscrits]))
     // L'index contient départements, communes et, aux législatives, circonscriptions (« rhône 2e »).
     return preparer([...index.territoires.values()], inscrits)
-  }, [agregats.data, index])
-  // Codes postaux : chargés à la première utilisation du champ de recherche.
-  const [rechercheActive, setRechercheActive] = useState(false)
-  const activerRecherche = useCallback(() => setRechercheActive(true), [])
+  }, [rechercheActive, agregats.data, index])
+  // Codes postaux : chargés eux aussi à la première utilisation du champ.
   const codesPostaux = useCodesPostaux(rechercheActive)
   const postaux = useMemo(
     () => codesPostaux.data && indexerCodesPostaux(codesPostaux.data, entreesRecherche),
@@ -188,8 +201,11 @@ export default function App() {
   const etatCarte = useMemo((): EtatCarte | null => {
     if (!scrutin || !agregats.data || !candidats.data) return null
     const communes = agregats.data.filter((a) => a.niveau === 'commune')
-    const listeBureaux = carteAuBureau ? bureaux.data : null
-    if (listeBureaux === undefined) return null
+    // En tête : les communes se colorent sans attendre les bureaux (chargés ensuite). Les autres modes les
+    // attendent, car leurs classes se calculent sur les bureaux.
+    const chargementBureaux = carteAuBureau && bureaux.data === undefined
+    if (chargementBureaux && vue.mode !== 'tete') return null
+    const listeBureaux = carteAuBureau ? bureaux.data ?? null : null
     const unite = listeBureaux ? 'bureaux' : 'communes'
     const poids = (champ: 'exprimes' | 'inscrits') => listeBureaux
       ? new Map(listeBureaux.map((b) => [b.code_bv, b[champ]]))
@@ -491,17 +507,17 @@ export default function App() {
             />
           )}
           {vue.page !== 'methodologie' && etatCarte && <Legende description={etatCarte.legende} className="legende-panneau" />}
-          <p className="sources">
+          {!chargement && <p className="sources">
             Résultats : ministère de l'Intérieur, via data.gouv.fr. Contours des bureaux : data.gouv.fr (REU 2022,
             indicatifs). Limites administratives : IGN, simplifiées par Etalab (COG 2026). Blocs : circulaire du ministère
             de l'Intérieur de février 2026, appliquée à tous les scrutins.
-          </p>
+          </p>}
         </div>
       </aside>
       <main className="zone-carte">
         <ZoneCarte
           coloriage={etatCarte?.coloriage ?? null}
-          contours={contours.data ?? []}
+          contours={contours.data ?? AUCUN_CONTOUR}
           auBureau={carteAuBureau}
           circonscriptions={scrutin?.portee === 'circonscription'}
           selection={selection}

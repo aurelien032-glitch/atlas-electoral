@@ -91,17 +91,19 @@ export function useSeriesCommunes(departement: string | undefined) {
 /** Législatives seulement : libellés et emprises des circonscriptions. */
 export const useCirconscriptions = (scrutin?: string) => useFichier<Circonscription>(scrutin, 'circonscriptions.parquet')
 
-function useGeo<T>(fichier: string) {
+function useGeo<T>(fichier: string, actif = true) {
   return useQuery({
     queryKey: ['geo', fichier],
+    enabled: actif,
     queryFn: ({ signal }) => lireParquet<T>(`${RACINE_DONNEES}/geo/${fichier}`, signal),
   })
 }
 
 /** Encarts de la vue nationale : Paris et petite couronne, départements d'outre-mer. */
-export function useEncarts() {
+export function useEncarts(actif: boolean) {
   return useQuery({
     queryKey: ['geo', 'encarts.json'],
+    enabled: actif,
     queryFn: async ({ signal }) => {
       const reponse = await fetch(`${RACINE_DONNEES}/geo/encarts.json`, { signal })
       if (!reponse.ok) throw new Error(`encarts indisponibles (HTTP ${reponse.status})`)
@@ -111,7 +113,7 @@ export function useEncarts() {
 }
 
 /** Bureaux des contours officiels et leur commune, communs à tous les scrutins. */
-export const useContours = () => useGeo<BureauContour>('bureaux_contours_2022.parquet')
+export const useContours = (actif: boolean) => useGeo<BureauContour>('bureaux_contours_2022.parquet', actif)
 
 /** Noms et emprises des départements et des communes (découpage 2026). */
 export const useTerritoires = () => useGeo<Territoire>('territoires.parquet')

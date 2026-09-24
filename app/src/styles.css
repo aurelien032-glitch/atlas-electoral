@@ -168,7 +168,9 @@ a:hover, .lien:hover { color: var(--encre-2); }
 
 /* Carte et éléments posés dessus. */
 .zone-carte { position: relative; min-width: 0; }
-.zone-carte-fond, .carte { position: absolute; inset: 0; }
+/* Styles de MapLibre chargés avec la carte, donc après ceux-ci : nos réglages passent par .zone-carte
+   pour l'emporter quel que soit l'ordre de chargement. */
+.zone-carte-fond, .zone-carte .carte { position: absolute; inset: 0; }
 
 .onglets {
   position: absolute; top: 24px; left: 32px; z-index: 2;
@@ -180,9 +182,10 @@ a:hover, .lien:hover { color: var(--encre-2); }
 }
 .onglets button[aria-pressed='true'] { background: var(--encre); color: var(--surface); }
 
-.maplibregl-ctrl-top-right { top: 16px; right: 20px; }
-.maplibregl-ctrl-group { border-radius: 6px; box-shadow: none; border: 1px solid var(--bord-champ); background: var(--surface); }
-.maplibregl-ctrl-group button { width: 44px; height: 44px; }
+.zone-carte .maplibregl-ctrl-top-right { top: 16px; right: 20px; }
+.zone-carte .maplibregl-ctrl-group { border-radius: 6px; box-shadow: none; border: 1px solid var(--bord-champ); background: var(--surface); }
+.zone-carte .maplibregl-ctrl-group button { width: 44px; height: 44px; }
+.zone-carte .maplibregl-ctrl-attrib a { text-decoration: underline; }
 
 .legende {
   display: flex; flex-direction: column; gap: 6px;
@@ -218,15 +221,16 @@ a:hover, .lien:hover { color: var(--encre-2); }
   .zone-carte { position: fixed; inset: 0; }
   .onglets { top: 12px; left: 12px; right: 12px; overflow-x: auto; }
   .onglets button { flex: none; padding: 0 14px; font-size: 14px; }
-  .maplibregl-ctrl-top-right { top: 72px; right: 12px; }
+  .zone-carte .maplibregl-ctrl-top-right { top: 72px; right: 12px; }
   .legende-carte { display: none; }
   .legende-panneau { display: flex; }
   .panneau {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; max-height: 42dvh;
+    /* Hauteur fixe : un volet qui grandirait à l'arrivée des chiffres déplacerait tout (CLS). */
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; height: 42dvh;
     border-right: 0; border-top: 1px solid var(--filet); border-radius: 18px 18px 0 0;
-    box-shadow: 0 -6px 24px rgba(27, 26, 23, 0.08); transition: max-height 200ms ease-out;
+    box-shadow: 0 -6px 24px rgba(27, 26, 23, 0.08); transition: height 200ms ease-out;
   }
-  .panneau[data-deplie='true'] { max-height: 88dvh; }
+  .panneau[data-deplie='true'] { height: 88dvh; }
   .poignee {
     display: block; align-self: center; width: 64px; height: 28px; flex: none; cursor: pointer;
     border: 0; background: linear-gradient(var(--bord-champ), var(--bord-champ)) no-repeat center / 40px 4px;
