@@ -3,7 +3,11 @@
 Visualisation interactive et publique des résultats de scrutins électoraux français
 (présidentielles, législatives, européennes, municipales…) jusqu'au niveau du **bureau de vote**.
 
-## Stack
+> **Refonte en cours.** Le code actuel est un prototype (v0). La nouvelle conception
+> (site 100 % statique, sources officielles, grille des nuances) est décrite dans le
+> [plan de conception](docs/PLAN.md), encore en brouillon.
+
+## Stack (prototype v0)
 
 | Couche | Technologies |
 |---|---|
