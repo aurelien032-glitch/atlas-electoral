@@ -26,6 +26,8 @@ export interface Index {
   noms: Map<string, string>
   territoires: Map<string, Territoire>
   passage: Map<string, string>
+  /** Communes nées d'une fusion : leurs résultats anciens additionnent les communes qui les ont formées. */
+  fusionnees: Set<string>
   /** Départements de métropole et d'outre-mer (hors collectivités d'outre-mer et Français de l'étranger). */
   departements: Set<string>
 }
@@ -43,6 +45,7 @@ export function indexer(
     noms: new Map(territoires.map((t) => [t.code, t.nom])),
     territoires: new Map(territoires.map((t) => [t.code, t])),
     passage: new Map(passage.map((p) => [p.ancien, p.actuel])),
+    fusionnees: new Set(passage.filter((p) => p.fusion).map((p) => p.actuel)),
     departements: new Set(territoires.filter((t) => t.niveau === 'departement' && DEPARTEMENT.test(t.code)).map((t) => t.code)),
   }
 }

@@ -84,6 +84,18 @@ def ecrire_territoires(couches: dict[str, dict], chemin: Path) -> int:
     return len(lignes)
 
 
+def publier_passage(con, sortie: Path) -> None:
+    """Passage vers le COG 2026, pour l'application. « fusion » distingue une commune fusionnée (ses
+    résultats anciens additionnent plusieurs communes) d'un code corrigé (même territoire)."""
+    if PASSAGE_COMMUNES.exists():
+        con.sql(f"""CREATE OR REPLACE TABLE passage AS
+                    SELECT ancien, actuel, NOT starts_with(source, 'correction') AS fusion
+                    FROM read_csv('{PASSAGE_COMMUNES.as_posix()}', all_varchar = true)""")
+        con.sql(f"COPY passage TO '{(sortie / 'passage_communes.parquet').as_posix()}' (FORMAT parquet, COMPRESSION zstd)")
+    else:
+        con.sql("CREATE OR REPLACE TABLE passage (ancien VARCHAR, actuel VARCHAR, fusion BOOLEAN)")
+
+
 def main() -> None:
     sortie = PUBLICATION / "geo"
     sortie.mkdir(parents=True, exist_ok=True)
@@ -106,11 +118,7 @@ def main() -> None:
     # Correspondance bureau → commune des contours de bureaux, pour colorer les bureaux au niveau communal.
     # Les communes fusionnées depuis 2022 y prennent leur code du COG 2026, comme les agrégats.
     con = duckdb.connect()
-    if PASSAGE_COMMUNES.exists():
-        con.sql(f"CREATE TABLE passage AS SELECT ancien, actuel FROM read_csv('{PASSAGE_COMMUNES.as_posix()}', all_varchar = true)")
-        con.sql(f"COPY passage TO '{(sortie / 'passage_communes.parquet').as_posix()}' (FORMAT parquet, COMPRESSION zstd)")
-    else:
-        con.sql("CREATE TABLE passage (ancien VARCHAR, actuel VARCHAR)")
+    publier_passage(con, sortie)
     con.sql(f"""
         COPY (SELECT c.code_bv, coalesce(p.actuel, c.code_commune) AS code_commune, c.code_circonscription
               FROM '{CONTOURS_CODES.as_posix()}' c LEFT JOIN passage p ON p.ancien = c.code_commune ORDER BY c.code_bv)

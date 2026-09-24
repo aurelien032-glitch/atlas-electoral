@@ -470,6 +470,10 @@ def main(argv=None) -> None:
     }
     chemin.write_text(json.dumps(catalogue, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    # Les séries relisent tous les tours publiés : elles suivent chaque construction, même partielle.
+    from .series import construire as construire_series, resume
+    print(resume(construire_series(args.sortie)))
+
 
 if __name__ == "__main__":
     main()

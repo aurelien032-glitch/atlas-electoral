@@ -123,6 +123,39 @@ a:hover, .lien:hover { color: var(--encre-2); }
   color: var(--encre); background: #fff; border: 1px solid var(--bord-champ); border-radius: 22px;
 }
 
+/* Au fil des scrutins : courbes en SVG (traits de 2 px, repères en filet), doublées d'un tableau. */
+.chronologie { display: flex; flex-direction: column; gap: 10px; padding-top: 16px; border-top: 1px solid var(--filet); }
+.cles { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--encre-2); }
+.cles li { display: flex; align-items: center; gap: 6px; }
+.cle-ligne { flex: none; width: 14px; height: 3px; border-radius: 2px; }
+.courbes { position: relative; touch-action: pan-y; }
+.courbes svg { display: block; overflow: visible; }
+.courbes text { font-size: 12px; fill: var(--encre-2); font-variant-numeric: tabular-nums; }
+.courbes .annee-courante { fill: var(--encre); font-weight: 600; }
+.courbes .repere { stroke: var(--piste); }
+.courbes .base { stroke: var(--bord-champ); }
+.courbes .courant { stroke: var(--filet); }
+.courbes .reticule { stroke: var(--encre-2); }
+.courbes .anneau { stroke: var(--surface); stroke-width: 2px; }
+.sous-titre-courbe { margin: 4px 0 -4px; font-size: 13px; color: var(--encre-2); }
+.bulle-courbe {
+  position: absolute; top: 0; z-index: 2; pointer-events: none; padding: 8px 10px;
+  font-size: 13px; line-height: 1.35; background: var(--surface); border: 1px solid var(--bord-champ);
+  border-radius: 6px; box-shadow: 0 4px 16px rgba(27, 26, 23, 0.12);
+}
+.bulle-titre { margin: 0 0 4px; font-weight: 600; white-space: nowrap; }
+.bulle-courbe ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.bulle-courbe li { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.bulle-courbe strong { min-width: 46px; text-align: right; font-variant-numeric: tabular-nums; }
+.bulle-courbe li > span:last-child { color: var(--encre-2); }
+.donnees-courbes summary { cursor: pointer; font-size: 14px; padding: 6px 0; }
+.defilement { overflow-x: auto; }
+.donnees-courbes table { border-collapse: collapse; font-size: 13px; }
+.donnees-courbes th, .donnees-courbes td { padding: 3px 0 3px 12px; }
+.donnees-courbes th:first-child { padding-left: 0; font-weight: 400; text-align: left; white-space: nowrap; }
+.donnees-courbes thead th { font-weight: 400; color: var(--encre-2); }
+.donnees-courbes tr.separe > * { border-top: 1px solid var(--filet); }
+
 .note { margin: 0; font-size: 14px; color: var(--encre-2); }
 .note-bas, .sources { margin: 0; font-size: 12px; line-height: 1.5; color: var(--encre-2); }
 .sources { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--filet); }

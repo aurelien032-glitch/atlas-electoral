@@ -2,8 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import type { Feature } from 'geojson'
 import { lireParquet } from './parquet'
 import type {
-  Agregat, Bureau, BureauContour, Candidature, Catalogue, Circonscription, Passage, Territoire, VoixAgregat, VoixBureau,
-  VoixPanachage,
+  Agregat, Bureau, BureauContour, Candidature, Catalogue, Circonscription, LigneSerie, Passage, Territoire, VoixAgregat,
+  VoixBureau, VoixPanachage,
 } from './types'
 
 /** Racine des fichiers publiés par le pipeline (servis sous /data en développement, cf. vite.config.ts). */
@@ -40,6 +40,24 @@ export function usePanachage(scrutin: string | undefined, departement: string | 
     queryKey: ['scrutin', scrutin, 'panachage', departement],
     enabled: scrutin !== undefined && departement !== undefined,
     queryFn: ({ signal }) => lireParquet<VoixPanachage>(`${RACINE_DONNEES}/${scrutin}/panachage/${departement}.parquet`, signal),
+  })
+}
+
+/** Séries de la France, des départements et des circonscriptions : un seul petit fichier. */
+export function useSeriesTerritoires(actif: boolean) {
+  return useQuery({
+    queryKey: ['series', 'territoires'],
+    enabled: actif,
+    queryFn: ({ signal }) => lireParquet<LigneSerie>(`${RACINE_DONNEES}/series/territoires.parquet`, signal),
+  })
+}
+
+/** Séries des communes d'un département, chargées à l'ouverture de la fiche d'une commune. */
+export function useSeriesCommunes(departement: string | undefined) {
+  return useQuery({
+    queryKey: ['series', 'communes', departement],
+    enabled: departement !== undefined,
+    queryFn: ({ signal }) => lireParquet<LigneSerie>(`${RACINE_DONNEES}/series/communes/${departement}.parquet`, signal),
   })
 }
 

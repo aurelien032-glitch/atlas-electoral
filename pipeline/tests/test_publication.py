@@ -163,3 +163,35 @@ def test_577_circonscriptions_et_76_elus_au_premier_tour(con):
     assert manifeste("2024_legi_t1")["compteurs"]["circonscriptions"] == 577
     elus = con.sql(f"SELECT count(*) FROM {fichier('2024_legi_t1', 'candidats.parquet')} WHERE elu").fetchone()[0]
     assert elus == 76
+
+
+SERIES = PUBLICATION / "series"
+sans_series = pytest.mark.skipif(not (SERIES / "series.json").exists(),
+                                 reason="lancer d'abord python -m atlas_pipeline.series")
+
+
+@sans_series
+@pytest.mark.parametrize("scrutin", SCRUTINS)
+def test_series_redonnent_les_agregats_de_la_france(con, scrutin):
+    t = "'" + (SERIES / "territoires.parquet").as_posix() + "'"
+    attendu = con.sql(f"""SELECT inscrits, votants, exprimes, exprimes_listes FROM {fichier(scrutin, 'agregats.parquet')}
+                          WHERE niveau = 'france'""").fetchone()
+    serie = f"FROM {t} WHERE niveau = 'france' AND scrutin = '{scrutin}'"
+    assert con.sql(f"SELECT inscrits, votants, exprimes, exprimes_listes {serie}").fetchone() == attendu
+    voix = con.sql(f"SELECT sum(voix) FROM {fichier(scrutin, 'agregats_voix.parquet')} WHERE niveau = 'france'").fetchone()[0]
+    blocs = " + ".join(f"coalesce({b}, 0)" for b in ("EXG", "GAU", "CENT", "DTE", "EXD", "DIV", "NC"))
+    assert con.sql(f"SELECT {blocs} {serie}").fetchone()[0] == voix
+
+
+@sans_series
+def test_series_couvrent_chaque_commune_dans_le_fichier_de_son_departement(con):
+    assert json.loads((SERIES / "series.json").read_text(encoding="utf-8"))["tours"] == SCRUTINS
+    lignes = 0
+    for f in (SERIES / "communes").glob("*.parquet"):
+        chemin = "'" + f.as_posix() + "'"
+        departements = con.sql(f"""SELECT DISTINCT CASE WHEN code LIKE '97%' OR code LIKE '98%' THEN left(code, 3)
+                                   ELSE left(code, 2) END FROM {chemin}""").fetchall()
+        assert departements == [(f.stem,)]
+        lignes += con.sql(f"SELECT count(*) FROM {chemin}").fetchone()[0]
+    assert lignes == sum(con.sql(f"SELECT count(*) FROM {fichier(s, 'agregats.parquet')} WHERE niveau = 'commune'")
+                         .fetchone()[0] for s in SCRUTINS)

@@ -20,7 +20,8 @@
 > - maquettes : direction **« A · Éditorial »** retenue (Newsreader et Source Sans 3, papier chaud) ; mode Score dans la **teinte du bloc** de la cible ; mode Évolution en **orange ↔ violet** (d'après ColorBrewer PuOr) ;
 > - direction A codée dans `app/` (§ 11) : modes Tête, Score, Participation et Évolution, détail d'un territoire jusqu'au bureau ; choix d'affichage validés (Q11) ;
 > - circonscriptions des législatives (Q8) et communes fusionnées (Q10) : traitées le 24/09 (§ 10) ;
-> - **historique** : 56 tours de 1999 à 2026 publiés, classement des nuances historiques validé (§ 8.4) ; circonscriptions dessinées sur la carte ; étude chronologie et projection 2027 : [docs/etude-chronologie-et-projection.md](etude-chronologie-et-projection.md) (Q12).
+> - **historique** : 56 tours de 1999 à 2026 publiés, classement des nuances historiques validé (§ 8.4) ; circonscriptions dessinées sur la carte ; étude chronologie et projection 2027 : [docs/etude-chronologie-et-projection.md](etude-chronologie-et-projection.md) (Q12) ;
+> - **au fil des scrutins** (Q14, § 9) : courbes des blocs et de la participation pour la France et chaque territoire, séries publiées dans `series/` ; panachage des municipales 2014 et 2020 publié à part (Q13) ; simulateur de scénarios prévu après la bêta (Q12).
 >
 > Méthode : profilage des données (`data:explore-data`), décision d'architecture au format ADR (`engineering:architecture`), cadrage produit (`product-management:write-spec`), principes de visualisation (`dataviz`), audit du prototype (`api-coverage-auditor`, `feature-dev:code-explorer`), recherche des sources et des hébergeurs vérifiée par de vraies requêtes HTTP. Les chiffres « mesurés » viennent de requêtes DuckDB sur les fichiers de `Data/` (annexe A).
 
@@ -361,6 +362,10 @@ publication/v1/
 │   ├── circonscriptions.parquet  législatives : libellé et emprise de chaque circonscription
 │   ├── panachage/<dép>.parquet   municipales 2014 et 2020 : candidats des communes au panachage (à part)
 │   └── scrutin.json           manifeste : compteurs, contrôles, empreintes SHA-256
+├── series/                    « Au fil des scrutins » : comptes par territoire et par tour, voix par bloc
+│   ├── territoires.parquet    France, départements, circonscriptions (250 Ko)
+│   ├── communes/<dép>.parquet communes au COG 2026, chargées à l'ouverture d'une commune (600 Ko au plus)
+│   └── series.json            manifeste : tours, lignes, empreintes SHA-256
 ├── geo/                       communes, départements, régions (Etalab), territoires.parquet (noms, emprises),
 │                              passage_communes.parquet, bureaux_contours_2022.parquet
 └── …
@@ -556,6 +561,18 @@ Tous les classements hérités sont signalés comme cas limites quand l'analogie
 
 **État partageable** : chaque vue a son URL, par exemple `/2022_pres_t1/commune/75056?mode=score&cible=…`.
 
+**Au fil des scrutins (réalisé le 24/09, décision Q14)** : sous l'aperçu (France entière) et sous la fiche
+d'un département, d'une circonscription ou d'une commune (celle du bureau choisi), les premiers tours d'un
+type d'élection à la fois : une courbe par bloc coloré, la participation dans un second graphique (un seul
+axe par graphique), un tableau « Voir les données » avec les divers et non classés. Choix de lecture :
+- **premiers tours seulement** : les seconds opposent les seuls qualifiés ;
+- **cinq courbes** : le gris des divers et non classés échoue au validateur face aux cinq teintes (écart de
+  3,3 pour les daltoniens) ; ces voix restent dans l'infobulle et le tableau ;
+- **pas de candidat ≠ 0 %** : la courbe s'interrompt (tiret dans le tableau), comme les hachures de la carte ;
+- notes selon le cas : couverture des municipales (3 500 habitants et plus en 2008, 1 000 et plus en 2014 et
+  2020, toutes en 2026), cantonales renouvelées par moitié, années au panachage, commune née d'une fusion ;
+- réticule et infobulle au survol, flèches du clavier, lecture vocale ; SVG maison, sans bibliothèque.
+
 **Règles graphiques** (skill `dataviz`) :
 - un seul axe par graphique ;
 - une légende dès deux séries ;
@@ -732,7 +749,7 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 | Q11 | Choix d'affichage proposés en codant la direction A : hachures pour « pas de candidat » et « non comparable » ; évolution lue à la commune ; participation en sarcelle ; colonne de comparaison seulement quand elle a un sens (scrutin national, ou bureau comparé à sa commune) ; noms de famille en casse d'usage (« LE PEN » → « Le Pen »), noms de listes inchangés | **Tranché le 24/09** : tous validés | — |
 | Q12 | Projection 2027 : garder le périmètre actuel (pas de projection) ou ajouter un simulateur de scénarios clairement étiqueté, après la bêta ? Voir l'étude | **Tranché le 24/09** : simulateur de scénarios après la bêta, avec les garde-fous de l'étude (espace séparé, hypothèses de l'utilisateur, résultat réel par défaut, ni sondages ni sièges, désactivé la veille et le jour du vote) ; prévisions et sondages restent hors périmètre | Phase 4 |
 | Q13 | Municipales 2014 et 2020, petites communes au panachage (≈ 400 000 candidatures individuelles, 12 à 13 Mo par tour) : tout garder, garder à part (chargé au détail d'une commune) ou ne garder que la participation ? | **Tranché le 24/09** : garder à part, chargé à l'ouverture de la fiche d'une commune | Budget des données |
-| Q14 | Vues chronologiques à construire en premier | **Tranché le 24/09** : « Au fil des scrutins » dans la fiche d'un territoire et courbes nationales ; les petits multiples et la carte des bascules ensuite | — |
+| Q14 | Vues chronologiques à construire en premier | **Tranché et réalisé le 24/09** (§ 9) : « Au fil des scrutins » dans la fiche d'un territoire et courbes nationales ; les petits multiples et la carte des bascules ensuite | — |
 | Q6 | Publication de nos données sur data.gouv | **Tranché** : plus tard | P2 |
 
 ## 16. Outillage Claude : skills, plugins, connecteurs

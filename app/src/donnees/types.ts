@@ -61,7 +61,24 @@ export interface Agregat extends Resultat {
 }
 
 /** Base des parts des blocs : les exprimés des communes à listes quand le panachage est exclu. */
-export const exprimesPourParts = (r: Resultat & { exprimes_listes?: number | null }) => r.exprimes_listes ?? r.exprimes
+export const exprimesPourParts = (r: Pick<Resultat, 'exprimes'> & { exprimes_listes?: number | null }) =>
+  r.exprimes_listes ?? r.exprimes
+
+/**
+ * Un tour dans la série d'un territoire (fichiers series/) : des comptes, dont les voix de chaque bloc,
+ * vides quand le bloc n'avait pas de candidat. Les parts se calculent sur exprimes_listes, vide pour une
+ * commune au panachage (aucune part).
+ */
+export type LigneSerie = {
+  /** Absent des fichiers des communes. */
+  niveau?: 'france' | 'departement' | 'circonscription'
+  code: string
+  scrutin: string
+  inscrits: number
+  votants: number
+  exprimes: number
+  exprimes_listes: number | null
+} & Record<Bloc, number | null>
 
 /** Voix d'un candidat d'une commune au panachage (fichier par département, chargé à la demande). */
 export interface VoixPanachage {
@@ -138,4 +155,6 @@ export interface Circonscription {
 export interface Passage {
   ancien: string
   actuel: string
+  /** Fusion de communes (sinon, simple correction d'un code erroné : même territoire). */
+  fusion: boolean
 }

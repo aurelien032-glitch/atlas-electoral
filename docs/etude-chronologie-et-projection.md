@@ -5,7 +5,7 @@
 >
 > **Décisions (plan, Q12 et Q14)** :
 > - vues chronologiques à construire d'abord : « Au fil des scrutins » dans la fiche d'un territoire, et les
->   courbes nationales ;
+>   courbes nationales (**réalisées le 24/09**, plan § 9) ;
 > - projection : un **simulateur de scénarios, après la bêta**, avec les garde-fous du § 3 (approche A) ;
 >   prévisions et sondages restent hors du périmètre (§ 2.4 du plan).
 

@@ -19,7 +19,8 @@ Le prototype v0 (FastAPI + DuckDB) est conservé sous le tag `prototype-v0` : ne
 ## Commandes
 
 ```bash
-cd pipeline && python -m atlas_pipeline.construire && python -m pytest   # données + 65 tests
+cd pipeline && python -m atlas_pipeline.construire && python -m pytest   # données, séries + 573 tests
+cd pipeline && python -m atlas_pipeline.series                           # séries seules (≈ 15 s)
 cd pipeline && python -m atlas_pipeline.geo                              # contours Etalab + index des territoires
 cd pipeline && python -m atlas_pipeline.cog                              # passage des communes vers le COG 2026
 cd pipeline && python -m atlas_pipeline.circonscriptions --source <GeoJSON des bureaux>  # contours (≈ 4 min)
@@ -48,6 +49,8 @@ cd app && npx tsc -b && npm run lint && npm test && npm run build          # ava
   2015, blancs et nuls sont comptés ensemble (colonne `blancs` vide) : ne jamais inventer de répartition.
 - Municipales 2014 et 2020 : les communes au panachage (vote pour des personnes) sont publiées à part
   (`panachage/<dép>.parquet`, chargé à la demande) ; les parts des blocs se calculent sur `exprimes_listes`.
+- Séries (`series/`, « Au fil des scrutins ») : relues dans les fichiers publiés à la fin de chaque
+  construction. Voix d'un bloc **vides** quand il n'avait pas de candidat : ne jamais les remplacer par 0.
 - Les agrégats par commune sont au **COG 2026** (`referentiels/passage_communes_2026.csv`) ; les bureaux gardent
   le code de commune de l'année du vote (le client passe par `communeDu(code, passage)`).
 

@@ -16,10 +16,10 @@ Organisation :
 | Dossier ou fichier | Rôle |
 |---|---|
 | `src/donnees/` | Types, lecture des Parquet (hyparquet), requêtes TanStack Query, index des territoires, noms |
-| `src/calculs/` | Parts, écarts entre scrutins, seuils de classes lisibles (fonctions pures, testées) |
+| `src/calculs/` | Parts, écarts entre scrutins, seuils de classes lisibles, séries chronologiques (fonctions pures, testées) |
 | `src/modes.ts` | Valeurs et coloriage de chaque mode de carte : Tête, Score, Participation, Évolution |
 | `src/cibles.ts` | Ce que montre le mode Score : une candidature ou un bloc |
 | `src/carte/` | Carte MapLibre, palettes validées, feature-states, légende, onglets, infobulle |
-| `src/panneau/` | Aperçu de chaque mode et détail d'un territoire (fil d'Ariane, résultats en tableau) |
+| `src/panneau/` | Aperçu de chaque mode, détail d'un territoire (fil d'Ariane, résultats en tableau), « Au fil des scrutins » (courbes SVG et tableau) |
 | `src/recherche/` | Recherche d'une commune ou d'un département (normalisation des noms, classement, combobox) |
 | `src/vue.ts`, `src/url.ts` | État de la vue dans l'URL (`?scrutin=…&mode=…&cible=…&bloc=…&de=…&sel=…`) |

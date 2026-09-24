@@ -11,7 +11,7 @@ import { blocEnTete, optionsCibles, retenueDuBloc } from './cibles'
 import { nomCandidature } from './donnees/libelles'
 import {
   useAgregats, useAgregatsVoix, useBureaux, useCandidats, useCatalogue, useCirconscriptions, useContourCommune, useContours,
-  usePanachage, usePassage, useTerritoires, useVoix,
+  usePanachage, usePassage, useSeriesCommunes, useSeriesTerritoires, useTerritoires, useVoix,
 } from './donnees/requetes'
 import { communeDu, departementDe, emprise, indexer, titreDe } from './donnees/territoires'
 import { scrutinParDefaut, scrutinPrecedent } from './donnees/scrutins'
@@ -24,6 +24,7 @@ import {
   partsAuNiveau, seuilsDe, valeursEvolution, valeursParticipation, valeursScore, type Coloriage, type Mode, type Valeurs,
 } from './modes'
 import { Apercu, type ApercuEvolution } from './panneau/Apercu'
+import { Chronologie } from './panneau/Chronologie'
 import type { Actions, Contexte } from './panneau/contexte'
 import { Detail, type Parent } from './panneau/Detail'
 import { preparer } from './recherche/chercher'
@@ -127,6 +128,18 @@ export default function App() {
     : selection?.niveau === 'bureau' ? communeDu(selection.code, index.passage) : undefined
   const auPanachage = communeChoisie !== undefined && communesPanachage.has(communeChoisie)
   const panachage = usePanachage(auPanachage ? id : undefined, auPanachage ? departementDe(communeChoisie) : undefined)
+
+  // Au fil des scrutins : la France, un département ou une circonscription viennent d'un seul petit
+  // fichier ; une commune (ou la commune d'un bureau), du fichier de son département.
+  const niveauSerie = !selection ? 'france' : selection.niveau === 'bureau' ? 'commune' : selection.niveau
+  const codeSerie = !selection ? 'FR' : communeChoisie ?? selection.code
+  const seriesTerritoires = useSeriesTerritoires(niveauSerie !== 'commune')
+  const seriesCommunes = useSeriesCommunes(niveauSerie === 'commune' ? departementDe(codeSerie) : undefined)
+  const serie = niveauSerie === 'commune' ? seriesCommunes : seriesTerritoires
+  const lignesSerie = useMemo(
+    () => serie.data?.filter((l) => l.code === codeSerie && (l.niveau ?? 'commune') === niveauSerie),
+    [serie.data, codeSerie, niveauSerie],
+  )
   const cibles = useMemo(() => optionsCibles(scrutin, candidats.data), [scrutin, candidats.data])
   // Recherche : à pertinence égale, les communes qui comptent le plus d'inscrits passent devant.
   const entreesRecherche = useMemo(() => {
@@ -396,6 +409,13 @@ export default function App() {
                 circonscriptions={detail?.circonscriptions ?? []} supplementaires={detail?.supplementaires} panachage={auPanachage}
                 cible={vue.mode === 'score' ? cible : undefined} complement={complement} actions={actions} />
             : <Apercu ctx={ctx} mode={vue.mode} cibles={cibles} cible={cible} bloc={bloc} evolution={apercuEvolution} actions={actions} />)}
+          {ctx && (
+            <Chronologie
+              lignes={lignesSerie} erreur={serie.isError} scrutins={scrutins} courant={ctx.scrutin} niveau={niveauSerie}
+              precision={selection?.niveau === 'bureau' ? 'à la commune' : undefined}
+              fusion={niveauSerie === 'commune' && index.fusionnees.has(codeSerie)}
+            />
+          )}
           {etatCarte && <Legende description={etatCarte.legende} className="legende-panneau" />}
           <p className="sources">
             Résultats : ministère de l'Intérieur, via data.gouv.fr. Contours des bureaux : data.gouv.fr (REU 2022,
