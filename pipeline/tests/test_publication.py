@@ -117,8 +117,9 @@ TERRITOIRES = PUBLICATION / "geo" / "territoires.parquet"
 @pytest.mark.skipif(not TERRITOIRES.exists(), reason="lancer d'abord python -m atlas_pipeline.geo")
 @pytest.mark.parametrize("scrutin", SCRUTINS)
 def test_territoires_nommes(con, scrutin):
-    # Chaque département des résultats a un nom. Les communes absentes du COG 2026 (fusionnées depuis,
-    # question Q10) restent marginales en inscrits ; les Français de l'étranger n'ont pas de commune.
+    # Chaque département des résultats a un nom. Grâce à la table de passage (question Q10), les communes
+    # fusionnées depuis le scrutin sont comptées dans leur commune de 2026 : il ne reste que des codes
+    # particuliers (Wallis-et-Futuna agrégé), marginaux en inscrits. Les Français de l'étranger n'ont pas de commune.
     t = "'" + TERRITOIRES.as_posix() + "'"
     agregats = fichier(scrutin, "agregats.parquet")
     sans_nom = con.sql(f"""SELECT count(*) FROM {agregats} WHERE niveau = 'departement'
@@ -127,4 +128,35 @@ def test_territoires_nommes(con, scrutin):
     hors_cog = con.sql(f"""SELECT sum(inscrits) FILTER (WHERE code NOT IN (SELECT code FROM {t} WHERE niveau = 'commune'))
                                   / sum(inscrits)
                            FROM {agregats} WHERE niveau = 'commune' AND code NOT LIKE 'ZZ%'""").fetchone()[0]
-    assert (hors_cog or 0) < 0.005
+    assert (hors_cog or 0) < 0.0005
+
+
+def test_passage_vers_des_communes_de_2026(con):
+    passage = "'" + (REFERENTIELS / "passage_communes_2026.csv").as_posix() + "'"
+    t = "'" + TERRITOIRES.as_posix() + "'"
+    inconnues = con.sql(f"""SELECT count(*) FROM read_csv({passage}, all_varchar = true)
+                            WHERE actuel NOT IN (SELECT code FROM {t} WHERE niveau = 'commune')""").fetchone()[0]
+    assert inconnues == 0
+
+
+LEGISLATIVES = [s for s in SCRUTINS if manifeste(s)["portee"] == "circonscription"]
+
+
+@pytest.mark.parametrize("scrutin", LEGISLATIVES)
+def test_circonscriptions_des_legislatives(con, scrutin):
+    # Chaque candidature a sa circonscription (fichier officiel par circonscription), et nos totaux par
+    # circonscription égalent les totaux officiels (inscrits et exprimés).
+    c = manifeste(scrutin)["compteurs"]
+    assert c["circonscriptions_ecart_officiel"] == 0
+    sans = con.sql(f"SELECT count(*) FROM {fichier(scrutin, 'candidats.parquet')} WHERE circonscription IS NULL").fetchone()[0]
+    assert sans == 0
+    agregees = con.sql(f"""SELECT count(*) FROM {fichier(scrutin, 'agregats.parquet')}
+                           WHERE niveau = 'circonscription'""").fetchone()[0]
+    assert agregees == c["circonscriptions"] == con.sql(
+        f"SELECT count(*) FROM {fichier(scrutin, 'circonscriptions.parquet')}").fetchone()[0]
+
+
+def test_577_circonscriptions_et_76_elus_au_premier_tour(con):
+    assert manifeste("2024_legi_t1")["compteurs"]["circonscriptions"] == 577
+    elus = con.sql(f"SELECT count(*) FROM {fichier('2024_legi_t1', 'candidats.parquet')} WHERE elu").fetchone()[0]
+    assert elus == 76

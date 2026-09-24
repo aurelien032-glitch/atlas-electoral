@@ -11,7 +11,6 @@ Usage, depuis le dossier pipeline/ :
 import csv
 import gzip
 import json
-import shutil
 import tempfile
 import time
 import urllib.request
@@ -19,7 +18,7 @@ from pathlib import Path
 
 import duckdb
 
-from .config import CONTOURS_CODES, PUBLICATION
+from .config import CONTOURS_CODES, PASSAGE_COMMUNES, PUBLICATION
 
 MILLESIME = 2026
 SOURCE = "https://etalab-datasets.geo.data.gouv.fr/contours-administratifs/{millesime}/geojson/{nom}.geojson.gz"
@@ -105,7 +104,17 @@ def main() -> None:
     n = ecrire_territoires(couches, chemin)
     print(f"territoires : {n:,} lignes, {chemin.stat().st_size / 1e3:.0f} Ko")
     # Correspondance bureau → commune des contours de bureaux, pour colorer les bureaux au niveau communal.
-    shutil.copy2(CONTOURS_CODES, sortie / "bureaux_contours_2022.parquet")
+    # Les communes fusionnées depuis 2022 y prennent leur code du COG 2026, comme les agrégats.
+    con = duckdb.connect()
+    if PASSAGE_COMMUNES.exists():
+        con.sql(f"CREATE TABLE passage AS SELECT ancien, actuel FROM read_csv('{PASSAGE_COMMUNES.as_posix()}', all_varchar = true)")
+        con.sql(f"COPY passage TO '{(sortie / 'passage_communes.parquet').as_posix()}' (FORMAT parquet, COMPRESSION zstd)")
+    else:
+        con.sql("CREATE TABLE passage (ancien VARCHAR, actuel VARCHAR)")
+    con.sql(f"""
+        COPY (SELECT c.code_bv, coalesce(p.actuel, c.code_commune) AS code_commune, c.code_circonscription
+              FROM '{CONTOURS_CODES.as_posix()}' c LEFT JOIN passage p ON p.ancien = c.code_commune ORDER BY c.code_bv)
+        TO '{(sortie / 'bureaux_contours_2022.parquet').as_posix()}' (FORMAT parquet, COMPRESSION zstd)""")
 
 
 if __name__ == "__main__":

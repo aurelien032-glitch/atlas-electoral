@@ -18,7 +18,8 @@
 > - squelette de l'application réalisé (`app/`, § 11) ; prototype v0 retiré, conservé sous le tag `prototype-v0` ;
 > - contours administratifs : versions simplifiées d'Etalab, les tuiles IGN étant trop lourdes (§ 4.1) ;
 > - maquettes : direction **« A · Éditorial »** retenue (Newsreader et Source Sans 3, papier chaud) ; mode Score dans la **teinte du bloc** de la cible ; mode Évolution en **orange ↔ violet** (d'après ColorBrewer PuOr) ;
-> - direction A codée dans `app/` (§ 11) : modes Tête, Score, Participation et Évolution, détail d'un territoire jusqu'au bureau ; choix d'affichage validés (Q11).
+> - direction A codée dans `app/` (§ 11) : modes Tête, Score, Participation et Évolution, détail d'un territoire jusqu'au bureau ; choix d'affichage validés (Q11) ;
+> - circonscriptions des législatives (Q8) et communes fusionnées (Q10) : traitées le 24/09 (§ 10).
 >
 > Méthode : profilage des données (`data:explore-data`), décision d'architecture au format ADR (`engineering:architecture`), cadrage produit (`product-management:write-spec`), principes de visualisation (`dataviz`), audit du prototype (`api-coverage-auditor`, `feature-dev:code-explorer`), recherche des sources et des hébergeurs vérifiée par de vraies requêtes HTTP. Les chiffres « mesurés » viennent de requêtes DuckDB sur les fichiers de `Data/` (annexe A).
 
@@ -354,9 +355,12 @@ publication/v1/
 │   ├── bureaux.parquet        une ligne par bureau : participation, tête, avance (~650 Ko)
 │   ├── voix.parquet           voix par bureau et par candidature (~1,2 Mo)
 │   ├── candidats.parquet      candidatures : nuance, famille, bloc, cas limite
-│   ├── agregats.parquet       participation par commune, département et France
+│   ├── agregats.parquet       participation par commune (COG 2026), circonscription, département, France
 │   ├── agregats_voix.parquet  voix par candidature aux mêmes niveaux
+│   ├── circonscriptions.parquet  législatives : libellé et emprise de chaque circonscription
 │   └── scrutin.json           manifeste : compteurs, contrôles, empreintes SHA-256
+├── geo/                       communes, départements, régions (Etalab), territoires.parquet (noms, emprises),
+│                              passage_communes.parquet, bureaux_contours_2022.parquet
 └── …
 tiles/
 └── circonscriptions.pmtiles   seule couche géographique à produire nous-mêmes (à venir)
@@ -581,6 +585,11 @@ HTTP        COG
 - Un bureau (`60400_0001`, municipales 2026) compte plus de votants que d'inscrits : anomalie de la source, tolérée et tracée dans le manifeste, à signaler à l'écran.
 - Les données ne donnent plus le code de circonscription depuis 2024 : les candidatures des législatives sont identifiées par département, panneau et nom. Les agrégats par circonscription restent à produire (§ 15).
 
+**Circonscriptions et communes fusionnées, traitées le 24/09** :
+- **Circonscriptions (Q8).** Source retenue : les fichiers officiels du ministère « résultats définitifs par circonscription » (data.gouv, un par tour). Chaque ligne de voix y trouve sa circonscription par département, panneau, nom et prénom : **100 % d'appariement** (4 009 candidatures au 1er tour, 1 094 au 2d, soit exactement les nombres officiels ; les candidatures de Saint-Barthélemy et Saint-Martin, qui partagent une circonscription, ne sont plus dédoublées). Un bureau n'appartient qu'à une circonscription (contrôle bloquant). Les **totaux par circonscription égalent les totaux officiels** (inscrits et exprimés) dans les 577 circonscriptions ; 76 élus au 1er tour, 501 au 2d. Publiés : niveau `circonscription` des agrégats, colonnes `circonscription` et `elu` des candidatures, `circonscriptions.parquet` (libellé « Rhône, 2e circonscription » et emprise approchée).
+- **Communes fusionnées (Q10).** Table de passage vers le COG 2026 de l'INSEE (`referentiels/passage_communes_2026.csv`, 4 240 anciens codes : commune déléguée ou associée → sa commune de rattachement, sinon la chaîne des fusions ; `python -m atlas_pipeline.cog`). Les agrégats par commune et la correspondance bureau → commune passent au COG 2026 ; les bureaux gardent leur code. Part des inscrits sans commune 2026 : de 0,15 % à 0,02 % (reste Wallis-et-Futuna, agrégé sous un code propre).
+- 69 tests pytest (conservation, réconciliation par circonscription, 577 circonscriptions, 76 élus au 1er tour, passage vers des communes de 2026…).
+
 ## 11. Pile technique
 
 Nouvelle base, mais avec des outils déjà maîtrisés :
@@ -688,9 +697,9 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 | Q4 | Municipales 2026 | **Tranché** : dans la v1 ; les données sont publiées | Phase 1 |
 | Q5 | Nom, domaine, charte | **Tranché** : « Atlas électoral », pas de domaine payant, charte sobre et neutre | — |
 | Q7 | Renommer le dépôt GitHub | **Fait le 24/09** : `github.com/aurelien032-glitch/atlas-electoral` (l'ancienne adresse redirige) | — |
-| Q8 | Circonscriptions des législatives 2024 : le code a disparu des données. Quelle source pour la correspondance bureaux ↔ circonscriptions (table INSEE 2022, contours 2022) ? | Ouvert | Agrégats par circonscription |
+| Q8 | Circonscriptions des législatives 2024 : le code a disparu des données. Quelle source pour la correspondance bureaux ↔ circonscriptions (table INSEE 2022, contours 2022) ? | **Traité le 24/09** : fichiers officiels du ministère par circonscription ; appariement complet et totaux identiques aux officiels (§ 10). Reste : une couche de contours des circonscriptions pour la carte | Carte des circonscriptions |
 | Q9 | Totaux officiels des autres tours pour la réconciliation : sources à relever (Conseil constitutionnel, ministère) | Ouvert | Tests |
-| Q10 | Communes fusionnées depuis le scrutin : les contours sont au COG 2026, les résultats 2022 et 2024 au COG de leur année, d'où quelques communes blanches. Appliquer la table de passage du COG dans le pipeline ? | Ouvert | Carte nationale |
+| Q10 | Communes fusionnées depuis le scrutin : les contours sont au COG 2026, les résultats 2022 et 2024 au COG de leur année, d'où quelques communes blanches. Appliquer la table de passage du COG dans le pipeline ? | **Traité le 24/09** : table de passage vers le COG 2026 (INSEE) ; 0,02 % d'inscrits sans commune 2026 (§ 10) | — |
 | Q11 | Choix d'affichage proposés en codant la direction A : hachures pour « pas de candidat » et « non comparable » ; évolution lue à la commune ; participation en sarcelle ; colonne de comparaison seulement quand elle a un sens (scrutin national, ou bureau comparé à sa commune) ; noms de famille en casse d'usage (« LE PEN » → « Le Pen »), noms de listes inchangés | **Tranché le 24/09** : tous validés | — |
 | Q6 | Publication de nos données sur data.gouv | **Tranché** : plus tard | P2 |
 

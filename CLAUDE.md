@@ -21,6 +21,7 @@ Le prototype v0 (FastAPI + DuckDB) est conservé sous le tag `prototype-v0` : ne
 ```bash
 cd pipeline && python -m atlas_pipeline.construire && python -m pytest   # données + 65 tests
 cd pipeline && python -m atlas_pipeline.geo                              # contours Etalab + index des territoires
+cd pipeline && python -m atlas_pipeline.cog                              # passage des communes vers le COG 2026
 cd app && npm run dev        # sert aussi ../publication sous /data
 cd app && npx tsc -b && npm run lint && npm test && npm run build          # avant tout commit
 ```
@@ -38,8 +39,12 @@ cd app && npx tsc -b && npm run lint && npm test && npm run build          # ava
   unicité des clés, toute nuance présente dans le référentiel. Anomalies **tolérées et tracées** dans le
   manifeste : somme des voix ≠ exprimés, votants > inscrits.
 - Les codes de département se déduisent du code commune INSEE (le champ source mélange `ZA` et `971`).
-- Les législatives n'ont plus de code de circonscription depuis 2024 : une candidature y est identifiée par
-  département, panneau et nom.
+- Les législatives n'ont plus de code de circonscription depuis 2024 : on le reprend des fichiers officiels
+  « résultats par circonscription » (département, panneau, nom, prénom). Une candidature y est identifiée par
+  sa circonscription (« 69-02 ») ; un bureau n'a qu'une circonscription (contrôle bloquant) ; les totaux par
+  circonscription doivent égaler les totaux officiels.
+- Les agrégats par commune sont au **COG 2026** (`referentiels/passage_communes_2026.csv`) ; les bureaux gardent
+  le code de commune de l'année du vote (le client passe par `communeDu(code, passage)`).
 
 ## Classement politique (sensible)
 
