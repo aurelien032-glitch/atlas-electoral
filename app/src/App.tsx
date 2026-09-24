@@ -12,10 +12,10 @@ import { blocEnTete, optionsCibles, retenueDuBloc } from './cibles'
 import { nomCandidature } from './donnees/libelles'
 import {
   useAgregats, useAgregatsVoix, useBureaux, useCandidats, useCatalogue, useCirconscriptions, useContourCommune, useContours,
-  useEncarts, usePanachage, usePassage, useSeriesCommunes, useSeriesTerritoires, useTerritoires, useVoix,
+  useCodesPostaux, useEncarts, usePanachage, usePassage, useSeriesCommunes, useSeriesTerritoires, useTerritoires, useVoix,
 } from './donnees/requetes'
 import { communeDu, departementDe, emprise, indexer, titreDe } from './donnees/territoires'
-import { scrutinParDefaut, scrutinPrecedent } from './donnees/scrutins'
+import { scrutinParDefaut, scrutinPrecedent, voteParSecteur } from './donnees/scrutins'
 import {
   exprimesPourParts, type Agregat, type BureauContour, type Candidature, type Encart, type Resultat, type Territoire,
   type VoixPanachage,
@@ -30,7 +30,7 @@ import { Chronologie } from './panneau/Chronologie'
 import type { Actions, Contexte } from './panneau/contexte'
 import { Detail, type Parent } from './panneau/Detail'
 import { Methodologie } from './panneau/Methodologie'
-import { preparer } from './recherche/chercher'
+import { indexerCodesPostaux, preparer } from './recherche/chercher'
 import { Recherche } from './recherche/Recherche'
 import { useUrl } from './url'
 import { ecrireSelection, lireVue, type Selection } from './vue'
@@ -163,6 +163,14 @@ export default function App() {
     // L'index contient départements, communes et, aux législatives, circonscriptions (« rhône 2e »).
     return preparer([...index.territoires.values()], inscrits)
   }, [agregats.data, index])
+  // Codes postaux : chargés à la première utilisation du champ de recherche.
+  const [rechercheActive, setRechercheActive] = useState(false)
+  const activerRecherche = useCallback(() => setRechercheActive(true), [])
+  const codesPostaux = useCodesPostaux(rechercheActive)
+  const postaux = useMemo(
+    () => codesPostaux.data && indexerCodesPostaux(codesPostaux.data, entreesRecherche),
+    [codesPostaux.data, entreesRecherche],
+  )
   const cible = cibles.find((c) => c.valeur === vue.cible) ?? cibles[0]
   const bloc: BlocColore = vue.bloc ?? blocEnTete(candidats.data) ?? 'DTE'
 
@@ -261,6 +269,8 @@ export default function App() {
     const lignes: string[] = []
     if (survol.niveau === 'commune' && communesPanachage.has(survol.code) && vue.mode !== 'participation') {
       lignes.push('Vote pour des personnes (panachage)')
+    } else if (survol.niveau === 'commune' && scrutin && voteParSecteur(scrutin, survol.code) && vue.mode === 'tete') {
+      lignes.push('Vote par secteur : résultats additionnés, voir la fiche')
     } else if (vue.mode === 'tete') {
       const r = resultats[({ bureau: 'bureaux', commune: 'communes', circonscription: 'circonscriptions' } as const)[survol.niveau]].get(survol.code)
       const tete = r?.tete != null ? parCand.get(r.tete) : undefined
@@ -279,7 +289,7 @@ export default function App() {
       else lignes.push(vue.mode === 'evolution' ? `${formatEcart(v)} ${unitePoints(v)}` : formatPourcent(v))
     }
     return { titre, lignes }
-  }, [vue.mode, resultats, parCand, etatCarte, index, communesPanachage])
+  }, [vue.mode, resultats, parCand, etatCarte, index, communesPanachage, scrutin])
 
   const actions: Actions = useMemo(() => ({
     scrutin: (valeur) => modifierUrl({ scrutin: valeur, cible: null }),
@@ -425,7 +435,7 @@ export default function App() {
           <a href={lienMethodologie} aria-current={vue.page === 'methodologie' ? 'page' : undefined}
             onClick={(e) => { e.preventDefault(); modifierUrl({ page: 'methodologie' }); setDeplie(true) }}>Méthodologie</a>
         </header>
-        <Recherche entrees={entreesRecherche} onChoisir={allerA} />
+        <Recherche entrees={entreesRecherche} postaux={postaux} onActiver={activerRecherche} onChoisir={allerA} />
         <div id="panneau-corps" className="panneau-corps">
           {erreur && <p className="alerte">Données indisponibles : {erreur.message}</p>}
           {chargement && !erreur && <p className="note">Chargement…</p>}

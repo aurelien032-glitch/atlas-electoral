@@ -41,6 +41,12 @@ const SOURCES = [
     lien: 'https://www.data.gouv.fr/datasets/proposition-de-contours-des-bureaux-de-vote/',
   },
   {
+    cles: ['codes_postaux'],
+    titre: 'Codes postaux',
+    detail: 'Base officielle des codes postaux de La Poste, pour la recherche',
+    lien: 'https://www.data.gouv.fr/datasets/base-officielle-des-codes-postaux/',
+  },
+  {
     cles: ['cog_2026_communes', 'cog_2026_mouvements'],
     titre: 'Code officiel géographique 2026',
     detail: 'Insee : communes au 1er janvier 2026 et fusions intervenues depuis chaque scrutin',
@@ -253,7 +259,7 @@ export function Methodologie({ catalogue, scrutin, onScrutin, onRetour }: Props)
       <Section titre="Limites connues">
         <ul className="liste">
           <li>Les contours des bureaux sont indicatifs : reconstitués en 2022 à partir des adresses, ils peuvent s'écarter du découpage réel, et les bureaux créés depuis n'y figurent pas.</li>
-          <li>Paris, Lyon et Marseille : résultats à la commune, pas encore par arrondissement ou secteur.</li>
+          <li>Paris, Lyon et Marseille : résultats à la commune, pas encore par arrondissement ou secteur. Jusqu'en 2020, les municipales s'y votaient par secteur : additionnés à la commune, ces scrutins n'ont pas de liste « en tête ».</li>
           <li>Nouvelle-Calédonie, Polynésie française, Wallis-et-Futuna : pas de contours de bureaux, résultats à la commune.</li>
           <li>L'offre politique change d'un scrutin à l'autre : une évolution de bloc peut tenir à l'absence d'une candidature.</li>
           <li>Seule la présidentielle 2022 est, à ce jour, rapprochée des totaux officiels proclamés.</li>

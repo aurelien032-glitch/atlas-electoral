@@ -1,6 +1,7 @@
 import { LIBELLE_BLOC, palier } from '../carte/couleurs'
 import type { Cible } from '../cibles'
 import { nomCandidature, nuanceCourte } from '../donnees/libelles'
+import { voteParSecteur } from '../donnees/scrutins'
 import { communeDu, departementDe, departementDeCirconscription, numeroDu, titreDe } from '../donnees/territoires'
 import { exprimesPourParts, type Bloc, type Candidature, type Resultat } from '../donnees/types'
 import { formatNombre, formatPart, unitePoints } from '../format'
@@ -107,9 +108,10 @@ export function Detail({ ctx, selection, resultat, lignes, parent, circonscripti
   // Au département (et au-delà), les législatives et les municipales comptent des dizaines de
   // candidatures locales : on les regroupe par bloc. Une circonscription garde ses candidatures.
   const parBloc = ctx.scrutin.portee !== 'national' && selection.niveau === 'departement'
+  const secteurs = selection.niveau === 'commune' && voteParSecteur(ctx.scrutin, selection.code)
   const tries = [...(lignes ?? [])].sort((a, b) => b.voix - a.voix)
   let phrase: string | undefined
-  if (!parBloc && tries.length >= 2 && resultat.tete !== null) {
+  if (!parBloc && !secteurs && tries.length >= 2 && resultat.tete !== null) {
     const tete = resultat.tete
     const avance = (resultat.avance_x10000 ?? 0) / 100
     phrase = resultat.egalite
@@ -174,6 +176,13 @@ export function Detail({ ctx, selection, resultat, lignes, parent, circonscripti
       {lignes === undefined
         ? <p className="note">Chargement des voix…</p>
         : <Barres lignes={rangees} legende={`Résultats, ${titre}`} entete={parBloc ? 'Bloc' : 'Candidature'} parent={parent?.nom} />}
+      {secteurs && (
+        <p className="note-bas">
+          Jusqu'en 2020, les municipales de Paris, Lyon et Marseille se votaient par secteur : chaque liste ne se
+          présentait que dans le sien. Les résultats de la commune additionnent ces scrutins distincts ; aucune
+          liste n'y est « en tête ».
+        </p>
+      )}
       {!parBloc && !panachage && <TableNuances candidatures={presentes} />}
       {panachage && (
         <p className="note-bas">

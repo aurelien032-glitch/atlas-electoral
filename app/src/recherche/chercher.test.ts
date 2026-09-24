@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Territoire } from '../donnees/types'
-import { chercher, normaliser, preparer } from './chercher'
+import { chercher, indexerCodesPostaux, normaliser, preparer } from './chercher'
 
 const t = (niveau: Territoire['niveau'], code: string, nom: string, departement = code.slice(0, 2)): Territoire =>
   ({ niveau, code, nom, departement, ouest: 0, sud: 0, est: 1, nord: 1 })
@@ -49,5 +49,24 @@ describe('chercher', () => {
 
   it('donne le département des communes, pour les homonymes', () => {
     expect(chercher(entrees, 'lyon')[0].departement).toBe('Rhône')
+  })
+})
+
+describe('codes postaux', () => {
+  const lyon = entrees.find((e) => e.territoire.code === '69123')
+  const affoux = preparer([t('commune', '69001', 'Affoux')], new Map([['69001', 300]]))
+  const avecAffoux = [...entrees, ...affoux]
+  const postaux = indexerCodesPostaux([{ code_postal: '69001', commune: '69123' }, { code_postal: '69002', commune: '69123' }], avecAffoux)
+
+  it('trouve une commune par son code postal, avant la commune qui porte ce code INSEE', () => {
+    const [premier, second] = chercher(avecAffoux, '69001', 8, postaux)
+    expect(premier.territoire.nom).toBe('Lyon')
+    expect(premier.precision).toBe('code postal 69001')
+    expect(second.territoire.nom).toBe('Affoux')
+    expect(lyon).toBeDefined()
+  })
+
+  it('ne propose une commune qu’une fois, même quand plusieurs codes postaux commencent pareil', () => {
+    expect(chercher(avecAffoux, '6900', 8, postaux).filter((e) => e.territoire.nom === 'Lyon')).toHaveLength(1)
   })
 })

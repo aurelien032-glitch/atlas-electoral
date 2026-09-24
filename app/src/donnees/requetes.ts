@@ -3,7 +3,7 @@ import type { Feature } from 'geojson'
 import { lireCsv } from './csv'
 import { lireParquet } from './parquet'
 import type {
-  Agregat, Bureau, BureauContour, Candidature, Catalogue, Circonscription, Encart, LigneSerie, Manifeste, Passage, Territoire,
+  Agregat, Bureau, BureauContour, Candidature, Catalogue, Circonscription, CodePostal, Encart, LigneSerie, Manifeste, Passage, Territoire,
   VoixAgregat, VoixBureau, VoixPanachage,
 } from './types'
 
@@ -115,6 +115,15 @@ export const useContours = () => useGeo<BureauContour>('bureaux_contours_2022.pa
 
 /** Noms et emprises des départements et des communes (découpage 2026). */
 export const useTerritoires = () => useGeo<Territoire>('territoires.parquet')
+
+/** Codes postaux des communes, pour la recherche : demandés à la première utilisation du champ. */
+export function useCodesPostaux(actif: boolean) {
+  return useQuery({
+    queryKey: ['geo', 'codes_postaux.parquet'],
+    enabled: actif,
+    queryFn: ({ signal }) => lireParquet<CodePostal>(`${RACINE_DONNEES}/geo/codes_postaux.parquet`, signal),
+  })
+}
 
 /** Communes fusionnées depuis 2022 : ancien code → commune du COG 2026. */
 export const usePassage = () => useGeo<Passage>('passage_communes.parquet')

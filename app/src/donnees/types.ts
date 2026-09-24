@@ -163,7 +163,6 @@ export interface Circonscription {
   nord: number | null
 }
 
-/** Ancien code de commune (fusionnée depuis) → commune du COG 2026. */
 /** Encart de la carte nationale (geo/encarts.json) : chemins SVG précalculés, par code. */
 export interface Encart {
   code: string
@@ -175,6 +174,13 @@ export interface Encart {
   circonscriptions: Record<string, string>
 }
 
+/** Code postal et commune du COG 2026 (base officielle de La Poste). */
+export interface CodePostal {
+  code_postal: string
+  commune: string
+}
+
+/** Ancien code de commune (fusionnée depuis) → commune du COG 2026. */
 export interface Passage {
   ancien: string
   actuel: string

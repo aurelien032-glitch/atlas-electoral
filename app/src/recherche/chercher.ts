@@ -25,6 +25,8 @@ export interface Entree {
   departement: string | undefined
   /** Nombre d'inscrits : à pertinence égale, les territoires peuplés passent devant. */
   poids: number
+  /** Raison de la suggestion quand ce n'est pas le nom (« code postal 69001 »). */
+  precision?: string
 }
 
 export function preparer(territoires: readonly Territoire[], poids: ReadonlyMap<string, number>): Entree[] {
@@ -52,7 +54,27 @@ function pertinence(entree: Entree, requete: string, mots: string[]): number | n
   return null
 }
 
-export function chercher(entrees: readonly Entree[], texte: string, n = 8): Entree[] {
+/** Communes de chaque code postal (base officielle de La Poste), sous la forme des entrées de recherche. */
+export function indexerCodesPostaux(
+  lignes: readonly { code_postal: string; commune: string }[],
+  entrees: readonly Entree[],
+): Map<string, Entree[]> {
+  const parCode = new Map(entrees.filter((e) => e.territoire.niveau === 'commune').map((e) => [e.territoire.code, e]))
+  const index = new Map<string, Entree[]>()
+  for (const l of lignes) {
+    const entree = parCode.get(l.commune)
+    if (!entree) continue
+    index.set(l.code_postal, [...(index.get(l.code_postal) ?? []), entree])
+  }
+  return index
+}
+
+export function chercher(
+  entrees: readonly Entree[],
+  texte: string,
+  n = 8,
+  postaux?: ReadonlyMap<string, readonly Entree[]>,
+): Entree[] {
   const requete = normaliser(texte)
   if (requete.length < 2) return []
   const parCode = /^[0-9][0-9ab]?[0-9]*$/.test(requete)
@@ -64,6 +86,17 @@ export function chercher(entrees: readonly Entree[], texte: string, n = 8): Entr
       : pertinence(entree, requete, mots)
     if (score !== null) trouves.push([entree, score])
   }
+  // Un nombre peut aussi être un code postal : « 69001 » est Affoux (code INSEE) et Lyon (code postal).
+  if (parCode && postaux && /^[0-9]+$/.test(requete)) {
+    for (const [code, communes] of postaux) {
+      if (!code.startsWith(requete)) continue
+      for (const entree of communes) trouves.push([{ ...entree, precision: `code postal ${code}` }, code.length === requete.length ? 0 : 1])
+    }
+  }
   trouves.sort((a, b) => a[1] - b[1] || b[0].poids - a[0].poids || a[0].forme.localeCompare(b[0].forme))
-  return trouves.slice(0, n).map(([entree]) => entree)
+  const vus = new Set<string>()
+  return trouves
+    .filter(([entree]) => !vus.has(entree.territoire.code) && vus.add(entree.territoire.code))
+    .slice(0, n)
+    .map(([entree]) => entree)
 }

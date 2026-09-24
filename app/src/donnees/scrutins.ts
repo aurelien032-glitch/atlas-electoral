@@ -12,6 +12,13 @@ export const TYPES = [
 ] as const
 
 export const typeDe = (id: string) => id.split('_')[1] ?? ''
+
+/**
+ * Paris, Lyon et Marseille aux municipales jusqu'en 2020 : chaque liste ne se présentait que dans son
+ * secteur. Additionnés à la commune, ces scrutins distincts n'ont pas de « tête » qui ait un sens.
+ */
+export const voteParSecteur = (scrutin: ScrutinCatalogue, commune: string) =>
+  typeDe(scrutin.id) === 'muni' && scrutin.date < '2026' && ['75056', '69123', '13055'].includes(commune)
 const tourDe = (id: string) => id.split('_')[2] ?? ''
 
 /** Scrutins groupés par type, du plus récent au plus ancien dans chaque groupe. */

@@ -4,16 +4,19 @@ import { chercher, type Entree } from './chercher'
 
 interface Props {
   entrees: readonly Entree[]
+  /** Codes postaux, chargés à la première utilisation du champ. */
+  postaux: ReadonlyMap<string, readonly Entree[]> | undefined
+  onActiver: () => void
   onChoisir: (territoire: Territoire) => void
 }
 
 /** Champ de recherche d'une commune ou d'un département (motif « combobox » de l'ARIA). */
-export function Recherche({ entrees, onChoisir }: Props) {
+export function Recherche({ entrees, postaux, onActiver, onChoisir }: Props) {
   const [texte, setTexte] = useState('')
   const [ouvert, setOuvert] = useState(false)
   const [actif, setActif] = useState(-1)
   const id = useId()
-  const resultats = useMemo(() => chercher(entrees, texte), [entrees, texte])
+  const resultats = useMemo(() => chercher(entrees, texte, 8, postaux), [entrees, texte, postaux])
   const visible = ouvert && resultats.length > 0
 
   const choisir = (entree: Entree) => {
@@ -55,7 +58,7 @@ export function Recherche({ entrees, onChoisir }: Props) {
           aria-controls={`${id}-liste`}
           aria-autocomplete="list"
           aria-activedescendant={visible && actif >= 0 ? `${id}-${actif}` : undefined}
-          placeholder="Nom ou code INSEE"
+          placeholder="Nom, code postal ou code INSEE"
           autoComplete="off"
           spellCheck={false}
           value={texte}
@@ -65,7 +68,7 @@ export function Recherche({ entrees, onChoisir }: Props) {
             setActif(-1)
           }}
           onKeyDown={clavier}
-          onFocus={() => setOuvert(true)}
+          onFocus={() => { setOuvert(true); onActiver() }}
           onBlur={() => setOuvert(false)}
         />
       </label>
@@ -87,7 +90,8 @@ export function Recherche({ entrees, onChoisir }: Props) {
               <span className="discret">
                 {entree.territoire.niveau === 'departement'
                   ? `département (${entree.territoire.code})`
-                  : entree.territoire.niveau === 'circonscription' ? 'circonscription' : entree.departement}
+                  : entree.territoire.niveau === 'circonscription' ? 'circonscription'
+                    : [entree.departement, entree.precision].filter(Boolean).join(' · ')}
               </span>
             </li>
           ))}

@@ -18,7 +18,7 @@ from pathlib import Path
 
 import duckdb
 
-from .config import CONTOURS_CODES, PASSAGE_COMMUNES, PUBLICATION
+from .config import CONTOURS_CODES, LIEN_PERENNE, PASSAGE_COMMUNES, PUBLICATION, RESSOURCES
 
 MILLESIME = 2026
 SOURCE = "https://etalab-datasets.geo.data.gouv.fr/contours-administratifs/{millesime}/geojson/{nom}.geojson.gz"
@@ -37,6 +37,12 @@ AUTRES_TERRITOIRES = {
     "988": "Nouvelle-Calédonie",
     "ZZ": "Français établis hors de France",
 }
+
+
+def arrondissement_municipal(code: str) -> bool:
+    """Arrondissements de Paris, Lyon et Marseille : les résultats sont publiés à la commune (75056,
+    69123, 13055), les arrondissements n'en ont pas. Voir docs/etude-paris-lyon-marseille.md."""
+    return "75101" <= code <= "75120" or "69381" <= code <= "69389" or "13201" <= code <= "13216"
 
 
 def telecharger(nom: str) -> dict:
@@ -96,6 +102,29 @@ def publier_passage(con, sortie: Path) -> None:
         con.sql("CREATE OR REPLACE TABLE passage (ancien VARCHAR, actuel VARCHAR, fusion BOOLEAN)")
 
 
+def publier_codes_postaux(con, sortie: Path) -> int:
+    """Code postal → communes du COG 2026 (base officielle de La Poste), pour la recherche. Le fichier est
+    en Latin-1 malgré son en-tête HTTP ; seules les communes connues de l'index des territoires sont gardées."""
+    url = LIEN_PERENNE.format(id=RESSOURCES["codes_postaux"])
+    con.sql("INSTALL httpfs; LOAD httpfs;")
+    con.sql(f"""
+        CREATE OR REPLACE TABLE codes_postaux AS
+        SELECT DISTINCT l.code_postal,
+               -- La Poste code Paris, Lyon et Marseille par arrondissement : on revient à la commune.
+               CASE WHEN l.insee BETWEEN '75101' AND '75120' THEN '75056'
+                    WHEN l.insee BETWEEN '69381' AND '69389' THEN '69123'
+                    WHEN l.insee BETWEEN '13201' AND '13216' THEN '13055'
+                    ELSE coalesce(p.actuel, l.insee) END AS commune
+        FROM read_csv('{url}', delim = ';', header = true, encoding = 'latin-1', all_varchar = true,
+                      names = ['insee', 'nom', 'code_postal', 'acheminement', 'ligne_5']) l
+        LEFT JOIN passage p ON p.ancien = l.insee
+        ORDER BY 1, 2""")
+    con.sql(f"""DELETE FROM codes_postaux WHERE commune NOT IN (
+                    SELECT code FROM '{(sortie / 'territoires.parquet').as_posix()}' WHERE niveau = 'commune')""")
+    con.sql(f"COPY codes_postaux TO '{(sortie / 'codes_postaux.parquet').as_posix()}' (FORMAT parquet, COMPRESSION zstd)")
+    return con.sql("SELECT count(*) FROM codes_postaux").fetchone()[0]
+
+
 def main() -> None:
     sortie = PUBLICATION / "geo"
     sortie.mkdir(parents=True, exist_ok=True)
@@ -103,7 +132,9 @@ def main() -> None:
     for couche, nom in COUCHES.items():
         debut = time.time()
         collection = telecharger(nom)
-        # On ne garde que le code et le nom : les autres propriétés alourdiraient chaque chargement.
+        # Pas d'arrondissement municipal : superposés à leur commune, ils captaient survol et clic sans
+        # avoir de résultat. On ne garde que le code et le nom, les autres propriétés alourdiraient tout.
+        collection["features"] = [e for e in collection["features"] if not arrondissement_municipal(e["properties"]["code"])]
         for entite in collection["features"]:
             p = entite["properties"]
             entite["properties"] = {"code": p.get("code"), "nom": p.get("nom")}
@@ -119,6 +150,8 @@ def main() -> None:
     # Les communes fusionnées depuis 2022 y prennent leur code du COG 2026, comme les agrégats.
     con = duckdb.connect()
     publier_passage(con, sortie)
+    n = publier_codes_postaux(con, sortie)
+    print(f"codes postaux : {n:,} couples code postal - commune")
     con.sql(f"""
         COPY (SELECT c.code_bv, coalesce(p.actuel, c.code_commune) AS code_commune, c.code_circonscription
               FROM '{CONTOURS_CODES.as_posix()}' c LEFT JOIN passage p ON p.ancien = c.code_commune ORDER BY c.code_bv)

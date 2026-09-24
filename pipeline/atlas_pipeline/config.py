@@ -22,6 +22,8 @@ RESSOURCES = {
     # Législatives 2024 : résultats officiels par circonscription (le code a disparu des données agrégées).
     "legislatives_2024_t1_circonscriptions": "5163f2e3-1362-4c35-89a0-1934bb74f2d9",
     "legislatives_2024_t2_circonscriptions": "41ed46cd-77c2-4ecc-b8eb-374aa953ca39",
+    # Base officielle des codes postaux (La Poste), pour chercher une commune par son code postal.
+    "codes_postaux": "008a2dda-2c60-4b63-b910-998f6f818089",
 }
 
 # Seuil au-delà duquel un scrutin est cartographié au bureau de vote (part des inscrits de
