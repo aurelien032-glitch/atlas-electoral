@@ -132,6 +132,18 @@ def test_territoires_nommes(con, scrutin):
     assert (hors_cog or 0) < 0.0005
 
 
+@pytest.mark.skipif(not TERRITOIRES.exists(), reason="lancer d'abord python -m atlas_pipeline.geo")
+def test_departements_a_part(con):
+    # Le petit fichier des départements, lu avant l'index complet, en est l'extrait exact.
+    t = "'" + TERRITOIRES.as_posix() + "'"
+    d = "'" + TERRITOIRES.with_name("territoires_departements.parquet").as_posix() + "'"
+    ecarts = con.sql(f"""SELECT count(*) FROM (
+                           (SELECT * FROM {t} WHERE niveau = 'departement' EXCEPT ALL SELECT * FROM {d})
+                           UNION ALL (SELECT * FROM {d} EXCEPT ALL SELECT * FROM {t} WHERE niveau = 'departement'))""").fetchone()[0]
+    assert ecarts == 0
+    assert con.sql(f"SELECT count(*) FROM {d}").fetchone()[0] >= 101
+
+
 def test_passage_vers_des_communes_de_2026(con):
     passage = "'" + (REFERENTIELS / "passage_communes_2026.csv").as_posix() + "'"
     t = "'" + TERRITOIRES.as_posix() + "'"

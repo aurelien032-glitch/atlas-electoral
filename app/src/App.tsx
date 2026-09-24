@@ -1,5 +1,5 @@
 import type { Feature } from 'geojson'
-import { Suspense, lazy, useCallback, useMemo, useState } from 'react'
+import { Component, Suspense, lazy, useCallback, useMemo, useState, type ReactNode } from 'react'
 import type { Cadrage, Survol } from './carte/Carte'
 import { Encarts } from './carte/Encarts'
 import {
@@ -12,7 +12,8 @@ import { blocEnTete, optionsCibles, retenueDuBloc } from './cibles'
 import { nomCandidature } from './donnees/libelles'
 import {
   useAgregats, useAgregatsVoix, useBureaux, useCandidats, useCatalogue, useCirconscriptions, useContourCommune, useContours,
-  useCodesPostaux, useEncarts, usePanachage, usePassage, useSeriesCommunes, useSeriesTerritoires, useTerritoires, useVoix,
+  useCodesPostaux, useDepartements, useEncarts, usePanachage, usePassage, useSeriesCommunes, useSeriesTerritoires,
+  useTerritoires, useVoix,
 } from './donnees/requetes'
 import { arrondissementDu, communeDu, departementDe, emprise, indexer, titreDe, villeDe } from './donnees/territoires'
 import { scrutinParDefaut, scrutinPrecedent, voteParSecteur } from './donnees/scrutins'
@@ -66,7 +67,25 @@ interface EtatCarte {
   valeurs: Valeurs | null
 }
 
+/** Carte qui ne peut pas s'afficher (fragment non reçu, WebGL indisponible) : le panneau reste utilisable. */
+class GardeCarte extends Component<{ children: ReactNode; onEchec: () => void }, { echec: boolean }> {
+  state = { echec: false }
+  static getDerivedStateFromError() {
+    return { echec: true }
+  }
+  componentDidCatch() {
+    this.props.onEchec()
+  }
+  render() {
+    return this.state.echec
+      ? <p className="alerte carte-indisponible" role="alert">La carte n'a pas pu s'afficher : rechargez la page. Les résultats restent consultables dans le panneau.</p>
+      : this.props.children
+  }
+}
+
 interface PropsZone {
+  /** La carte démarre après les premiers chiffres : MapLibre et ses contours ne leur disputent ni le réseau ni le processeur. */
+  lancee: boolean
   coloriage: Coloriage | null
   contours: BureauContour[]
   auBureau: boolean
@@ -81,17 +100,23 @@ interface PropsZone {
   encarts: Encart[] | undefined
   onChoisirEncart: (selection: Selection) => void
   onCadrer: (emprise: [number, number, number, number]) => void
+  /** Carte prête, ou en échec : ce qui attendait la carte peut se télécharger. */
+  onPrete: () => void
 }
 
 // Le survol change à chaque mouvement de souris : son état vit ici, pour ne pas recalculer les panneaux.
-function ZoneCarte({ contenu, encarts, onChoisirEncart, onCadrer, ...props }: PropsZone) {
+function ZoneCarte({ lancee, contenu, encarts, onChoisirEncart, onCadrer, onPrete, ...props }: PropsZone) {
   const [survol, setSurvol] = useState<Survol | null>(null)
   const bulle = survol && contenu(survol)
   return (
     <div className="zone-carte-fond">
-      <Suspense fallback={null}>
-        <Carte {...props} onSurvol={setSurvol} />
-      </Suspense>
+      {lancee && (
+        <GardeCarte onEchec={onPrete}>
+          <Suspense fallback={null}>
+            <Carte {...props} onSurvol={setSurvol} onPrete={onPrete} />
+          </Suspense>
+        </GardeCarte>
+      )}
       {encarts && !props.selection && (
         <Encarts
           encarts={encarts} coloriage={props.coloriage} onSurvol={setSurvol} onChoisir={onChoisirEncart} onCadrer={onCadrer}
@@ -121,14 +146,28 @@ export default function App() {
   const agregats = useAgregats(id)
   const candidats = useCandidats(id)
   const chiffresPrets = agregats.isSuccess && candidats.isSuccess
-  // Bureaux (70 000 lignes) : après les chiffres du panneau, pour ne pas leur disputer le réseau.
-  const bureaux = useBureaux(chiffresPrets && (auBureau || selection?.niveau === 'bureau') ? id : undefined)
+  // Ordre des téléchargements : les chiffres du panneau, puis la carte (qui reste ensuite, d'un scrutin à
+  // l'autre), puis ce qui peut attendre qu'elle soit prête (index complet, historique, bureaux).
+  const [carteLancee, setCarteLancee] = useState(false)
+  if (chiffresPrets && !carteLancee) setCarteLancee(true)
+  const [carteChargee, setCarteChargee] = useState(false)
+  const signalerCarte = useCallback(() => setCarteChargee(true), [])
+  // Bureaux (70 000 lignes) : tout de suite pour la fiche d'un bureau, sinon après la carte.
+  const bureaux = useBureaux((selection?.niveau === 'bureau' ? chiffresPrets : carteChargee && auBureau) ? id : undefined)
   const agregatsVoix = useAgregatsVoix(vue.mode === 'score' || vue.mode === 'evolution' || selection ? id : undefined)
   const voix = useVoix((vue.mode === 'score' && carteAuBureau) || selection?.niveau === 'bureau' ? id : undefined)
   // Correspondance bureau → commune : seulement pour les cartes à la commune.
-  const contours = useContours(scrutin !== undefined && !carteAuBureau)
+  const contours = useContours(chiffresPrets && !carteAuBureau)
   const encarts = useEncarts(chiffresPrets)
-  const territoires = useTerritoires()
+  // Recherche, préparée à la première utilisation du champ (normaliser 35 000 noms prend du temps) : à
+  // pertinence égale, les communes qui comptent le plus d'inscrits passent devant.
+  const [rechercheActive, setRechercheActive] = useState(false)
+  const activerRecherche = useCallback(() => setRechercheActive(true), [])
+  // Index des territoires : les départements suffisent à la vue nationale ; les 35 000 communes (600 Ko)
+  // viennent après la carte, sauf pour un lien vers un territoire, qui attend son nom, ou pour la recherche.
+  const departements = useDepartements()
+  const territoires = useTerritoires(carteChargee || selection !== undefined || rechercheActive)
+  const communesNommees = territoires.data !== undefined
   const passage = usePassage()
   const circonscriptions = useCirconscriptions(scrutin?.portee === 'circonscription' ? id : undefined)
   const contourCommune = useContourCommune(selection?.niveau === 'commune' ? selection.code : undefined)
@@ -142,8 +181,8 @@ export default function App() {
 
   const parCand = useMemo(() => new Map((candidats.data ?? []).map((c) => [c.cand, c])), [candidats.data])
   const index = useMemo(
-    () => indexer(territoires.data ?? [], passage.data, circonscriptions.data),
-    [territoires.data, passage.data, circonscriptions.data],
+    () => indexer(territoires.data ?? departements.data ?? [], passage.data, circonscriptions.data),
+    [territoires.data, departements.data, passage.data, circonscriptions.data],
   )
   // Municipales jusqu'en 2020 : dans les petites communes, on vote pour des personnes (panachage). Leurs
   // candidats sont publiés à part, un fichier par département, chargé à l'ouverture de la fiche.
@@ -162,7 +201,7 @@ export default function App() {
   const niveauSerie = !selection ? 'france'
     : selection.niveau === 'bureau' ? (arrondissementDuBureau ? 'arrondissement' : 'commune') : selection.niveau
   const codeSerie = !selection ? 'FR' : arrondissementDuBureau ?? communeChoisie ?? selection.code
-  const seriesTerritoires = useSeriesTerritoires(niveauSerie !== 'commune' && chiffresPrets)
+  const seriesTerritoires = useSeriesTerritoires(niveauSerie !== 'commune' && chiffresPrets && (carteChargee || selection !== undefined))
   const seriesCommunes = useSeriesCommunes(niveauSerie === 'commune' ? departementDe(codeSerie) : undefined)
   const serie = niveauSerie === 'commune' ? seriesCommunes : seriesTerritoires
   const lignesSerie = useMemo(
@@ -170,10 +209,6 @@ export default function App() {
     [serie.data, codeSerie, niveauSerie],
   )
   const cibles = useMemo(() => optionsCibles(scrutin, candidats.data), [scrutin, candidats.data])
-  // Recherche, préparée à la première utilisation du champ (normaliser 35 000 noms prend du temps) : à
-  // pertinence égale, les communes qui comptent le plus d'inscrits passent devant.
-  const [rechercheActive, setRechercheActive] = useState(false)
-  const activerRecherche = useCallback(() => setRechercheActive(true), [])
   const entreesRecherche = useMemo(() => {
     if (!rechercheActive) return []
     const inscrits = new Map((agregats.data ?? []).filter((a) => a.niveau === 'commune').map((a) => [a.code, a.inscrits]))
@@ -284,7 +319,9 @@ export default function App() {
   }), [bureaux.data, agregats.data])
 
   const contenuInfobulle = useCallback((survol: Survol) => {
-    const titre = titreDe({ niveau: survol.niveau, code: survol.code }, index)
+    // Les noms des communes arrivent avec l'index complet, juste après la carte : pas de code INSEE en attendant.
+    const nomAttendu = !communesNommees && survol.niveau !== 'circonscription'
+    const titre = nomAttendu ? 'Chargement du nom…' : titreDe({ niveau: survol.niveau, code: survol.code }, index)
     const lignes: string[] = []
     if (survol.niveau === 'commune' && communesPanachage.has(survol.code) && vue.mode !== 'participation') {
       lignes.push('Vote pour des personnes (panachage)')
@@ -311,7 +348,7 @@ export default function App() {
       else lignes.push(vue.mode === 'evolution' ? `${formatEcart(v)} ${unitePoints(v)}` : formatPourcent(v))
     }
     return { titre, lignes }
-  }, [vue.mode, resultats, parCand, etatCarte, index, communesPanachage, scrutin])
+  }, [vue.mode, resultats, parCand, etatCarte, index, communesNommees, communesPanachage, scrutin])
 
   const actions: Actions = useMemo(() => ({
     scrutin: (valeur) => modifierUrl({ scrutin: valeur, cible: null }),
@@ -458,9 +495,10 @@ export default function App() {
     return undefined
   }, [selection, detail, vue.mode, cible, evolution, scrutinDe, scrutin, bloc, index, auPanachage])
 
-  const chargement = catalogue.isPending || agregats.isPending || candidats.isPending || territoires.isPending
+  const chargement = catalogue.isPending || agregats.isPending || candidats.isPending
+    || (selection ? territoires.isPending : territoires.isPending && departements.isPending)
   const erreur = catalogue.error ?? agregats.error ?? candidats.error ?? bureaux.error ?? agregatsVoix.error ?? voix.error ?? panachage.error
-    ?? contours.error ?? territoires.error ?? agregatsDe.error ?? agregatsVoixDe.error ?? candidatsDe.error
+    ?? contours.error ?? territoires.error ?? departements.error ?? agregatsDe.error ?? agregatsVoixDe.error ?? candidatsDe.error
 
   return (
     <div className="atlas">
@@ -528,6 +566,8 @@ export default function App() {
       </aside>
       <main className="zone-carte">
         <ZoneCarte
+          lancee={carteLancee}
+          onPrete={signalerCarte}
           coloriage={etatCarte?.coloriage ?? null}
           contours={contours.data ?? AUCUN_CONTOUR}
           auBureau={carteAuBureau}

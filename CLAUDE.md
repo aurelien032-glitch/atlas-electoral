@@ -85,7 +85,11 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   `setWorkerUrl(urlWorker)` (import `?worker&url`), sinon le worker ne se charge pas.
 - La carte (et la feuille de style de MapLibre) est chargée en différé (`React.lazy`) : le panneau s'affiche
   d'abord. Ses styles arrivant après les nôtres, nos réglages des classes `maplibregl-*` passent par
-  `.zone-carte` pour l'emporter.
+  `.zone-carte` pour l'emporter. Elle est protégée par `GardeCarte` : si elle échoue, le panneau reste.
+- Ordre des téléchargements (`App.tsx`) : les chiffres du panneau (catalogue, agrégats, candidats, petit index
+  des départements) ; puis la carte ; puis, une fois les contours des communes chargés (`onPrete`), l'index
+  complet des territoires, l'historique et les bureaux. Un lien vers un territoire, la recherche ou la fiche
+  d'un bureau demandent tout de suite ce dont ils ont besoin.
 - Ne jamais passer à la carte un tableau ou un objet recréé à chaque rendu (`?? []`) : son effet de coloriage
   se relancerait à chaque mise à jour (plusieurs secondes sur un téléphone). Les états ne sont posés que
   s'ils changent ; ceux des bureaux, à l'approche du zoom des bureaux.

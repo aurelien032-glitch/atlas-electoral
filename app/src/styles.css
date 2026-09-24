@@ -173,6 +173,7 @@ a:hover, .lien:hover { color: var(--encre-2); }
 /* Styles de MapLibre chargés avec la carte, donc après ceux-ci : nos réglages passent par .zone-carte
    pour l'emporter quel que soit l'ordre de chargement. */
 .zone-carte-fond, .zone-carte .carte { position: absolute; inset: 0; }
+.carte-indisponible { position: absolute; top: 40%; left: 16px; right: 16px; text-align: center; }
 
 .onglets {
   position: absolute; top: 24px; left: 32px; z-index: 2;

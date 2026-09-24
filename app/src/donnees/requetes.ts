@@ -115,8 +115,11 @@ export function useEncarts(actif: boolean) {
 /** Bureaux des contours officiels et leur commune, communs à tous les scrutins. */
 export const useContours = (actif: boolean) => useGeo<BureauContour>('bureaux_contours_2022.parquet', actif)
 
-/** Noms et emprises des départements et des communes (découpage 2026). */
-export const useTerritoires = () => useGeo<Territoire>('territoires.parquet')
+/** Noms et emprises des départements et des communes (découpage 2026) : 600 Ko. */
+export const useTerritoires = (actif: boolean) => useGeo<Territoire>('territoires.parquet', actif)
+
+/** Les départements seuls (quelques Ko) : la vue nationale n'attend pas l'index complet. */
+export const useDepartements = () => useGeo<Territoire>('territoires_departements.parquet')
 
 /** Codes postaux des communes, pour la recherche : demandés à la première utilisation du champ. */
 export function useCodesPostaux(actif: boolean) {

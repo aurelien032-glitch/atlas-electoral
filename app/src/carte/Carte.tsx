@@ -1,7 +1,7 @@
 import type { ExpressionSpecification, StyleSpecification } from '@maplibre/maplibre-gl-style-spec'
 import {
   Map as CarteMapLibre, NavigationControl, addProtocol, removeProtocol, setWorkerUrl,
-  type FeatureIdentifier, type GeoJSONSource, type MapLayerMouseEvent,
+  type FeatureIdentifier, type GeoJSONSource, type MapLayerMouseEvent, type MapSourceDataEvent,
 } from 'maplibre-gl'
 import urlWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 // Styles des contrôles de la carte : chargés avec elle, pas avant (ils ne bloquent plus le premier affichage).
@@ -123,6 +123,8 @@ interface Props {
   libelle: string
   onSurvol: (survol: Survol | null) => void
   onClic: (survol: Survol) => void
+  /** Style chargé : les téléchargements qui attendaient la carte peuvent partir. */
+  onPrete: () => void
 }
 
 // Marges de cadrage : la légende occupe le bas à gauche sur ordinateur, le volet le bas de l'écran sur mobile.
@@ -157,7 +159,7 @@ function motifHachures(pas = 8, ratio = 2) {
   return { width: n, height: n, data }
 }
 
-export function Carte({ coloriage, contours, auBureau, circonscriptions, selection, contour, cadrage, libelle, onSurvol, onClic }: Props) {
+export function Carte({ coloriage, contours, auBureau, circonscriptions, selection, contour, cadrage, libelle, onSurvol, onClic, onPrete }: Props) {
   const conteneur = useRef<HTMLDivElement>(null)
   const refCarte = useRef<CarteMapLibre | null>(null)
   const refSelection = useRef<Selection | undefined>(undefined)
@@ -180,6 +182,11 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
     refPoses.current.set(source, etats)
   }
   const [prete, setPrete] = useState(false)
+  // Contours des communes chargés : ce qui attendait la carte peut se télécharger sans leur disputer le réseau.
+  const [communesChargees, setCommunesChargees] = useState(false)
+  useEffect(() => {
+    if (communesChargees) onPrete()
+  }, [communesChargees, onPrete])
 
   useEffect(() => {
     if (!conteneur.current) return
@@ -201,7 +208,17 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
     })
     // Les résultats peuvent être appliqués dès que les sources existent : inutile d'attendre le
     // premier rendu complet ('load'), qui tarde quand l'onglet est en arrière-plan.
-    carte.once('style.load', () => setPrete(true))
+    carte.once('style.load', () => {
+      setPrete(true)
+      // Secours : des contours qui tardent (réseau très lent, erreur) ne bloquent pas le reste indéfiniment.
+      setTimeout(() => setCommunesChargees(true), 8000)
+    })
+    const surDonnees = (e: MapSourceDataEvent) => {
+      if (e.sourceId !== 'communes' || !e.isSourceLoaded) return
+      carte.off('sourcedata', surDonnees)
+      setCommunesChargees(true)
+    }
+    carte.on('sourcedata', surDonnees)
     carte.on('error', (e) => console.error('Carte :', e.error))
     // Limites départementales : tracé à 1 000 m pour la vue nationale, remplacé une fois pour toutes par
     // celui à 100 m (huit fois plus lourd) à l'approche du zoom des bureaux.
@@ -286,9 +303,15 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
     source?.setData(detaille ? contour : { type: 'FeatureCollection', features: [] })
   }, [prete, selection, contour])
 
+  const refCadre = useRef('')
   useEffect(() => {
     const carte = refCarte.current
     if (!carte || !prete || !cadrage) return
+    // Un cadrage recalculé à l'identique (l'index des territoires se complète) ne ramène pas en arrière
+    // une carte que l'on a déjà déplacée.
+    const cle = `${cadrage.jeton}:${cadrage.emprise.join(',')}`
+    if (cle === refCadre.current) return
+    refCadre.current = cle
     const [ouest, sud, est, nord] = cadrage.emprise
     carte.fitBounds([[ouest, sud], [est, nord]], { padding: marges(), maxZoom: 13, duration: 600 })
   }, [prete, cadrage])

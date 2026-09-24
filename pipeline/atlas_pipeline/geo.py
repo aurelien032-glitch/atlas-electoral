@@ -69,7 +69,9 @@ def emprise(geometrie: dict | None) -> tuple[float | None, ...]:
 
 
 def ecrire_territoires(couches: dict[str, dict], chemin: Path) -> int:
-    """Nom, département et emprise de chaque département et commune : fil d'Ariane, recherche, cadrage."""
+    """Nom, département et emprise de chaque département et commune : fil d'Ariane, recherche, cadrage. Les
+    départements forment aussi un fichier à part (quelques Ko) : la vue nationale n'attend pas les 600 Ko
+    de l'index complet."""
     lignes = []
     for niveau, couche in (("departement", "departements-detail"), ("commune", "communes")):
         for entite in couches[couche]["features"]:
@@ -84,12 +86,17 @@ def ecrire_territoires(couches: dict[str, dict], chemin: Path) -> int:
         temporaire = Path(dossier) / "territoires.csv"
         with temporaire.open("w", newline="", encoding="utf-8") as f:
             csv.writer(f).writerows(lignes)
-        duckdb.sql(f"""
-            COPY (SELECT * FROM read_csv('{temporaire.as_posix()}', header = false, columns = {{
-                    'niveau': 'VARCHAR', 'code': 'VARCHAR', 'nom': 'VARCHAR', 'departement': 'VARCHAR',
-                    'ouest': 'FLOAT', 'sud': 'FLOAT', 'est': 'FLOAT', 'nord': 'FLOAT'}})
-                  ORDER BY niveau, code)
-            TO '{chemin.as_posix()}' (FORMAT parquet, COMPRESSION zstd)""")
+        con = duckdb.connect()
+        con.sql(f"""
+            CREATE TABLE territoires AS
+            SELECT * FROM read_csv('{temporaire.as_posix()}', header = false, columns = {{
+                'niveau': 'VARCHAR', 'code': 'VARCHAR', 'nom': 'VARCHAR', 'departement': 'VARCHAR',
+                'ouest': 'FLOAT', 'sud': 'FLOAT', 'est': 'FLOAT', 'nord': 'FLOAT'}})
+            ORDER BY niveau, code""")
+    con.sql(f"COPY territoires TO '{chemin.as_posix()}' (FORMAT parquet, COMPRESSION zstd)")
+    departements = chemin.with_name("territoires_departements.parquet")
+    con.sql(f"""COPY (SELECT * FROM territoires WHERE niveau = 'departement')
+                TO '{departements.as_posix()}' (FORMAT parquet, COMPRESSION zstd)""")
     return len(lignes)
 
 
