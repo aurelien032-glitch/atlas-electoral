@@ -1,6 +1,7 @@
 import type { Feature } from 'geojson'
 import { useCallback, useMemo, useState } from 'react'
 import { Carte, type Cadrage, type Survol } from './carte/Carte'
+import { Encarts } from './carte/Encarts'
 import {
   LIBELLE_BLOC, PALETTE_EVOLUTION, RAMPE_PARTICIPATION, RAMPE_SCORE, SEUILS_EVOLUTION, palier, type BlocColore,
 } from './carte/couleurs'
@@ -11,12 +12,13 @@ import { blocEnTete, optionsCibles, retenueDuBloc } from './cibles'
 import { nomCandidature } from './donnees/libelles'
 import {
   useAgregats, useAgregatsVoix, useBureaux, useCandidats, useCatalogue, useCirconscriptions, useContourCommune, useContours,
-  usePanachage, usePassage, useSeriesCommunes, useSeriesTerritoires, useTerritoires, useVoix,
+  useEncarts, usePanachage, usePassage, useSeriesCommunes, useSeriesTerritoires, useTerritoires, useVoix,
 } from './donnees/requetes'
 import { communeDu, departementDe, emprise, indexer, titreDe } from './donnees/territoires'
 import { scrutinParDefaut, scrutinPrecedent } from './donnees/scrutins'
 import {
-  exprimesPourParts, type Agregat, type BureauContour, type Candidature, type Resultat, type Territoire, type VoixPanachage,
+  exprimesPourParts, type Agregat, type BureauContour, type Candidature, type Encart, type Resultat, type Territoire,
+  type VoixPanachage,
 } from './donnees/types'
 import { formatEcart, formatPart, formatPourcent, unitePoints } from './format'
 import {
@@ -48,6 +50,9 @@ function voixDuPanachage(lignes: readonly VoixPanachage[]) {
   return [...sommes].map(([cand, voix]) => ({ cand, voix }))
 }
 const FRANCE_METROPOLITAINE: [number, number, number, number] = [-5.2, 41.3, 9.6, 51.1]
+/** Territoires hors de la métropole, accessibles depuis l'aperçu : départements et collectivités d'outre-mer,
+ * Français établis hors de France (« ZZ »). */
+const HORS_METROPOLE = ['971', '972', '973', '974', '976', '975', '977', '978', '986', '987', '988', 'ZZ']
 
 interface EtatCarte {
   coloriage: Coloriage
@@ -66,15 +71,25 @@ interface PropsZone {
   libelle: string
   contenu: (survol: Survol) => { titre: string; lignes: string[] }
   onClic: (survol: Survol) => void
+  /** Vue nationale : encarts de la petite couronne et de l'outre-mer. */
+  encarts: Encart[] | undefined
+  onChoisirEncart: (selection: Selection) => void
+  onCadrer: (emprise: [number, number, number, number]) => void
 }
 
 // Le survol change à chaque mouvement de souris : son état vit ici, pour ne pas recalculer les panneaux.
-function ZoneCarte({ contenu, ...props }: PropsZone) {
+function ZoneCarte({ contenu, encarts, onChoisirEncart, onCadrer, ...props }: PropsZone) {
   const [survol, setSurvol] = useState<Survol | null>(null)
   const bulle = survol && contenu(survol)
   return (
     <div className="zone-carte-fond">
       <Carte {...props} onSurvol={setSurvol} />
+      {encarts && !props.selection && (
+        <Encarts
+          encarts={encarts} coloriage={props.coloriage} onSurvol={setSurvol} onChoisir={onChoisirEncart} onCadrer={onCadrer}
+          parCirconscription={props.circonscriptions && (props.coloriage?.circonscriptions?.size ?? 0) > 0}
+        />
+      )}
       {survol && bulle && <Infobulle x={survol.x} y={survol.y} largeur={survol.largeur} titre={bulle.titre} lignes={bulle.lignes} />}
     </div>
   )
@@ -101,6 +116,7 @@ export default function App() {
   const agregatsVoix = useAgregatsVoix(vue.mode === 'score' || vue.mode === 'evolution' || selection ? id : undefined)
   const voix = useVoix((vue.mode === 'score' && carteAuBureau) || selection?.niveau === 'bureau' ? id : undefined)
   const contours = useContours()
+  const encarts = useEncarts()
   const territoires = useTerritoires()
   const passage = usePassage()
   const circonscriptions = useCirconscriptions(scrutin?.portee === 'circonscription' ? id : undefined)
@@ -304,6 +320,8 @@ export default function App() {
     return `?${p}`
   }, [parametres])
 
+  const cadrer = useCallback((emprise: [number, number, number, number]) => setCadrage({ emprise, jeton: Date.now() }), [])
+
   const changerMode = useCallback((mode: Mode) => modifierUrl({ mode: mode === 'tete' ? null : mode }), [modifierUrl])
 
   const ctx: Contexte | null = scrutin && agregats.data && candidats.data
@@ -419,6 +437,20 @@ export default function App() {
                 circonscriptions={detail?.circonscriptions ?? []} supplementaires={detail?.supplementaires} panachage={auPanachage}
                 cible={vue.mode === 'score' ? cible : undefined} complement={complement} actions={actions} />
             : <Apercu ctx={ctx} mode={vue.mode} cibles={cibles} cible={cible} bloc={bloc} evolution={apercuEvolution} actions={actions} />)}
+          {vue.page !== 'methodologie' && ctx && !selection && (
+            <nav className="raccourcis" aria-label="Outre-mer et Français de l'étranger">
+              <h2 className="surtitre">Outre-mer et Français de l'étranger</h2>
+              <ul>
+                {HORS_METROPOLE.filter((code) => index.noms.has(code)).map((code) => (
+                  <li key={code}>
+                    <button type="button" className="lien" onClick={() => actions.territoire({ niveau: 'departement', code })}>
+                      {index.noms.get(code)}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
           {vue.page !== 'methodologie' && ctx && (
             <Chronologie
               lignes={lignesSerie} erreur={serie.isError} scrutins={scrutins} courant={ctx.scrutin} niveau={niveauSerie}
@@ -446,6 +478,9 @@ export default function App() {
           libelle={`Carte : ${etatCarte?.legende.type === 'classes' ? etatCarte.legende.titre : 'bloc en tête'}, ${scrutin?.libelle ?? ''}`}
           contenu={contenuInfobulle}
           onClic={choisirSurCarte}
+          encarts={encarts.data}
+          onChoisirEncart={actions.territoire}
+          onCadrer={cadrer}
         />
         <Onglets mode={vue.mode} onMode={changerMode} />
         {etatCarte && <Legende description={etatCarte.legende} className="legende-carte" />}

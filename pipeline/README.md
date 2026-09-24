@@ -9,6 +9,8 @@ pip install -r requirements.txt
 python -m atlas_pipeline.contours      # une fois : liste des bureaux des contours officiels (referentiels/)
 python -m atlas_pipeline.cog           # une fois par millésime : passage des communes vers le COG 2026
 python -m atlas_pipeline.geo           # contours simplifiés d'Etalab, index des territoires
+python -m atlas_pipeline.circonscriptions  # contours des circonscriptions (GeoJSON officiel des bureaux, ≈ 4 min)
+python -m atlas_pipeline.encarts       # encarts de la vue nationale : petite couronne et outre-mer
 python -m atlas_pipeline.construire    # les 56 tours (1999-2026) puis les séries → ../publication/v1/
 python -m atlas_pipeline.series        # les séries seules, relues dans les fichiers publiés (≈ 15 s)
 python -m pytest                       # contrôles sur les fichiers publiés

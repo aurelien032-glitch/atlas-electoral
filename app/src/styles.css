@@ -258,3 +258,24 @@ a:hover, .lien:hover { color: var(--encre-2); }
 .controles th { width: 44%; padding-right: 12px; font-weight: 400; color: var(--encre-2); }
 .depliant code { font-size: 12px; word-break: break-all; }
 .panneau-entete a[aria-current='page'] { text-decoration-thickness: 2px; }
+
+/* Encarts de la vue nationale : petite couronne et outre-mer, sous les boutons de zoom. */
+.encarts {
+  position: absolute; top: 120px; right: 20px; z-index: 2;
+  display: grid; grid-template-columns: repeat(2, auto); gap: 6px 8px; padding: 8px;
+  background: var(--surface); border: 1px solid var(--filet); border-radius: 8px;
+}
+.encarts figure { margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.encarts figure:first-child { grid-column: 1 / -1; }
+.encarts svg { display: block; background: var(--papier); border-radius: 4px; }
+.encarts .forme { stroke: #fff; stroke-width: 0.4; cursor: pointer; }
+.encarts .forme:hover { stroke: var(--encre); stroke-width: 1; }
+.encarts figcaption .lien { font-size: 12px; color: var(--encre-2); }
+@media (max-width: 760px), (max-height: 640px) {
+  .encarts { display: none; }
+}
+
+/* Raccourcis vers l'outre-mer et les Français de l'étranger, sous l'aperçu. */
+.raccourcis { display: flex; flex-direction: column; gap: 8px; }
+.raccourcis ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; }
+.raccourcis .lien { min-height: 28px; }

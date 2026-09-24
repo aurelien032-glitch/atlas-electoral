@@ -164,6 +164,17 @@ export interface Circonscription {
 }
 
 /** Ancien code de commune (fusionnée depuis) → commune du COG 2026. */
+/** Encart de la carte nationale (geo/encarts.json) : chemins SVG précalculés, par code. */
+export interface Encart {
+  code: string
+  nom: string
+  largeur: number
+  hauteur: number
+  emprise: [number, number, number, number]
+  communes: Record<string, string>
+  circonscriptions: Record<string, string>
+}
+
 export interface Passage {
   ancien: string
   actuel: string

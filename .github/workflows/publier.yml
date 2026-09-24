@@ -38,6 +38,9 @@ jobs:
       - name: Contours des circonscriptions (GeoJSON officiel des bureaux, lu en flux)
         working-directory: pipeline
         run: python -m atlas_pipeline.circonscriptions
+      - name: Encarts de la vue nationale (petite couronne et outre-mer, geo.api.gouv.fr)
+        working-directory: pipeline
+        run: python -m atlas_pipeline.encarts
       - name: Résultats des 56 tours et séries (Parquet officiels, lus à distance)
         working-directory: pipeline
         run: python -m atlas_pipeline.construire

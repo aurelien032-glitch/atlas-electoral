@@ -382,7 +382,7 @@ Changer de scrutin ne recharge que quelques mégaoctets de résultats, jamais la
 France → région → département → circonscription législative → commune → bureau de vote.
 
 Trois vues spéciales :
-- l'outre-mer, en encarts (la Nouvelle-Calédonie, la Polynésie française et Wallis-et-Futuna au niveau de la commune seulement, faute de contours de bureaux) ;
+- l'outre-mer, en encarts (la Nouvelle-Calédonie, la Polynésie française et Wallis-et-Futuna au niveau de la commune seulement, faute de contours de bureaux) ; **réalisé le 24/09** avec l'encart de Paris et la petite couronne : chemins SVG précalculés (`python -m atlas_pipeline.encarts`, `geo/encarts.json`, 83 Ko) à partir de l'API Découpage administratif, colorés comme la carte ; les collectivités d'outre-mer et les Français de l'étranger ont des raccourcis dans l'aperçu ;
 - les Français de l'étranger, en liste ou sur une carte des 11 circonscriptions de l'étranger ;
 - Paris, Lyon et Marseille, par arrondissement ou secteur.
 
@@ -695,7 +695,7 @@ il reste, pour ouvrir au public :
 | 1. Paris, Lyon, Marseille | À faire | Les données ne descendent qu'à la commune (bureaux « 75056_… ») : rattacher les bureaux aux arrondissements et secteurs, et vérifier la réforme de 2025 pour les municipales 2026 |
 | 2. Panneau territoire | **Fait le 24/09** : participation, barres triées ; sous chaque candidature, sa nuance officielle (ou « attribuée ») et son bloc ; tableau dépliable « Nuances, familles et blocs » avec les libellés | — |
 | 3. Recherche et permaliens | Partiel : nom et code INSEE ; chaque vue a son lien | Recherche par code postal (base officielle de La Poste) |
-| 4. Exhaustivité | Partiel : outre-mer et Français de l'étranger dans les données et la recherche ; total France égal au total officiel pour la présidentielle 2022 | Accès direct à l'outre-mer sur la carte (encarts ou raccourcis), Français de l'étranger dans l'aperçu, totaux officiels des autres tours (Q9) |
+| 4. Exhaustivité | Partiel : **encarts** de Paris et la petite couronne et des cinq départements d'outre-mer sur la vue nationale (mêmes couleurs, infobulle et clic ; circonscriptions aux législatives) ; raccourcis vers toutes les collectivités d'outre-mer et les Français de l'étranger sous l'aperçu (24/09) ; total France égal au total officiel pour la présidentielle 2022 | Totaux officiels des autres tours (Q9) ; encarts absents sur mobile (raccourcis seulement) |
 | 5. Accessibilité | Largement fait : tableaux, clavier dans le panneau, palettes validées, mobile | Audit Lighthouse et lecteur d'écran ; la carte elle-même n'est pas utilisable au clavier (le panneau et la recherche le sont) |
 | 6. Transparence | **Fait le 24/09** : page Méthodologie dans le panneau (`?page=methodologie`) : sources avec liens et date de version, méthode, grille des 186 nuances (et son CSV), rapport qualité du scrutin choisi (contrôles du manifeste, total officiel quand il est rapproché, fichiers et empreintes SHA-256), limites connues, licences | — |
 

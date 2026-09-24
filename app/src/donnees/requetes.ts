@@ -3,7 +3,7 @@ import type { Feature } from 'geojson'
 import { lireCsv } from './csv'
 import { lireParquet } from './parquet'
 import type {
-  Agregat, Bureau, BureauContour, Candidature, Catalogue, Circonscription, LigneSerie, Manifeste, Passage, Territoire,
+  Agregat, Bureau, BureauContour, Candidature, Catalogue, Circonscription, Encart, LigneSerie, Manifeste, Passage, Territoire,
   VoixAgregat, VoixBureau, VoixPanachage,
 } from './types'
 
@@ -95,6 +95,18 @@ function useGeo<T>(fichier: string) {
   return useQuery({
     queryKey: ['geo', fichier],
     queryFn: ({ signal }) => lireParquet<T>(`${RACINE_DONNEES}/geo/${fichier}`, signal),
+  })
+}
+
+/** Encarts de la vue nationale : Paris et petite couronne, départements d'outre-mer. */
+export function useEncarts() {
+  return useQuery({
+    queryKey: ['geo', 'encarts.json'],
+    queryFn: async ({ signal }) => {
+      const reponse = await fetch(`${RACINE_DONNEES}/geo/encarts.json`, { signal })
+      if (!reponse.ok) throw new Error(`encarts indisponibles (HTTP ${reponse.status})`)
+      return ((await reponse.json()) as { encarts: Encart[] }).encarts
+    },
   })
 }
 

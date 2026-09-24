@@ -25,6 +25,12 @@ from .config import LIEN_PERENNE, PUBLICATION, RESSOURCES
 # le 24/09, 30 m donnent 2,9 Mo compressés, 60 m 1,8 Mo, 100 m 1,2 Mo.
 TOLERANCE = 0.0006
 
+# Outre-mer : le fichier des contours code les départements à la manière du ministère (« ZA » pour la
+# Guadeloupe), les résultats avec le code INSEE (« 971 »). Saint-Barthélemy et Saint-Martin (« ZX ») et
+# les Français de l'étranger (« ZZ ») gardent leur code, qui est aussi celui des résultats.
+DEPARTEMENTS_DU_MINISTERE = {"ZA": "971", "ZB": "972", "ZC": "973", "ZD": "974", "ZS": "975", "ZM": "976",
+                             "ZW": "986", "ZP": "987", "ZN": "988"}
+
 
 def fusionner(source: str) -> int:
     if source.startswith("http"):
@@ -33,10 +39,12 @@ def fusionner(source: str) -> int:
     sortie.parent.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect()
     con.sql("INSTALL spatial; LOAD spatial;")
-    # Code du fichier (« 6902 », « 2A01 », « 97101 ») → code publié (« 69-02 », « 2A-01 », « 971-01 »).
+    # Code du fichier (« 6902 », « 2A01 », « ZA01 ») → code des résultats (« 69-02 », « 2A-01 », « 971-01 »).
+    departement = "left(codeCirconscription, length(codeCirconscription) - 2)"
+    selon_insee = " ".join(f"WHEN '{m}' THEN '{i}'" for m, i in DEPARTEMENTS_DU_MINISTERE.items())
     con.sql(f"""
         CREATE TABLE circo AS
-        SELECT left(codeCirconscription, length(codeCirconscription) - 2) || '-' || right(codeCirconscription, 2) AS code,
+        SELECT CASE {departement} {selon_insee} ELSE {departement} END || '-' || right(codeCirconscription, 2) AS code,
                ST_ReducePrecision(ST_SimplifyPreserveTopology(ST_Union_Agg(ST_MakeValid(geom)), {TOLERANCE}), 0.00001) AS geom
         FROM ST_Read('{source}')
         WHERE codeCirconscription IS NOT NULL

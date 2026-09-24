@@ -195,3 +195,36 @@ def test_series_couvrent_chaque_commune_dans_le_fichier_de_son_departement(con):
         lignes += con.sql(f"SELECT count(*) FROM {chemin}").fetchone()[0]
     assert lignes == sum(con.sql(f"SELECT count(*) FROM {fichier(s, 'agregats.parquet')} WHERE niveau = 'commune'")
                          .fetchone()[0] for s in SCRUTINS)
+
+
+CIRCONSCRIPTIONS_GEO = PUBLICATION / "geo" / "circonscriptions.geojson"
+
+
+@pytest.mark.skipif(not CIRCONSCRIPTIONS_GEO.exists(), reason="lancer d'abord python -m atlas_pipeline.circonscriptions")
+def test_contours_des_circonscriptions_aux_codes_des_resultats(con):
+    # Un contour dont le code n'existe pas dans les résultats resterait sans couleur sur la carte.
+    contours = {e["properties"]["code"] for e in json.loads(CIRCONSCRIPTIONS_GEO.read_text(encoding="utf-8"))["features"]}
+    resultats = {c for (c,) in con.sql(f"""SELECT code FROM {fichier('2024_legi_t1', 'agregats.parquet')}
+                                           WHERE niveau = 'circonscription'""").fetchall()}
+    assert contours - resultats == set()
+    # Sans contour de bureau : Wallis-et-Futuna, Polynésie, Nouvelle-Calédonie, Saint-Barthélemy et
+    # Saint-Martin, Français de l'étranger.
+    assert {c.split("-")[0] for c in resultats - contours} == {"986", "987", "988", "ZX", "ZZ"}
+
+
+ENCARTS = PUBLICATION / "geo" / "encarts.json"
+
+
+@pytest.mark.skipif(not ENCARTS.exists(), reason="lancer d'abord python -m atlas_pipeline.encarts")
+def test_encarts_aux_codes_des_resultats(con):
+    # Chaque commune et chaque circonscription dessinée dans un encart doit trouver sa couleur.
+    encarts = json.loads(ENCARTS.read_text(encoding="utf-8"))["encarts"]
+    assert [e["code"] for e in encarts] == ["IDF", "971", "972", "973", "974", "976"]
+    communes = {c for (c,) in con.sql(f"""SELECT code FROM {fichier('2022_pres_t1', 'agregats.parquet')}
+                                          WHERE niveau = 'commune'""").fetchall()}
+    circonscriptions = {c for (c,) in con.sql(f"""SELECT code FROM {fichier('2024_legi_t1', 'agregats.parquet')}
+                                                  WHERE niveau = 'circonscription'""").fetchall()}
+    for e in encarts:
+        assert set(e["communes"]) <= communes, e["code"]
+        assert e["circonscriptions"] and set(e["circonscriptions"]) <= circonscriptions, e["code"]
+        assert all(e["communes"].values()), e["code"]

@@ -19,11 +19,12 @@ Le prototype v0 (FastAPI + DuckDB) est conservé sous le tag `prototype-v0` : ne
 ## Commandes
 
 ```bash
-cd pipeline && python -m atlas_pipeline.construire && python -m pytest   # données, séries + 573 tests
+cd pipeline && python -m atlas_pipeline.construire && python -m pytest   # données, séries + 575 tests
 cd pipeline && python -m atlas_pipeline.series                           # séries seules (≈ 15 s)
 cd pipeline && python -m atlas_pipeline.geo                              # contours Etalab + index des territoires
 cd pipeline && python -m atlas_pipeline.cog                              # passage des communes vers le COG 2026
 cd pipeline && python -m atlas_pipeline.circonscriptions --source <GeoJSON des bureaux>  # contours (≈ 4 min)
+cd pipeline && python -m atlas_pipeline.encarts                          # encarts petite couronne et outre-mer
 cd app && npm run dev        # sert aussi ../publication sous /data
 cd app && npx tsc -b && npm run lint && npm test && npm run build          # avant tout commit
 cd app && npm run preview    # build de production avec les en-têtes de public/_headers (CSP)
@@ -82,6 +83,9 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   peint (« sans résultat ») ; les hachures marquent une valeur sans objet (pas de candidat du bloc, pas
   comparable). `removeFeatureState` efface aussi la sélection : la remettre après chaque coloriage.
 - Le mode Évolution se lit à la commune : les numéros de bureaux changent d'un scrutin à l'autre.
+- Encarts de la vue nationale (petite couronne, départements d'outre-mer) : chemins SVG précalculés
+  (`geo/encarts.json`), colorés avec les mêmes états que la carte. Les contours des circonscriptions d'outre-mer
+  portent le code INSEE des résultats (« 971-01 »), pas celui du ministère (« ZA-01 ») : un test le vérifie.
 - Commune sélectionnée : contour détaillé demandé à `geo.api.gouv.fr` (API officielle, CORS ouvert), contour
   simplifié en secours. Dans le panneau intégré, MapLibre attend une image (`requestAnimationFrame`) pour
   charger son style : une capture d'écran la déclenche, ce n'est pas un bug du site.
