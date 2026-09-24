@@ -17,6 +17,19 @@ function travailleur(): Worker {
     if ('erreur' in message.data) attente.rejeter(new Error(message.data.erreur))
     else attente.resoudre(message.data.lignes)
   }
+  // Worker introuvable ou arrêté : les lectures en cours échouent (la page le dit et peut réessayer) au lieu
+  // d'attendre indéfiniment ; la lecture suivante relance un worker.
+  const echec = (raison: string) => {
+    for (const attente of attentes.values()) attente.rejeter(new Error(raison))
+    attentes.clear()
+    decodeur?.terminate()
+    decodeur = undefined
+  }
+  decodeur.onerror = (e) => {
+    e.preventDefault()
+    echec(`décodeur indisponible${e.message ? ` (${e.message})` : ''}`)
+  }
+  decodeur.onmessageerror = () => echec('réponse illisible du décodeur')
   return decodeur
 }
 
@@ -27,9 +40,20 @@ export async function lireParquet<T>(url: string, signal?: AbortSignal): Promise
   const tampon = await reponse.arrayBuffer()
   signal?.throwIfAborted()
   const id = suivant++
+  const worker = travailleur()
   const lignes = await new Promise<Record<string, unknown>[]>((resoudre, rejeter) => {
-    attentes.set(id, { resoudre, rejeter: (e) => rejeter(new Error(`${url} : ${e.message}`)) })
-    travailleur().postMessage({ id, tampon }, [tampon])
+    // Lecture abandonnée (autre scrutin choisi) : le worker saute ce fichier s'il ne l'a pas commencé.
+    const annuler = () => {
+      attentes.delete(id)
+      worker.postMessage({ annuler: id })
+      rejeter(signal?.reason instanceof Error ? signal.reason : new DOMException('Lecture abandonnée', 'AbortError'))
+    }
+    signal?.addEventListener('abort', annuler, { once: true })
+    attentes.set(id, {
+      resoudre: (l) => { signal?.removeEventListener('abort', annuler); resoudre(l) },
+      rejeter: (e) => { signal?.removeEventListener('abort', annuler); rejeter(new Error(`${url} : ${e.message}`)) },
+    })
+    worker.postMessage({ id, tampon }, [tampon])
   })
   return lignes as T[]
 }
