@@ -22,9 +22,11 @@ from .config import CONTOURS_CODES, LIEN_PERENNE, PASSAGE_COMMUNES, PUBLICATION,
 
 MILLESIME = 2026
 SOURCE = "https://etalab-datasets.geo.data.gouv.fr/contours-administratifs/{millesime}/geojson/{nom}.geojson.gz"
-# Résolution choisie par couche : 1 000 m pour la vue nationale des communes, 100 m pour des
-# limites départementales qui restent justes quand on zoome sur les bureaux.
-COUCHES = {"communes": "communes-1000m", "departements": "departements-100m", "regions": "regions-1000m"}
+# Résolution choisie par couche : 1 000 m pour la vue nationale ; 100 m pour des limites départementales
+# qui restent justes au zoom des bureaux (800 Ko compressés contre 100 : la carte ne les charge qu'en
+# s'en approchant). L'index des territoires prend ses emprises dans ce tracé détaillé.
+COUCHES = {"communes": "communes-1000m", "departements": "departements-1000m",
+           "departements-detail": "departements-100m", "regions": "regions-1000m"}
 
 # Territoires des résultats absents du découpage départemental d'Etalab : collectivités d'outre-mer
 # et Français établis hors de France. Ils ont un nom, pas de contour.
@@ -69,7 +71,7 @@ def emprise(geometrie: dict | None) -> tuple[float | None, ...]:
 def ecrire_territoires(couches: dict[str, dict], chemin: Path) -> int:
     """Nom, département et emprise de chaque département et commune : fil d'Ariane, recherche, cadrage."""
     lignes = []
-    for niveau, couche in (("departement", "departements"), ("commune", "communes")):
+    for niveau, couche in (("departement", "departements-detail"), ("commune", "communes")):
         for entite in couches[couche]["features"]:
             code, nom = entite["properties"]["code"], entite["properties"]["nom"]
             departement = code if niveau == "departement" else departement_de(code)
@@ -131,13 +133,16 @@ def main() -> None:
         debut = time.time()
         collection = telecharger(nom)
         # Les arrondissements de Paris, Lyon et Marseille suivent leur ville dans le fichier : dessinés
-        # par-dessus, ce sont eux que la carte colore et que le survol désigne. On ne garde que le code et
-        # le nom : les autres propriétés alourdiraient chaque chargement.
+        # par-dessus, ce sont eux que la carte colore et que le survol désigne. Le fichier publié ne garde
+        # que le code : les noms (un cinquième du poids compressé des communes) sont dans l'index.
         for entite in collection["features"]:
             p = entite["properties"]
             entite["properties"] = {"code": p.get("code"), "nom": p.get("nom")}
+        publiee = {"type": "FeatureCollection", "features": [
+            {"type": "Feature", "properties": {"code": e["properties"]["code"]}, "geometry": e["geometry"]}
+            for e in collection["features"]]}
         chemin = sortie / f"{couche}.geojson"
-        chemin.write_text(json.dumps(collection, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        chemin.write_text(json.dumps(publiee, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
         print(f"{couche} : {len(collection['features']):,} entités, {chemin.stat().st_size / 1e6:.2f} Mo "
               f"(source {nom}, {time.time() - debut:.0f} s)")
         couches[couche] = collection

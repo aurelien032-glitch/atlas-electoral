@@ -203,6 +203,15 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
     // premier rendu complet ('load'), qui tarde quand l'onglet est en arrière-plan.
     carte.once('style.load', () => setPrete(true))
     carte.on('error', (e) => console.error('Carte :', e.error))
+    // Limites départementales : tracé à 1 000 m pour la vue nationale, remplacé une fois pour toutes par
+    // celui à 100 m (huit fois plus lourd) à l'approche du zoom des bureaux.
+    const detaillerDepartements = () => {
+      const source = carte.getSource<GeoJSONSource>('departements')
+      if (!source || carte.getZoom() < ZOOM_BUREAUX - 1) return
+      carte.off('zoomend', detaillerDepartements)
+      source.setData(`${RACINE_DONNEES}/geo/departements-detail.geojson`)
+    }
+    carte.on('zoomend', detaillerDepartements)
     refCarte.current = carte
     if (import.meta.env.DEV) Object.assign(window, { carteAtlas: carte }) // inspection en développement
     return () => {

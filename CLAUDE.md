@@ -75,8 +75,10 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
 
 - Géométrie des bureaux : PMTiles officiel de data.gouv (2022), `promoteId: 'codeBureauVote'`, résultats
   appliqués par `setFeatureState` (jamais de grosse expression `match` : le prototype v0 plafonnait à 500).
-- Vue nationale (zoom < 9) : communes simplifiées d'Etalab (COG 2026). Les tuiles vectorielles ADMIN EXPRESS de
-  l'IGN sont trop lourdes (11,4 Mo par tuile au zoom 5) : ne pas les utiliser pour l'affichage.
+- Vue nationale (zoom < 9) : communes simplifiées d'Etalab (COG 2026) ; départements à 1 000 m, remplacés par le
+  tracé à 100 m (`departements-detail.geojson`) à l'approche du zoom des bureaux. Contours publiés sans les noms
+  (ils sont dans l'index des territoires). Les tuiles vectorielles ADMIN EXPRESS de l'IGN sont trop lourdes
+  (11,4 Mo par tuile au zoom 5) : ne pas les utiliser pour l'affichage.
 - Scrutins dont moins de 98 % des inscrits de métropole joignent les contours (`niveau_carte = commune`) :
   chaque bureau prend la couleur de sa commune.
 - MapLibre 6 est en ESM seul : garder `optimizeDeps.exclude: ['maplibre-gl']`, `worker.format: 'es'` et
