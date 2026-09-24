@@ -1,5 +1,9 @@
-import { parquetReadObjects } from 'hyparquet'
-import { compressors } from 'hyparquet-compressors'
+import { decompress } from 'fzstd'
+import { parquetReadObjects, type Compressors } from 'hyparquet'
+
+// Le pipeline écrit tous ses Parquet en ZSTD : seul ce décompresseur est embarqué. Le paquet
+// hyparquet-compressors apporterait aussi brotli, gzip, snappy (WASM) et lz4, soit ~70 Ko compressés inutiles.
+const compressors: Compressors = { ZSTD: (entree) => decompress(entree) }
 
 /** Télécharge un fichier Parquet publié par le pipeline (compressé en ZSTD) et le décode. */
 export async function lireParquet<T>(url: string, signal?: AbortSignal): Promise<T[]> {

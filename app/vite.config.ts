@@ -37,5 +37,12 @@ export default defineConfig({
   // Vite les sépare mal, on le laisse donc de côté ; le worker est compilé comme module ES.
   optimizeDeps: { exclude: ['maplibre-gl'] },
   worker: { format: 'es' },
+  // MapLibre change rarement, l'application souvent : dans un fichier à part, il reste en cache d'une
+  // version du site à l'autre et se télécharge en parallèle du reste.
+  build: {
+    rolldownOptions: {
+      output: { codeSplitting: { groups: [{ name: 'maplibre', test: /node_modules[\\/]maplibre-gl/ }] } },
+    },
+  },
   test: { environment: 'node' },
 })
