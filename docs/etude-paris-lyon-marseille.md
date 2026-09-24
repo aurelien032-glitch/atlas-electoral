@@ -1,8 +1,8 @@
 # Étude — Paris, Lyon et Marseille : arrondissements et secteurs
 
 > **Statut : étude du 24 septembre 2026, demandée le même jour** (revue des exigences P0 avant la bêta :
-> « Municipales : résultats par liste et par commune ; secteurs de Paris, Lyon et Marseille »). Décision à
-> prendre : voir § 4.
+> « Municipales : résultats par liste et par commune ; secteurs de Paris, Lyon et Marseille »).
+> **Décision (Q15, 24/09) : arrondissements et secteurs traités avant l'ouverture de la bêta.**
 
 ## 1. Constats dans les données
 

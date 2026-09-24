@@ -764,7 +764,7 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 | Q12 | Projection 2027 : garder le périmètre actuel (pas de projection) ou ajouter un simulateur de scénarios clairement étiqueté, après la bêta ? Voir l'étude | **Tranché le 24/09** : simulateur de scénarios après la bêta, avec les garde-fous de l'étude (espace séparé, hypothèses de l'utilisateur, résultat réel par défaut, ni sondages ni sièges, désactivé la veille et le jour du vote) ; prévisions et sondages restent hors périmètre | Phase 4 |
 | Q13 | Municipales 2014 et 2020, petites communes au panachage (≈ 400 000 candidatures individuelles, 12 à 13 Mo par tour) : tout garder, garder à part (chargé au détail d'une commune) ou ne garder que la participation ? | **Tranché le 24/09** : garder à part, chargé à l'ouverture de la fiche d'une commune | Budget des données |
 | Q14 | Vues chronologiques à construire en premier | **Tranché et réalisé le 24/09** (§ 9) : « Au fil des scrutins » dans la fiche d'un territoire et courbes nationales ; les petits multiples et la carte des bascules ensuite | — |
-| Q15 | Paris, Lyon et Marseille : niveau « arrondissement » (à partir des numéros de bureau) et secteurs des municipales jusqu'en 2020, avant ou juste après l'ouverture de la bêta ? Voir l'étude | Ouvert | Bêta |
+| Q15 | Paris, Lyon et Marseille : niveau « arrondissement » (à partir des numéros de bureau) et secteurs des municipales jusqu'en 2020, avant ou juste après l'ouverture de la bêta ? Voir l'étude | **Tranché le 24/09** : avant la bêta | Bêta |
 | Q6 | Publication de nos données sur data.gouv | **Tranché** : plus tard | P2 |
 
 ## 16. Outillage Claude : skills, plugins, connecteurs
