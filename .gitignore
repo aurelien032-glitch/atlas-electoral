@@ -1,0 +1,30 @@
+# Données volumineuses (à régénérer via l'ETL / sources open data)
+Data/
+*.duckdb
+*.duckdb.wal
+*.parquet
+api/seed/
+api/storage/
+
+# Sorties de debug
+api/*_output.txt
+api/gis_audit.csv
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node / build
+node_modules/
+dist/
+
+# Environnement & IDE
+.env
+.env.*
+.vscode/
+.idea/
+*.code-workspace
+.DS_Store
+Thumbs.db

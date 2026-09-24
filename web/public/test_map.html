@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Extreme Tile Debugger</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: sans-serif;
+            background: #eee;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #controls {
+            background: white;
+            padding: 10px;
+            border-bottom: 2px solid #ccc;
+            margin-bottom: 10px;
+        }
+
+        #log {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            flex: 1;
+            overflow-y: scroll;
+            font-family: monospace;
+            font-size: 12px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        #map {
+            height: 400px;
+            border: 2px solid #333;
+            position: relative;
+        }
+
+        .success {
+            color: #0f0;
+        }
+
+        .error {
+            color: #f00;
+            font-weight: bold;
+        }
+
+        .info {
+            color: #0af;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="controls">
+        <b>MVT Debugger</b> |
+        <button onclick="testFetch()">Step 1: Manually Fetch 5/16/11</button>
+        <button onclick="initMap()">Step 2: Initialize Map</button>
+        <button onclick="document.location.reload()">Reload All</button>
+    </div>
+
+    <div id="log">Log window initialized...<br></div>
+
+    <div id="map">Map will appear here after Step 2</div>
+
+    <script>
+        function log(msg, type = 'info') {
+            const div = document.getElementById('log');
+            div.innerHTML += `<span class="${type}">[${new Date().toLocaleTimeString()}] ${msg}</span><br>`;
+            div.scrollTop = div.scrollHeight;
+        }
+
+        async function testFetch() {
+            const url = window.location.origin + '/api/tiles/departements/5/16/11';
+            log(`Fetching: ${url}`);
+            try {
+                const res = await fetch(url);
+                log(`Response Status: ${res.status} ${res.statusText}`);
+                if (res.ok) {
+                    const blob = await res.blob();
+                    log(`SUCCESS! Received ${blob.size} bytes. Type: ${blob.type}`, 'success');
+                } else {
+                    log(`FAILED: Received status ${res.status}`, 'error');
+                }
+            } catch (e) {
+                log(`ERROR: ${e.message}`, 'error');
+            }
+        }
+
+        function initMap() {
+            log("Initializing MapLibre...");
+            try {
+                const map = new maplibregl.Map({
+                    container: 'map',
+                    style: {
+                        version: 8,
+                        sources: {
+                            'local-tiles': {
+                                type: 'vector',
+                                tiles: [window.location.origin + '/api/tiles/departements/{z}/{x}/{y}'],
+                                minzoom: 0,
+                                maxzoom: 14
+                            }
+                        },
+                        layers: [
+                            { 'id': 'bg', 'type': 'background', 'paint': { 'background-color': '#222' } },
+                            {
+                                'id': 'fill',
+                                'type': 'fill',
+                                'source': 'local-tiles',
+                                'source-layer': 'departements',
+                                'paint': { 'fill-color': '#0f0', 'fill-opacity': 0.5, 'fill-outline-color': '#fff' }
+                            }
+                        ]
+                    },
+                    center: [2.21, 46.22],
+                    zoom: 5
+                });
+
+                map.on('load', () => log("Map Loaded", 'success'));
+                map.on('error', (e) => log(`MapLibre Error: ${e.error.message}`, 'error'));
+                map.on('sourcedata', (e) => {
+                    if (e.isSourceLoaded && e.sourceId === 'local-tiles') {
+                        log("Tile Source Data Received", 'success');
+                    }
+                });
+            } catch (e) {
+                log(`Init Failed: ${e.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: transparence-api
+    ports:
+      - "8000:8000"
+    environment:
+      - DUCKDB_PATH=/app/storage/consolidated.duckdb
+      - SEED_DB_PATH=/app/seed/consolidated.duckdb
+    volumes:
+      # Mount the code for instant updates
+      - ./api:/app
+      # Mount the database file as read-only seed
+      - ./api/consolidated.duckdb:/app/seed/consolidated.duckdb:ro
+      # Persistent storage for the working database
+      - api_storage:/app/storage
+      - ./Data:/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: transparence-web
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  api_storage:
