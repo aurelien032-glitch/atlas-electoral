@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atlas électoral — prototype de carte</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css">
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pmtiles@4.5.0/dist/pmtiles.js"></script>
+  <style>
+    :root {
+      --fond: #f6f6f3; --texte: #1d1d1b; --texte-2: #5b5b57;
+      --bord: #d9d9d4; --panneau: #ffffff; --sans-donnee: #e3e3de;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; height: 100%; color: var(--texte); background: var(--fond);
+      font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    #carte { position: absolute; inset: 0; }
+    #panneau {
+      position: absolute; top: 12px; left: 12px; width: min(340px, calc(100% - 24px));
+      max-height: calc(100% - 24px); overflow: auto; padding: 14px 16px;
+      background: var(--panneau); border: 1px solid var(--bord); border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, .08);
+    }
+    h1 { font-size: 16px; margin: 0 0 2px; }
+    .sous-titre, .note { color: var(--texte-2); font-size: 13px; margin: 0 0 12px; }
+    .note { font-size: 12px; margin: 10px 0 0; }
+    .entete-legende { color: var(--texte-2); font-size: 12px; margin: 0 0 4px; }
+    .legende { list-style: none; padding: 0; margin: 0 0 12px; }
+    .legende li { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+    .pastilles { display: inline-flex; gap: 2px; flex: none; width: 46px; }
+    .pastille { width: 14px; height: 14px; border-radius: 3px; flex: none; border: 1px solid rgba(0, 0, 0, .15); }
+    #detail { border-top: 1px solid var(--bord); padding-top: 10px; min-height: 48px; }
+    #detail h2 { font-size: 14px; margin: 0 0 4px; }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    td { padding: 2px 0; }
+    td:last-child { text-align: right; }
+    #mesures { border-top: 1px solid var(--bord); margin-top: 10px; padding-top: 8px; color: var(--texte-2); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div id="carte" role="region" aria-label="Carte du candidat en tête par bureau de vote"></div>
+  <aside id="panneau">
+    <h1>Atlas électoral — prototype</h1>
+    <p class="sous-titre">Présidentielle 2022, 1ᵉʳ tour · candidat en tête par bureau de vote</p>
+    <div id="legende"></div>
+    <div id="detail" aria-live="polite"><span class="note">Survolez ou touchez un bureau de vote.</span></div>
+    <div id="mesures">Chargement…</div>
+    <p class="note">Contours des bureaux : proposition data.gouv.fr (REU 2022, indicatifs). Limites départementales : IGN ADMIN EXPRESS. Résultats : ministère de l'Intérieur, via data.gouv.fr.</p>
+  </aside>
+
+  <script type="module">
+    import { parquetReadObjects } from 'https://cdn.jsdelivr.net/npm/hyparquet@1.31.1/+esm'
+    import { compressors } from 'https://cdn.jsdelivr.net/npm/hyparquet-compressors@1.1.2/+esm'
+
+    const SCRUTIN = '2022_pres_t1'
+    const TUILES_BUREAUX = 'https://data-pipeline-open.s3.sbg.io.cloud.ovh.net/reu/reu-france-entiere-2022-06-01-v2.pmtiles'
+    const COUCHE_BUREAUX = 'repertoire-unique-electoral-polygons'
+    const TUILES_IGN = 'https://data.geopf.fr/tms/1.0.0/ADMIN_EXPRESS/{z}/{x}/{y}.pbf'
+
+    // La couleur suit la famille politique du candidat, jamais son rang (skill dataviz).
+    // Palette validée en mode clair, toutes paires (ΔE daltonisme ≥ 17,6) ; l'ambre reste
+    // sous 3:1 de contraste, d'où la légende et le panneau de détail qui doublent la couleur.
+    const FAMILLE_DU_CANDIDAT = { 'MACRON': 'centre', 'LE PEN': 'extrême droite', 'MÉLENCHON': 'gauche' }
+    const COULEUR_DE_FAMILLE = { 'centre': '#D9960A', 'gauche': '#C8323A', 'extrême droite': '#3558A6' }
+    // Trois gris séparés par la clarté : autre candidat en tête, égalité, sans résultat.
+    const COULEUR_AUTRE = '#B5B5AF'
+    const COULEUR_EGALITE = '#57574F'
+
+    // Intensité selon l'avance du candidat en tête (« value by alpha »), décidée le 24/09 :
+    // trois paliers lisibles en légende. Plancher à 0,60 : c'est l'opacité minimale pour que
+    // les trois couleurs, une fois pâlies, passent encore le validateur (ΔE ≥ 15 en vision
+    // normale, ≥ 8 pour les daltoniens) ; à 0,45, le bleu et le rouge se confondaient.
+    const PALIERS_AVANCE = [
+      { jusqua: 0.05, opacite: 0.6, libelle: 'serré' },     // moins de 5 points
+      { jusqua: 0.15, opacite: 0.8, libelle: 'net' },       // de 5 à 15 points
+      { jusqua: Infinity, opacite: 1, libelle: 'large' },   // plus de 15 points
+    ]
+    const palierDe = (avance) => PALIERS_AVANCE.find((p) => avance < p.jusqua)
+    function opaciteSelonAvance(avance) {
+      return palierDe(avance).opacite
+    }
+
+    const format = new Intl.NumberFormat('fr-FR')
+    const pct = (x) => `${(100 * x).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
+    const points = (x) => `${(100 * x).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} points`
+
+    async function lireParquet(url) {
+      const t0 = performance.now()
+      const reponse = await fetch(url)
+      if (!reponse.ok) throw new Error(`${url} : HTTP ${reponse.status}`)
+      const tampon = await reponse.arrayBuffer()
+      const t1 = performance.now()
+      const lignes = await parquetReadObjects({ file: tampon, compressors })
+      return { lignes, octets: tampon.byteLength, msReseau: t1 - t0, msDecodage: performance.now() - t1 }
+    }
+
+    // Pour chaque bureau : les voix de chaque candidat, puis le premier, le second et l'avance.
+    function calculerResultats(participation, voix, nbCandidats) {
+      const bureaux = new Map()
+      for (const p of participation) {
+        bureaux.set(p.code_bv, { ...p, voix: new Array(nbCandidats).fill(0) })
+      }
+      for (const v of voix) {
+        const b = bureaux.get(v.code_bv)
+        if (b) b.voix[v.cand] = v.voix
+      }
+      for (const b of bureaux.values()) {
+        let premier = -1, second = -1
+        for (let c = 0; c < nbCandidats; c++) {
+          if (premier < 0 || b.voix[c] > b.voix[premier]) { second = premier; premier = c }
+          else if (second < 0 || b.voix[c] > b.voix[second]) second = c
+        }
+        b.premier = premier
+        b.egalite = b.exprimes > 0 && b.voix[premier] === b.voix[second]
+        b.avance = b.exprimes > 0 ? (b.voix[premier] - b.voix[second]) / b.exprimes : 0
+      }
+      return bureaux
+    }
+
+    function afficherLegende(categories) {
+      const pastille = (couleur, opacite = 1) =>
+        `<span class="pastille" style="background:${couleur};opacity:${opacite}"></span>`
+      const lignes = categories.map((c) => {
+        const pastilles = c.nuancee
+          ? PALIERS_AVANCE.map((p) => pastille(c.couleur, p.opacite)).join('')
+          : pastille(c.couleur)
+        return `<li><span class="pastilles">${pastilles}</span>${c.libelle}</li>`
+      })
+      lignes.push(`<li><span class="pastilles">${pastille('var(--sans-donnee)')}</span>Aucun résultat rattaché au contour</li>`)
+      document.getElementById('legende').innerHTML =
+        `<p class="entete-legende">Avance du premier : ${PALIERS_AVANCE.map((p) => p.libelle).join(' · ')}</p>` +
+        `<ul class="legende">${lignes.join('')}</ul>`
+    }
+
+    function afficherDetail(proprietes, bureau, candidats) {
+      const zone = document.getElementById('detail')
+      const titre = `<h2>${proprietes.nomCommune} — bureau ${proprietes.numeroBureauVote}</h2>`
+      if (!bureau) {
+        zone.innerHTML = `${titre}<span class="note">Aucun résultat 2022 rattaché au code ${proprietes.codeBureauVote}.</span>`
+        return
+      }
+      if (bureau.exprimes === 0) {
+        zone.innerHTML = `${titre}<span class="note">Aucun suffrage exprimé.</span>`
+        return
+      }
+      const avance = bureau.egalite
+        ? 'égalité en tête'
+        : `avance de ${points(bureau.avance)} (${palierDe(bureau.avance).libelle})`
+      const classement = candidats
+        .map((c) => ({ nom: `${c.prenom} ${c.nom}`, voix: bureau.voix[c.cand] }))
+        .sort((a, b) => b.voix - a.voix)
+        .slice(0, 5)
+        .map((c) => `<tr><td>${c.nom}</td><td>${format.format(c.voix)} · ${pct(c.voix / bureau.exprimes)}</td></tr>`)
+        .join('')
+      zone.innerHTML = `${titre}
+        <p class="note" style="margin:0 0 6px">${format.format(bureau.inscrits)} inscrits · participation ${pct(bureau.votants / bureau.inscrits)} · ${avance}</p>
+        <table>${classement}</table>`
+    }
+
+    const protocole = new pmtiles.Protocol()
+    maplibregl.addProtocol('pmtiles', protocole.tile)
+
+    const carte = new maplibregl.Map({
+      container: 'carte',
+      style: { version: 8, sources: {}, layers: [{ id: 'fond', type: 'background', paint: { 'background-color': '#f6f6f3' } }] },
+      center: [2.4, 46.6],
+      zoom: 5,
+      minZoom: 4,
+      maxZoom: 16,
+    })
+    carte.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
+
+    carte.on('error', (e) => console.error('Carte :', e.error ?? e))
+    carte.on('load', () => demarrer().catch((err) => {
+      console.error(err)
+      document.getElementById('mesures').textContent = `Erreur : ${err.message}`
+    }))
+
+    async function demarrer() {
+      const debut = performance.now()
+      const [candidats, participation, voix] = await Promise.all([
+        fetch(`data/${SCRUTIN}_candidats.json`).then((r) => r.json()),
+        lireParquet(`data/${SCRUTIN}_participation.parquet`),
+        lireParquet(`data/${SCRUTIN}_voix.parquet`),
+      ])
+
+      // Catégories de la carte « Tête » : les trois premiers candidats nationaux (couleur nuancée
+      // selon l'avance), puis « autre candidat » et « égalité » (couleurs neutres, opacité pleine).
+      const categories = candidats.slice(0, 3).map((c) => ({
+        cand: c.cand,
+        libelle: `${c.prenom} ${c.nom}`,
+        couleur: COULEUR_DE_FAMILLE[FAMILLE_DU_CANDIDAT[c.nom]] ?? COULEUR_AUTRE,
+        nuancee: true,
+      }))
+      const AUTRE = categories.push({ cand: null, libelle: 'Autre candidat en tête', couleur: COULEUR_AUTRE, nuancee: false }) - 1
+      const EGALITE = categories.push({ cand: null, libelle: 'Égalité en tête', couleur: COULEUR_EGALITE, nuancee: false }) - 1
+      const etatDe = (b) => {
+        if (b.egalite) return { categorie: EGALITE, opacite: 1 }
+        const i = categories.findIndex((c) => c.nuancee && c.cand === b.premier)
+        return i >= 0 ? { categorie: i, opacite: opaciteSelonAvance(b.avance) } : { categorie: AUTRE, opacite: 1 }
+      }
+      afficherLegende(categories)
+
+      const t0 = performance.now()
+      const bureaux = calculerResultats(participation.lignes, voix.lignes, candidats.length)
+      const msCalcul = performance.now() - t0
+
+      carte.addSource('bureaux', {
+        type: 'vector',
+        url: `pmtiles://${TUILES_BUREAUX}`,
+        promoteId: 'codeBureauVote',
+        attribution: 'Contours : data.gouv.fr (REU 2022)',
+      })
+      carte.addSource('ign', {
+        type: 'vector',
+        tiles: [TUILES_IGN],
+        minzoom: 2,
+        maxzoom: 16,
+        attribution: '© IGN — ADMIN EXPRESS',
+      })
+      const couleurs = categories.flatMap((c, i) => [i, c.couleur])
+      carte.addLayer({
+        id: 'bureaux-remplissage', type: 'fill', source: 'bureaux', 'source-layer': COUCHE_BUREAUX,
+        paint: {
+          'fill-color': ['match', ['coalesce', ['feature-state', 'categorie'], -1], ...couleurs, '#e3e3de'],
+          'fill-opacity': ['coalesce', ['feature-state', 'opacite'], 1],
+        },
+      })
+      carte.addLayer({
+        id: 'bureaux-contour', type: 'line', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: 10,
+        paint: { 'line-color': '#ffffff', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.2, 14, 1] },
+      })
+      carte.addLayer({
+        id: 'departements', type: 'line', source: 'ign', 'source-layer': 'departement',
+        paint: {
+          'line-color': '#3a3a36', 'line-opacity': 0.7,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.4, 10, 1.4],
+        },
+      })
+
+      // Un bureau sans suffrage exprimé n'a pas d'état : il reste « sans résultat ».
+      const t1 = performance.now()
+      const repartition = {}
+      for (const [code, b] of bureaux) {
+        if (b.exprimes === 0) continue
+        const etat = etatDe(b)
+        carte.setFeatureState({ source: 'bureaux', sourceLayer: COUCHE_BUREAUX, id: code }, etat)
+        const cle = `${categories[etat.categorie].libelle}${categories[etat.categorie].nuancee ? ` (${palierDe(b.avance).libelle})` : ''}`
+        repartition[cle] = (repartition[cle] ?? 0) + 1
+      }
+      const msEtats = performance.now() - t1
+
+      const survol = (e) => {
+        const f = e.features?.[0]
+        if (f) afficherDetail(f.properties, bureaux.get(f.properties.codeBureauVote), candidats)
+      }
+      carte.on('mousemove', 'bureaux-remplissage', survol)
+      carte.on('click', 'bureaux-remplissage', survol)
+
+      // Mesures prises dès que les résultats sont appliqués. L'événement 'idle' (rendu terminé)
+      // ne se produit que si la page est visible : il complète les mesures quand il arrive.
+      const mesures = {
+        participation: `${(participation.octets / 1024).toFixed(0)} Ko · réseau ${participation.msReseau.toFixed(0)} ms + décodage ${participation.msDecodage.toFixed(0)} ms`,
+        voix: `${(voix.octets / 1024).toFixed(0)} Ko · ${format.format(voix.lignes.length)} lignes · réseau ${voix.msReseau.toFixed(0)} ms + décodage ${voix.msDecodage.toFixed(0)} ms`,
+        calcul: `${format.format(bureaux.size)} bureaux · ${msCalcul.toFixed(0)} ms`,
+        etats: `${format.format(Object.values(repartition).reduce((a, n) => a + n, 0))} setFeatureState · ${msEtats.toFixed(0)} ms`,
+        donnees: `${((performance.now() - debut) / 1000).toFixed(2)} s jusqu'aux résultats appliqués`,
+      }
+      const afficherMesures = () => {
+        console.table(mesures)
+        document.getElementById('mesures').innerHTML = Object.entries(mesures)
+          .map(([k, v]) => `<div><strong>${k}</strong> : ${v}</div>`).join('')
+      }
+      afficherMesures()
+      carte.once('idle', () => {
+        mesures.rendu = `${((performance.now() - debut) / 1000).toFixed(2)} s jusqu'à la carte entièrement dessinée`
+        afficherMesures()
+      })
+      window.atlas = { carte, bureaux, candidats, mesures, repartition }
+    }
+  </script>
+</body>
+</html>

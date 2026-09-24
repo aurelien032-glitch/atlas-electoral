@@ -28,3 +28,6 @@ dist/
 *.code-workspace
 .DS_Store
 Thumbs.db
+
+# Données générées par les prototypes
+spikes/*/data/

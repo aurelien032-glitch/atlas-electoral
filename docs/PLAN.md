@@ -12,7 +12,8 @@
 > - présidentielle : chaque candidat prend la nuance de son mouvement aux législatives suivantes ; écologistes selon la nuance (VEC → gauche, ECO → divers) ; régionalistes → divers ;
 > - charte sobre et neutre ;
 > - données locales archivées hors du dépôt ; publication de nos données nettoyées : plus tard ;
-> - prochaine étape : un prototype de carte.
+> - prototype de carte réalisé le 24/09 (`spikes/carte-pmtiles/`, § 7.5) : l'architecture proposée fonctionne ;
+> - carte « Tête » : intensité en 3 paliers selon l'avance (serré, net, large), catégorie dédiée pour les égalités.
 >
 > Méthode : profilage des données (`data:explore-data`), décision d'architecture au format ADR (`engineering:architecture`), cadrage produit (`product-management:write-spec`), principes de visualisation (`dataviz`), audit du prototype (`api-coverage-auditor`, `feature-dev:code-explorer`), recherche des sources et des hébergeurs vérifiée par de vraies requêtes HTTP. Les chiffres « mesurés » viennent de requêtes DuckDB sur les fichiers de `Data/` (annexe A).
 
@@ -46,7 +47,7 @@
 - **Architecture proposée** : un site 100 % statique sur Cloudflare Pages. Il sert nos résultats compacts (un Parquet de 1,5 à 3 Mo par scrutin) et s'appuie sur la géométrie officielle des bureaux et sur les tuiles administratives de l'IGN. Coût : 0 €, sans nom de domaine payant.
 - **Première version** : présidentielle 2022, européennes et législatives 2024, municipales 2026, jusqu'au bureau de vote. L'historique 1999–2021 suivra au niveau de la commune. Cible : en ligne avant la présidentielle d'avril 2027.
 - **Point dur** : il n'existe aucun contour de bureau postérieur à 2022, et aucune mise à jour n'est prévue. En métropole, 98,2 % des inscrits de 2024 se rattachent quand même à un contour ; le reste s'affiche au niveau de la commune (§ 7.3).
-- **Prochaine étape** : un prototype de carte branché sur les tuiles officielles, pour valider le pari technique le plus risqué (§ 13).
+- **Prototype validé (24/09)** : les 69 682 bureaux de la présidentielle 2022 colorés sur les tuiles officielles, 1,6 Mo de données, 1,3 s jusqu'à la carte colorée (§ 7.5).
 
 ## 2. Problème, publics, objectifs
 
@@ -402,6 +403,42 @@ La couleur suit le rôle de la donnée (skill `dataviz`) :
 
 **Biais de surface.** Les communes rurales couvrent l'essentiel du territoire. Une carte en aplats surreprésente donc visuellement le vote rural. Le mode « Voix » et le rappel systématique du nombre d'inscrits corrigent cette lecture.
 
+### 7.5 Prototype du 24/09 (`spikes/carte-pmtiles/`)
+
+Une page HTML de 250 lignes (MapLibre 5.24, `pmtiles`, hyparquet) : carte « Tête » de la présidentielle 2022 (1ᵉʳ tour), survol des bureaux.
+
+| Étape | Mesure (poste de développement, serveur local) |
+|---|---|
+| Préparation des données (DuckDB lit data.gouv à distance, rien n'est téléchargé en entier) | 6,5 s ; participation 0,41 Mo + voix 1,22 Mo ; totaux identiques aux chiffres officiels |
+| Chargement et décodage de la participation | 401 Ko : 330 ms de réseau, 207 ms de décodage |
+| Chargement et décodage des voix | 1 190 Ko, 836 184 lignes : 538 ms de réseau, 506 ms de décodage |
+| Calcul du candidat en tête et de l'avance | 69 682 bureaux en 212 ms |
+| Coloration (`setFeatureState`) | 69 682 appels en 73 ms |
+| Total, du chargement de la carte aux résultats appliqués | **1,34 s** |
+
+Ce qu'il valide :
+- le PMTiles officiel des bureaux et les tuiles IGN se chargent directement depuis le navigateur (CORS, requêtes Range) ;
+- `promoteId: 'codeBureauVote'` et `setFeatureState` colorent tous les bureaux sans plafond, en moins de 0,1 s ;
+- les codes de bureau des résultats en ligne correspondent à ceux des tuiles, outre-mer compris (les codes y sont déjà convertis au format INSEE).
+
+Règle d'intensité (décidée le 24/09) :
+
+| Palier | Avance du premier sur le second | Opacité | Bureaux (présidentielle 2022, T1) |
+|---|---|---|---|
+| Serré | moins de 5 points | 0,60 | 18 815 |
+| Net | de 5 à 15 points | 0,80 | 28 316 |
+| Large | plus de 15 points | 1 | 21 167 |
+
+- Le plancher prévu à 0,45 échouait au validateur : pâlis à ce point, le bleu et le rouge ne sont plus séparés que de ΔE 11,1 en vision normale (minimum 15) et 6,8 pour un daltonien. **0,60 est l'opacité minimale qui passe** (ΔE 15,5 et 9,5).
+- Les 925 bureaux à **égalité en tête** ont leur propre catégorie, un gris foncé à pleine opacité. Sans cela, le code leur donnait la couleur du candidat le mieux classé au niveau national, ce qui était arbitraire.
+- Les 389 bureaux où **un autre candidat** est en tête restent en gris clair, et les 70 bureaux **sans suffrage exprimé** restent « sans résultat ».
+
+Ce qu'il enseigne :
+- **Précalculer la vue par défaut.** Décoder 836 184 lignes de voix puis calculer la tête coûte environ 0,7 s de processeur sur un ordinateur, sans doute deux à trois fois plus sur un téléphone. Le pipeline publiera donc, par scrutin, un petit fichier « carte » (bureau, tête, avance, participation), et le détail des voix ne sera chargé qu'au survol, par département ou en mode avancé.
+- **Ne pas afficher 70 000 bureaux au niveau national.** Aux faibles zooms, tippecanoe remplace les polygones trop petits par des carrés (la « poussière »), visibles un instant pendant le chargement. En dessous du zoom 9 environ, la carte montrera les communes et les départements agrégés, et les bureaux au-delà.
+- **MapLibre v6 existe** (ESM uniquement, sans fichier UMD). Le prototype utilise la v5 depuis un CDN ; l'application, construite avec Vite, pourra adopter la v6.
+- **L'événement `idle` ne se déclenche pas quand la page est masquée** (onglet en arrière-plan) : les mesures de performance ne doivent pas en dépendre.
+
 ## 8. Nuances politiques et blocs
 
 ### 8.1 Le problème
@@ -521,7 +558,7 @@ Nouvelle base, mais avec des outils déjà maîtrisés :
 | Besoin | Choix | Remarque |
 |---|---|---|
 | Application | React 19 + TypeScript + Vite | Base connue |
-| Carte | MapLibre GL JS v5 + `pmtiles` (`addProtocol`) | Pas de deck.gl : MapLibre gère seul les aplats et les cercles pour environ 70 000 entités, et deck.gl ajouterait un second contexte WebGL sans bénéfice à cette échelle |
+| Carte | MapLibre GL JS (v6, ESM ; v5 dans le prototype) + `pmtiles` (`addProtocol`) | Pas de deck.gl : MapLibre gère seul les aplats et les cercles pour environ 70 000 entités, et deck.gl ajouterait un second contexte WebGL sans bénéfice à cette échelle |
 | Graphiques | ECharts (import à la carte) via un petit wrapper maison | Leçon du projet finances : `echarts-for-react` avec React 19 peut afficher un graphique vide sans erreur |
 | Lecture Parquet | hyparquet + `hyparquet-compressors` (pour le ZSTD) | Environ 10 Ko compressé, lecture par requêtes Range. DuckDB-WASM (environ 2,8 Mo compressé, démarrage de 150 à 300 ms) seulement pour un futur mode requêtes |
 | Données et cache | TanStack Query | Annulation et mise en cache des requêtes |
@@ -572,7 +609,7 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 
 | Phase | Contenu | Période visée |
 |---|---|---|
-| 0 — Prototype et ménage | **Prototype de carte d'abord** (tuiles officielles, présidentielle 2022, hyparquet, feature-state), archivage de `Data/` hors du dépôt, tag `prototype-v0`, squelette du dépôt, `CLAUDE.md` du projet, maquettes (§ 16) | Fin septembre – mi-octobre 2026 |
+| 0 — Prototype et ménage | Prototype de carte (**fait le 24/09**, § 7.5), archivage de `Data/` hors du dépôt (**fait le 24/09**), tag `prototype-v0`, squelette du dépôt, `CLAUDE.md` du projet, maquettes (§ 16) | Fin septembre – mi-octobre 2026 |
 | 1 — Pipeline v1 | Manifeste des sources, modèle du § 6, référentiels (codes outre-mer, COG, nuances de la v1, municipales 2026), tests bloquants | Octobre |
 | 2 — Géographie | Carte branchée sur le PMTiles officiel et les tuiles IGN, couche des circonscriptions, encarts outre-mer, mesure des temps d'affichage | Octobre – novembre |
 | 3 — MVP front | Exigences P0, **bêta publique** | Novembre – mi-décembre |
@@ -650,3 +687,5 @@ Mesures réalisées le 24/09/2026 avec DuckDB 1.5.5 sur les fichiers de `Data/` 
 | PMTiles officiel (en-tête et métadonnées lus à distance) | Version 3, zooms 2 à 14, 283 906 tuiles, 351 Mo de données, généré par tippecanoe 1.36 |
 | Jointure au bureau en métropole (code strict) | 2022 prés. T1 : 99,64 % des inscrits ; 2024 législ. T1 : 98,23 % (3 583 bureaux non joints dans 662 communes) |
 | Bases dérivées du prototype | `transparence.duckdb` 1,3 Go (géométries) ; `consolidated.duckdb` 0,9 Go (`fact_results` 1,6 M lignes, 11 tables de géométries simplifiées, `fact_votes_nuance` vide) |
+| Prototype de carte (§ 7.5) | Données de la présidentielle 2022 : 1,6 Mo ; 1,34 s jusqu'à la carte colorée ; `setFeatureState` sur 69 682 bureaux en 73 ms |
+| Palette du prototype | Centre `#D9960A`, gauche `#C8323A`, extrême droite `#3558A6` : tous les contrôles du validateur passent en mode clair (ΔE ≥ 17,6 pour les daltoniens), avec un avertissement de contraste sur l'ambre (2,46:1) compensé par la légende et le panneau. Pâlies à 0,60 : ΔE 15,5 en vision normale et 9,5 pour les daltoniens (à 0,45 : 11,1 et 6,8, échec). Gris : autre `#B5B5AF`, égalité `#57574F`, sans résultat `#E3E3DE` |
