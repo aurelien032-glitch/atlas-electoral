@@ -16,7 +16,7 @@ import {
   useTerritoires, useVoix,
 } from './donnees/requetes'
 import { arrondissementDu, communeDu, departementDe, emprise, indexer, titreDe, villeDe } from './donnees/territoires'
-import { scrutinParDefaut, scrutinPrecedent, voteParSecteur } from './donnees/scrutins'
+import { plusieursElections, raisonPlusieursElections, scrutinParDefaut, scrutinPrecedent, voteParSecteur } from './donnees/scrutins'
 import {
   exprimesPourParts, type Agregat, type BureauContour, type Candidature, type Encart, type Resultat, type Territoire,
   type VoixPanachage,
@@ -329,6 +329,9 @@ export default function App() {
       lignes.push('Vote pour des personnes (panachage)')
     } else if (survol.niveau === 'commune' && scrutin && voteParSecteur(scrutin, survol.code) && vue.mode === 'tete') {
       lignes.push('Vote par secteur : résultats additionnés, voir la fiche')
+    } else if (vue.mode === 'tete' && scrutin && (survol.niveau === 'commune' || survol.niveau === 'arrondissement')
+      && plusieursElections(scrutin, survol.niveau, survol.code, resultats[survol.niveau === 'commune' ? 'communes' : 'arrondissements'].get(survol.code))) {
+      lignes.push(`${raisonPlusieursElections(scrutin).replace(/^./, (c) => c.toUpperCase())} : voir la fiche`)
     } else if (vue.mode === 'tete') {
       const r = resultats[({
         bureau: 'bureaux', commune: 'communes', arrondissement: 'arrondissements', circonscription: 'circonscriptions',

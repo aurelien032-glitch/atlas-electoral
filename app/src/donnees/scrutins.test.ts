@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { grouper, scrutinParDefaut, scrutinPrecedent } from './scrutins'
+import { grouper, plusieursElections, raisonPlusieursElections, scrutinParDefaut, scrutinPrecedent } from './scrutins'
 import type { ScrutinCatalogue } from './types'
 
 const s = (id: string, date: string) => ({ id, date, libelle: id, portee: 'national' }) as ScrutinCatalogue
@@ -25,5 +25,22 @@ describe('scrutins', () => {
       ['legi', ['2017_legi_t1']],
       ['euro', ['2024_euro_t1', '2019_euro_t1']],
     ])
+  })
+})
+
+describe('plusieurs élections dans un territoire', () => {
+  const muni2020 = s('2020_muni_t1', '2020-03-15')
+  const legi2024 = s('2024_legi_t1', '2024-06-30')
+
+  it('reconnaît le vote par secteur de Paris, Lyon et Marseille, même sans l’indicateur du pipeline', () => {
+    expect(plusieursElections(muni2020, 'commune', '13055')).toBe(true)
+    expect(plusieursElections(s('2026_muni_t1', '2026-03-15'), 'commune', '13055')).toBe(false)
+  })
+
+  it('suit l’indicateur des agrégats ailleurs', () => {
+    expect(plusieursElections(legi2024, 'commune', '31555', { plusieurs_elections: true })).toBe(true)
+    expect(plusieursElections(legi2024, 'commune', '31555', { plusieurs_elections: false })).toBe(false)
+    expect(plusieursElections(legi2024, 'commune', '31555', { exprimes: 10 })).toBe(false)
+    expect(raisonPlusieursElections(legi2024)).toBe('plusieurs circonscriptions')
   })
 })

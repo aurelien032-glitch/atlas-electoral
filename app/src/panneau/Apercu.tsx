@@ -3,7 +3,7 @@ import type { Mesure } from '../calculs/parts'
 import { BLOCS_COLORES, DU_BLOC, LIBELLE_BLOC, type BlocColore } from '../carte/couleurs'
 import type { Cible } from '../cibles'
 import { nomCandidature, nuanceCourte } from '../donnees/libelles'
-import { grouper, voteParSecteur } from '../donnees/scrutins'
+import { grouper, plusieursElections } from '../donnees/scrutins'
 import { exprimesPourParts, type Bloc, type ScrutinCatalogue } from '../donnees/types'
 import { formatEcart, formatNombre, formatPart } from '../format'
 import { partsAuNiveau, type Mode } from '../modes'
@@ -91,8 +91,9 @@ function ApercuTete({ ctx, actions }: Props) {
   } else {
     const blocDe = (cand: number): Bloc => ctx.parCand.get(cand)?.bloc ?? 'NC'
     const parCirconscription = ctx.scrutin.portee === 'circonscription'
-    // Municipales jusqu'en 2020 : Paris, Lyon et Marseille votaient par secteur, aucune liste n'y est « en tête ».
-    const agregats = ctx.agregats.filter((a) => a.niveau !== 'commune' || !voteParSecteur(ctx.scrutin, a.code))
+    // Communes qui réunissent plusieurs élections (circonscriptions, cantons, secteurs de Paris, Lyon et
+    // Marseille, communes fusionnées depuis) : aucune candidature n'y est « en tête ».
+    const agregats = ctx.agregats.filter((a) => a.niveau !== 'commune' || !plusieursElections(ctx.scrutin, a.niveau, a.code, a))
     const tetes = compterTetes(agregats, parCirconscription ? 'circonscription' : 'commune', blocDe)
     phrase = `Bloc en tête, par ${parCirconscription ? 'circonscription' : 'commune'} : ${enumerer(tetes.map(([b, n]) => `${LIBELLE_BLOC[b].toLowerCase()} dans ${formatNombre(n)}`))}.`
     const elus = ctx.candidats.filter((c) => c.elu)

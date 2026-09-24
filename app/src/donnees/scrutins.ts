@@ -21,6 +21,23 @@ export const voteParSecteur = (scrutin: ScrutinCatalogue, commune: string) =>
   typeDe(scrutin.id) === 'muni' && scrutin.date < '2026' && ['75056', '69123', '13055'].includes(commune)
 const tourDe = (id: string) => id.split('_')[2] ?? ''
 
+/** Territoire qui réunit plusieurs élections distinctes : pas de « candidature en tête » qui ait un sens. */
+export const plusieursElections = (scrutin: ScrutinCatalogue, niveau: string, code: string, r?: object) =>
+  (r !== undefined && 'plusieurs_elections' in r && r.plusieurs_elections === true)
+  || (niveau === 'commune' && voteParSecteur(scrutin, code))
+
+/** Pourquoi, selon le scrutin : « plusieurs circonscriptions », « plusieurs cantons »… */
+export function raisonPlusieursElections(scrutin: ScrutinCatalogue): string {
+  switch (typeDe(scrutin.id)) {
+    case 'legi': return 'plusieurs circonscriptions'
+    case 'cant': case 'dpmt': return 'plusieurs cantons'
+    case 'muni': return 'des communes qui votaient chacune pour leur conseil (fusionnées depuis)'
+    // Listes identifiées par département : une commune nouvelle à cheval sur deux départements en réunit deux.
+    case 'regi': case 'euro': return 'des communes de départements différents (fusionnées depuis)'
+    default: return 'plusieurs élections distinctes'
+  }
+}
+
 /** Scrutins groupés par type, du plus récent au plus ancien dans chaque groupe. */
 export function grouper(scrutins: readonly ScrutinCatalogue[]) {
   return TYPES

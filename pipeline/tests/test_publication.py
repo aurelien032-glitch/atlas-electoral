@@ -169,6 +169,26 @@ def test_departements_a_part(con):
     assert con.sql(f"SELECT count(*) FROM {d}").fetchone()[0] >= 101
 
 
+def test_plusieurs_elections(con):
+    # Une commune dont aucun bureau n'a toutes les candidatures réunit plusieurs élections distinctes : jamais
+    # aux présidentielles ni aux européennes ; Paris, Lyon et Marseille aux municipales par secteur ; les
+    # grandes villes aux législatives.
+    codes = lambda s: {c for (c,) in con.sql(f"""SELECT code FROM {fichier(s, 'agregats.parquet')}
+                                               WHERE niveau = 'commune' AND plusieurs_elections""").fetchall()}
+    # Aux régionales et européennes, une liste est identifiée par département : seules les communes nouvelles à
+    # cheval sur deux départements (Vallons-de-l'Erdre, Cormicy…) en réunissent plusieurs.
+    passage = "'" + (PUBLICATION / "geo" / "passage_communes.parquet").as_posix() + "'"
+    a_cheval = {c for (c,) in con.sql(f"""SELECT DISTINCT actuel FROM {passage}
+                                          WHERE left(ancien, 2) <> left(actuel, 2)""").fetchall()}
+    for s in SCRUTINS:
+        if s.split("_")[1] == "pres":
+            assert not codes(s), s
+        elif s.split("_")[1] in ("euro", "regi"):
+            assert codes(s) <= a_cheval, s
+    assert {"75056", "69123", "13055"} <= codes("2020_muni_t1")
+    assert {"31555", "75056"} <= codes("2024_legi_t1")
+
+
 def test_passage_publie_limite_aux_codes_rencontres(con):
     # L'historique dit « née d'une fusion » d'une commune dont un ancien code a des résultats : pas de Lyon
     # (Saint-Rambert-l'Île-Barbe, rattachée en 1963, n'apparaît dans aucun des 56 tours).

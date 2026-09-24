@@ -77,6 +77,11 @@ export interface Agregat extends Resultat {
   exprimes_listes?: number | null
   /** Commune (ou territoire en contenant une) où l'on vote pour des personnes (panachage). */
   panachage?: boolean | null
+  /**
+   * Commune ou arrondissement qui réunit plusieurs élections distinctes (circonscriptions, cantons, secteurs,
+   * communes fusionnées depuis) : sa « candidature en tête » compare des gens qui ne s'affrontaient pas.
+   */
+  plusieurs_elections?: boolean | null
 }
 
 /** Base des parts des blocs : les exprimés des communes à listes quand le panachage est exclu. */

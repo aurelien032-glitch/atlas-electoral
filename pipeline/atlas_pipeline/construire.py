@@ -323,6 +323,27 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
               UNION ALL
               SELECT 'commune' AS niveau, b.commune AS code, c.cand, sum(b.voix)::INTEGER AS voix
               FROM brut_cle b JOIN cand c USING (cle) WHERE b.panachage GROUP BY ALL)""")
+    # Commune (ou arrondissement) qui réunit plusieurs élections distinctes : plusieurs circonscriptions ou
+    # cantons, secteurs de Paris, Lyon et Marseille. Aucun de ses bureaux n'a alors toutes ses candidatures
+    # (la source garde les lignes à zéro voix) ; sa « candidature en tête » compare des gens qui ne
+    # s'affrontaient pas, et l'interface le dit. Les bureaux incomplets de la source (somme des voix inférieure
+    # aux exprimés, anomalie tracée) sont laissés de côté : il leur manque des lignes.
+    au_panachage = "true" if scrutin.panachage else "false"
+    con.sql(f"""
+        CREATE OR REPLACE TEMP TABLE plusieurs_elections AS
+        WITH complets AS (SELECT g.code_bv FROM g JOIN (SELECT code_bv, sum(voix) AS s FROM brut GROUP BY 1) v USING (code_bv)
+                          WHERE v.s = g.exprimes OR ({au_panachage} AND v.s > g.exprimes)),
+             b AS (SELECT * FROM brut_cle WHERE code_bv IN (SELECT code_bv FROM complets)),
+             parb AS (SELECT code_bv, commune, count(DISTINCT cle) AS n FROM b GROUP BY ALL),
+             territoire AS (SELECT 'commune' AS niveau, commune AS code, count(DISTINCT cle) AS n FROM b GROUP BY ALL
+                            UNION ALL
+                            SELECT 'arrondissement', {ARRONDISSEMENT}, count(DISTINCT cle) FROM b
+                            WHERE {ARRONDISSEMENT} IS NOT NULL GROUP BY ALL),
+             bureau_max AS (SELECT 'commune' AS niveau, commune AS code, max(n) AS n FROM parb GROUP BY ALL
+                            UNION ALL
+                            SELECT 'arrondissement', {ARRONDISSEMENT}, max(n) FROM parb
+                            WHERE {ARRONDISSEMENT} IS NOT NULL GROUP BY ALL)
+        SELECT niveau, code FROM territoire t JOIN bureau_max m USING (niveau, code) WHERE t.n > m.n""")
     # Comme pour les bureaux, la candidature en tête et son avance sont précalculées : la vue
     # nationale (communes) s'affiche sans décoder les voix de chaque candidature.
     ecrire(con, f"""
@@ -331,10 +352,12 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
                coalesce(a.exprimes > 0 AND p.voix = s.voix, false) AS egalite,
                CASE WHEN a.exprimes > 0
                     THEN round(10000.0 * (p.voix - coalesce(s.voix, 0)) / a.exprimes)::SMALLINT
-               END AS avance_x10000
+               END AS avance_x10000,
+               m.code IS NOT NULL AS plusieurs_elections
         FROM ({participation}) a
         LEFT JOIN agr_classement p ON p.niveau = a.niveau AND p.code = a.code AND p.rang = 1
         LEFT JOIN agr_classement s ON s.niveau = a.niveau AND s.code = a.code AND s.rang = 2
+        LEFT JOIN plusieurs_elections m ON m.niveau = a.niveau AND m.code = a.code
         ORDER BY a.niveau, a.code""", dossier / "agregats.parquet")
     ecrire(con, "SELECT niveau, code, cand, voix FROM agr_voix ORDER BY niveau, code, cand",
            dossier / "agregats_voix.parquet")
