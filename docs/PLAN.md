@@ -612,7 +612,8 @@ Budgets : moins de 450 Ko de JavaScript initial compressé (MapLibre compris) et
 - **détail d'un territoire** (clic sur la carte) : fil d'Ariane France › département › commune › bureau, participation, toutes les candidatures en tableau avec barres et comparaison au niveau supérieur, cas limites et nuances attribuées signalés ;
 - nouvel index `geo/territoires.parquet` (617 Ko : nom, département et emprise des 35 124 départements et communes) pour le fil d'Ariane et le cadrage ;
 - vérifications : TypeScript, oxlint, 16 tests Vitest, 65 tests pytest ; parcours vérifiés dans le navigateur (ordinateur et mobile) ;
-- JavaScript : 466 Ko compressés (budget 450) ; polices : 87 Ko au premier chargement (Newsreader sans l'axe de taille optique : 58 Ko au lieu de 132).
+- JavaScript : **395 Ko compressés** (budget 450), en deux fichiers : l'application (119 Ko) et MapLibre (276 Ko, qui reste en cache d'une version à l'autre) ; le décompresseur ZSTD seul remplace `hyparquet-compressors` (−72 Ko : brotli, gzip, snappy et lz4 ne servaient pas). Polices : 87 Ko au premier chargement (Newsreader sans l'axe de taille optique : 58 Ko au lieu de 132) ;
+- **contour détaillé** de la commune sélectionnée, demandé à l'API Découpage administratif (`geo.api.gouv.fr`, 13 à 40 Ko) : la couche nationale simplifiée à 1 km paraît grossière à fort zoom ; en cas d'échec, le contour simplifié reste affiché.
 - **recherche d'une commune ou d'un département** (en haut du panneau) : sans accents ni tirets, « st » vaut « saint », code INSEE accepté ; homonymes départagés par le département ; à pertinence égale, les communes qui comptent le plus d'inscrits d'abord ; motif « combobox » de l'ARIA (clavier complet). La recherche par adresse (Géoplateforme) viendra ensuite.
 
 ## 12. Exigences priorisées

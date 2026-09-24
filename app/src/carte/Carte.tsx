@@ -1,9 +1,10 @@
 import type { ExpressionSpecification, StyleSpecification } from '@maplibre/maplibre-gl-style-spec'
 import {
   Map as CarteMapLibre, NavigationControl, addProtocol, removeProtocol, setWorkerUrl,
-  type FeatureIdentifier, type MapLayerMouseEvent,
+  type FeatureIdentifier, type GeoJSONSource, type MapLayerMouseEvent,
 } from 'maplibre-gl'
 import urlWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
+import type { Feature } from 'geojson'
 import { Protocol } from 'pmtiles'
 import { useEffect, useRef, useState } from 'react'
 import { RACINE_DONNEES } from '../donnees/requetes'
@@ -56,6 +57,7 @@ const STYLE: StyleSpecification = {
       attribution: 'Contours administratifs : IGN, simplifiés par Etalab',
     },
     departements: { type: 'geojson', data: `${RACINE_DONNEES}/geo/departements.geojson`, promoteId: 'code' },
+    contour: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
   },
   layers: [
     { id: 'fond', type: 'background', paint: { 'background-color': FOND_CARTE } },
@@ -74,6 +76,7 @@ const STYLE: StyleSpecification = {
     { id: 'departements-selection', type: 'line', source: 'departements', paint: siSelection(2.5) },
     { id: 'communes-selection', type: 'line', source: 'communes', paint: siSelection(2.5) },
     { id: 'bureaux-selection', type: 'line', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: ZOOM_BUREAUX, paint: siSelection(3) },
+    { id: 'contour-selection', type: 'line', source: 'contour', paint: { 'line-color': ENCRE, 'line-width': 2.5 } },
   ],
 }
 
@@ -99,6 +102,8 @@ interface Props {
   /** Carte au bureau de vote ; sinon chaque bureau prend la couleur de sa commune. */
   auBureau: boolean
   selection: Selection | undefined
+  /** Contour détaillé de la commune sélectionnée, quand il est arrivé : il remplace le contour simplifié. */
+  contour: Feature | undefined
   cadrage: Cadrage | null
   libelle: string
   onSurvol: (survol: Survol | null) => void
@@ -133,7 +138,7 @@ function motifHachures(pas = 8, ratio = 2) {
   return { width: n, height: n, data }
 }
 
-export function Carte({ coloriage, contours, auBureau, selection, cadrage, libelle, onSurvol, onClic }: Props) {
+export function Carte({ coloriage, contours, auBureau, selection, contour, cadrage, libelle, onSurvol, onClic }: Props) {
   const conteneur = useRef<HTMLDivElement>(null)
   const refCarte = useRef<CarteMapLibre | null>(null)
   const refSelection = useRef<Selection | undefined>(undefined)
@@ -194,9 +199,13 @@ export function Carte({ coloriage, contours, auBureau, selection, cadrage, libel
     const carte = refCarte.current
     if (!carte || !prete) return
     if (refSelection.current) carte.removeFeatureState(cible(refSelection.current), 'selection')
-    if (selection) carte.setFeatureState(cible(selection), { selection: true })
-    refSelection.current = selection
-  }, [prete, selection])
+    // Le contour détaillé, s'il est là, remplace le contour simplifié de la commune.
+    const detaille = selection?.niveau === 'commune' && contour !== undefined
+    if (selection && !detaille) carte.setFeatureState(cible(selection), { selection: true })
+    refSelection.current = detaille ? undefined : selection
+    const source = carte.getSource<GeoJSONSource>('contour')
+    source?.setData(detaille ? contour : { type: 'FeatureCollection', features: [] })
+  }, [prete, selection, contour])
 
   useEffect(() => {
     const carte = refCarte.current

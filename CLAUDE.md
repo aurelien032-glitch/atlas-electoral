@@ -29,7 +29,8 @@ cd app && npx tsc -b && npm run lint && npm test && npm run build          # ava
 
 - **Aucune donnée brute sur le disque** : DuckDB lit les Parquet de data.gouv par requêtes Range. Ne jamais
   réintroduire de copie locale des sources ni de base DuckDB persistante.
-- **Aucun SQL à l'exécution** : le site ne lit que des fichiers précalculés.
+- **Aucun SQL à l'exécution** : le site ne lit que des fichiers précalculés, tous en Parquet ZSTD (seul
+  décompresseur embarqué : `fzstd`).
 - On ne publie que des **comptes** (voix, inscrits…) ; les pourcentages se calculent à l'affichage.
 - La **candidature en tête** et son **avance** sont précalculées par bureau et par commune (`bureaux.parquet`,
   `agregats.parquet`) : la carte ne décode pas les voix au chargement.
@@ -63,6 +64,9 @@ cd app && npx tsc -b && npm run lint && npm test && npm run build          # ava
   peint (« sans résultat ») ; les hachures marquent une valeur sans objet (pas de candidat du bloc, pas
   comparable). `removeFeatureState` efface aussi la sélection : la remettre après chaque coloriage.
 - Le mode Évolution se lit à la commune : les numéros de bureaux changent d'un scrutin à l'autre.
+- Commune sélectionnée : contour détaillé demandé à `geo.api.gouv.fr` (API officielle, CORS ouvert), contour
+  simplifié en secours. Dans le panneau intégré, MapLibre attend une image (`requestAnimationFrame`) pour
+  charger son style : une capture d'écran la déclenche, ce n'est pas un bug du site.
 
 ## Couleurs et accessibilité
 

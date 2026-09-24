@@ -1,3 +1,4 @@
+import type { Feature } from 'geojson'
 import { useCallback, useMemo, useState } from 'react'
 import { Carte, type Cadrage, type Survol } from './carte/Carte'
 import {
@@ -9,7 +10,7 @@ import { Onglets } from './carte/Onglets'
 import { blocEnTete, optionsCibles, retenueDuBloc } from './cibles'
 import { nomCandidature } from './donnees/libelles'
 import {
-  useAgregats, useAgregatsVoix, useBureaux, useCandidats, useCatalogue, useContours, useTerritoires, useVoix,
+  useAgregats, useAgregatsVoix, useBureaux, useCandidats, useCatalogue, useContourCommune, useContours, useTerritoires, useVoix,
 } from './donnees/requetes'
 import { communeDu, departementDe, emprise, indexer, titreDe } from './donnees/territoires'
 import type { Agregat, BureauContour, Resultat, ScrutinCatalogue, Territoire } from './donnees/types'
@@ -46,6 +47,7 @@ interface PropsZone {
   contours: BureauContour[]
   auBureau: boolean
   selection: Selection | undefined
+  contour: Feature | undefined
   cadrage: Cadrage | null
   libelle: string
   contenu: (survol: Survol) => { titre: string; lignes: string[] }
@@ -86,6 +88,7 @@ export default function App() {
   const voix = useVoix((vue.mode === 'score' && carteAuBureau) || selection?.niveau === 'bureau' ? id : undefined)
   const contours = useContours()
   const territoires = useTerritoires()
+  const contourCommune = useContourCommune(selection?.niveau === 'commune' ? selection.code : undefined)
 
   const scrutinDe = vue.mode === 'evolution' && scrutin
     ? scrutins.find((s) => s.id === vue.de && s.id !== scrutin.id) ?? scrutinVoisin(scrutins, scrutin)
@@ -343,6 +346,7 @@ export default function App() {
           contours={contours.data ?? []}
           auBureau={carteAuBureau}
           selection={selection}
+          contour={contourCommune.data}
           cadrage={cadrage ?? cadrageInitial}
           libelle={`Carte : ${etatCarte?.legende.type === 'classes' ? etatCarte.legende.titre : 'bloc en tête'}, ${scrutin?.libelle ?? ''}`}
           contenu={contenuInfobulle}

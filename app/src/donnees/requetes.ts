@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import type { Feature } from 'geojson'
 import { lireParquet } from './parquet'
 import type { Agregat, Bureau, BureauContour, Candidature, Catalogue, Territoire, VoixAgregat, VoixBureau } from './types'
 
@@ -43,3 +44,21 @@ export const useContours = () => useGeo<BureauContour>('bureaux_contours_2022.pa
 
 /** Noms et emprises des départements et des communes (découpage 2026). */
 export const useTerritoires = () => useGeo<Territoire>('territoires.parquet')
+
+/**
+ * Contour détaillé d'une commune, demandé à l'API Découpage administratif (geo.api.gouv.fr) au moment
+ * où elle est sélectionnée : la couche nationale, simplifiée à 1 km, paraît grossière à fort zoom.
+ * En cas d'échec, la carte garde le contour simplifié.
+ */
+export function useContourCommune(code: string | undefined) {
+  return useQuery({
+    queryKey: ['contour', code],
+    enabled: code !== undefined,
+    retry: 0,
+    queryFn: async ({ signal }) => {
+      const reponse = await fetch(`https://geo.api.gouv.fr/communes/${code}?format=geojson&geometry=contour&fields=code`, { signal })
+      if (!reponse.ok) throw new Error(`contour indisponible (HTTP ${reponse.status})`)
+      return (await reponse.json()) as Feature
+    },
+  })
+}
