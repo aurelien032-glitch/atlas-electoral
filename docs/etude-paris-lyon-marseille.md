@@ -9,9 +9,10 @@
 - **Les résultats ne descendent qu'à la commune** : les bureaux des trois villes portent le code de la
   commune (`75056_1512`, `69123_0305`, `13055_0801`), jamais celui de l'arrondissement.
 - **Les numéros de bureau donnent l'arrondissement** : les deux premiers chiffres du numéro sont ceux de
-  l'arrondissement, dans les 56 tours publiés. Relevé sur les législatives 2024 : Paris 01 à 20
-  (902 bureaux), Lyon 01 à 09 (305 bureaux, plus un bureau `0001` à rattacher), Marseille 01 à 16
-  (497 bureaux).
+  l'arrondissement. Vérifié sur les 56 tours publiés, à quelques bureaux près : à Lyon, un bureau numéroté
+  « 00… » depuis 2021 (deux en 2026) ; à Paris, un bureau « JU… » en 2019 et 2022. Ces bureaux restent à
+  rattacher. Aux législatives 2024 : Paris 01 à 20 (902 bureaux), Lyon 01 à 09 (305 bureaux, plus le
+  bureau `0001`), Marseille 01 à 16 (497 bureaux).
 - **Municipales de 2008 à 2020 : un scrutin par secteur.** Chaque liste ne se présentait que dans son
   secteur : entre 164 et 182 listes à Paris selon l'année, de 48 à 81 à Lyon et Marseille. Additionnés à
   la commune, ces scrutins distincts donnaient une liste « en tête » sans signification : à Paris en 2020,
