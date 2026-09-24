@@ -1,0 +1,58 @@
+code,type,libelle,bloc,famille,source,cas_limite,note
+EXG,individuelle,Extrême gauche,EXG,Extrême gauche,circulaire 2026,non,
+FI,individuelle,La France insoumise,EXG,Extrême gauche,circulaire 2026,oui,Bloc EXG selon la circulaire de février 2026 ; famille décidée le 24/09/2026
+COM,individuelle,Parti communiste français,GAU,Gauche,circulaire 2026,non,
+SOC,individuelle,Parti socialiste,GAU,Gauche,circulaire 2026,non,
+GEN,individuelle,Génération.s,GAU,Gauche,circulaire 2026,non,
+PLP,individuelle,Place Publique,GAU,Gauche,circulaire 2026,non,
+RDG,individuelle,Parti radical de gauche,GAU,Gauche,circulaire 2026,non,
+VEC,individuelle,Les Écologistes,GAU,Écologistes,circulaire 2026,non,
+DVG,individuelle,Divers gauche,GAU,Gauche,circulaire 2026,non,
+ECO,individuelle,Écologiste,DIV,Écologistes,circulaire 2026,oui,Bloc divers selon la circulaire ; famille écologistes
+REG,individuelle,Régionalistes,DIV,Régionalistes,circulaire 2026,oui,Bloc divers selon la circulaire ; famille régionalistes
+ANM,individuelle,Animaliste,DIV,Divers,circulaire 2026,non,
+DIV,individuelle,Divers,DIV,Divers,circulaire 2026,non,
+REN,individuelle,Renaissance,CENT,Centre,circulaire 2026,non,
+MDM,individuelle,Modem,CENT,Centre,circulaire 2026,non,
+HOR,individuelle,Horizons,CENT,Centre,circulaire 2026,non,
+PR,individuelle,Parti radical,CENT,Centre,circulaire 2026,non,
+DVC,individuelle,Divers centre,CENT,Centre,circulaire 2026,non,
+UDI,individuelle,Union des démocrates et indépendants,CENT,Centre,circulaire 2026,non,
+LR,individuelle,Les Républicains,DTE,Droite,circulaire 2026,non,
+DVD,individuelle,Divers droite,DTE,Droite,circulaire 2026,non,
+DSV,individuelle,Droite souverainiste,DTE,Droite,circulaire 2026,non,
+UDR,individuelle,Union des droites pour la République,EXD,Extrême droite,circulaire 2026,non,
+RN,individuelle,Rassemblement national,EXD,Extrême droite,circulaire 2026,non,
+REC,individuelle,Reconquête,EXD,Extrême droite,circulaire 2026,non,
+EXD,individuelle,Extrême droite,EXD,Extrême droite,circulaire 2026,non,
+LEXG,liste,Extrême gauche,EXG,Extrême gauche,circulaire 2026,non,
+LFI,liste,La France insoumise,EXG,Extrême gauche,circulaire 2026,oui,Bloc EXG selon la circulaire de février 2026 ; famille décidée le 24/09/2026
+LCOM,liste,Parti communiste français,GAU,Gauche,circulaire 2026,non,
+LSOC,liste,Parti socialiste,GAU,Gauche,circulaire 2026,non,
+LVEC,liste,Les Écologistes,GAU,Écologistes,circulaire 2026,non,
+LUG,liste,Union de la gauche,GAU,Gauche,circulaire 2026,non,
+LDVG,liste,Divers gauche,GAU,Gauche,circulaire 2026,non,
+LECO,liste,Écologiste,DIV,Écologistes,circulaire 2026,oui,Bloc divers selon la circulaire ; famille écologistes
+LREG,liste,Régionalistes,DIV,Régionalistes,circulaire 2026,oui,Bloc divers selon la circulaire ; famille régionalistes
+LDIV,liste,Divers,DIV,Divers,circulaire 2026,non,
+LREN,liste,Renaissance,CENT,Centre,circulaire 2026,non,
+LMDM,liste,Modem,CENT,Centre,circulaire 2026,non,
+LHOR,liste,Horizons,CENT,Centre,circulaire 2026,non,
+LUDI,liste,Union des démocrates et indépendants,CENT,Centre,circulaire 2026,non,
+LUC,liste,Union du centre,CENT,Centre,circulaire 2026,non,
+LDVC,liste,Divers centre,CENT,Centre,circulaire 2026,non,
+LLR,liste,Les Républicains,DTE,Droite,circulaire 2026,non,
+LUD,liste,Union de la droite,DTE,Droite,circulaire 2026,non,
+LDVD,liste,Divers droite,DTE,Droite,circulaire 2026,non,
+LDSV,liste,Droite souverainiste,DTE,Droite,circulaire 2026,non,
+LUDR,liste,Union des droites pour la République,EXD,Extrême droite,circulaire 2026,non,
+LRN,liste,Rassemblement national,EXD,Extrême droite,circulaire 2026,non,
+LREC,liste,Reconquête,EXD,Extrême droite,circulaire 2026,non,
+LUXD,liste,Union de l'extrême droite,EXD,Extrême droite,circulaire 2026,non,
+LEXD,liste,Extrême droite,EXD,Extrême droite,circulaire 2026,non,
+UG,individuelle,Union de la gauche (2024),GAU,Gauche,analogie LUG,oui,Nuance antérieure à la grille 2026 : rattachée à l'union de la gauche (LUG)
+NUP,individuelle,Nouvelle union populaire écologique et sociale (2022),GAU,Gauche,analogie LUG,oui,Nuance antérieure à la grille 2026 : rattachée à l'union de la gauche (LUG)
+ENS,individuelle,Ensemble (2022-2024),CENT,Centre,analogie LUC,oui,Nuance antérieure à la grille 2026 : rattachée à l'union du centre (LUC)
+LENS,liste,Ensemble (2024),CENT,Centre,analogie LUC,oui,Nuance antérieure à la grille 2026 : rattachée à l'union du centre (LUC)
+UXD,individuelle,Union de l'extrême droite (2024),EXD,Extrême droite,analogie LUXD,oui,Nuance antérieure à la grille 2026 : rattachée à l'union de l'extrême droite (LUXD)
+NC,individuelle,Sans nuance attribuée,NC,Non classé,règle du projet,non,Candidature ou liste à laquelle le ministère n'a attribué aucune nuance

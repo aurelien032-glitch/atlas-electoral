@@ -9,11 +9,12 @@
 > - hébergement 100 % statique, **0 € strict** (pas de nom de domaine payant) ;
 > - scrutins récents d'abord, municipales 2026 comprises (elles sont publiées) ;
 > - grille politique en 3 couches (nuance → famille → bloc), référence du ministère d'abord, UXD en extrême droite, cas limites selon le libellé officiel ;
-> - présidentielle : chaque candidat prend la nuance de son mouvement aux législatives suivantes ; écologistes selon la nuance (VEC → gauche, ECO → divers) ; régionalistes → divers ;
+> - blocs : grille de la circulaire de février 2026 appliquée à tous les scrutins ; FI et LFI en famille et en bloc « extrême gauche » ; présidentielle : code du parti du candidat dans cette grille ; écologistes selon la nuance (VEC → gauche, ECO → divers) ; régionalistes → divers ;
 > - charte sobre et neutre ;
 > - données locales archivées hors du dépôt ; publication de nos données nettoyées : plus tard ;
 > - prototype de carte réalisé le 24/09 (`spikes/carte-pmtiles/`, § 7.5) : l'architecture proposée fonctionne ;
-> - carte « Tête » : intensité en 3 paliers selon l'avance (serré, net, large), catégorie dédiée pour les égalités.
+> - carte « Tête » : intensité en 3 paliers selon l'avance (serré, net, large), catégorie dédiée pour les égalités ;
+> - pipeline de données v1 réalisé (§ 10) ; dépôt renommé `atlas-electoral`.
 >
 > Méthode : profilage des données (`data:explore-data`), décision d'architecture au format ADR (`engineering:architecture`), cadrage produit (`product-management:write-spec`), principes de visualisation (`dataviz`), audit du prototype (`api-coverage-auditor`, `feature-dev:code-explorer`), recherche des sources et des hébergeurs vérifiée par de vraies requêtes HTTP. Les chiffres « mesurés » viennent de requêtes DuckDB sur les fichiers de `Data/` (annexe A).
 
@@ -340,17 +341,20 @@ Règles :
 ### 6.2 Arborescence publiée
 
 ```text
-data/v1/
-├── scrutins.json              catalogue : id, type, date, tour, sources, empreintes
-├── referentiels/              nuances, familles, blocs, couleurs, codes, passage des communes
+publication/v1/
+├── scrutins.json              catalogue : scrutins, totaux, taux de jointure, versions des sources
+├── sources.lock.json          URL, ETag et date de chaque source officielle
+├── referentiels/nuances.csv   grille des nuances, familles et blocs
 ├── 2022_pres_t1/
-│   ├── bureaux.parquet        participation + voix par bureau (1,5 à 3 Mo)
-│   ├── candidats.parquet      candidats ou listes du scrutin
-│   ├── communes.parquet       agrégat par commune (~0,7 Mo)
-│   └── niveaux.json           circonscriptions, départements, régions, France (quelques Ko)
+│   ├── bureaux.parquet        une ligne par bureau : participation, tête, avance (~650 Ko)
+│   ├── voix.parquet           voix par bureau et par candidature (~1,2 Mo)
+│   ├── candidats.parquet      candidatures : nuance, famille, bloc, cas limite
+│   ├── agregats.parquet       participation par commune, département et France
+│   ├── agregats_voix.parquet  voix par candidature aux mêmes niveaux
+│   └── scrutin.json           manifeste : compteurs, contrôles, empreintes SHA-256
 └── …
 tiles/
-└── circonscriptions.pmtiles   seule couche géographique à produire nous-mêmes (petite)
+└── circonscriptions.pmtiles   seule couche géographique à produire nous-mêmes (à venir)
 ```
 
 Changer de scrutin ne recharge que quelques mégaoctets de résultats, jamais la géométrie.
@@ -461,27 +465,25 @@ Les codes de nuance changent à chaque scrutin (UG et ENS en 2024, préfixe `L` 
 
 La correspondance entre ces couches vit dans `referentiels/nuances.csv`. Ce fichier est public et versionné, chaque choix y est sourcé, et on peut en débattre par pull request.
 
-**Règles décidées** :
-- **Référence du ministère d'abord** : le bloc d'une nuance reprend son « bloc de clivage » dans la circulaire du scrutin quand il existe (à relever scrutin par scrutin). À défaut, on applique une règle écrite dans le fichier.
-- **UXD** (« Union de l'extrême droite ») va dans la famille et le bloc extrême droite.
-- **Cas limites : libellé officiel.** DSV (« droite souverainiste ») va à droite, DVC (« divers centre ») au centre. ECO et VEC forment la famille des écologistes, REG celle des régionalistes. Chaque cas est signalé « cas limite » dans l'interface.
+**Règles décidées le 24/09** :
+- **Blocs : la grille du ministère de 2026, pour tous les scrutins.** Le dictionnaire des nuances de la circulaire INTP2602966C (février 2026), publié sur data.gouv, donne un bloc par nuance : EXG, GAU, CENT, DTE, EXD ou DIV. On l'applique à tous les scrutins, y compris antérieurs, pour que les comparaisons dans le temps restent stables. Les nuances antérieures à 2026 sont rattachées à l'union correspondante de la grille : UG et NUP à l'union de la gauche (LUG, bloc GAU), ENS et LENS à l'union du centre (LUC, bloc CENT), UXD à l'union de l'extrême droite (LUXD, bloc EXD).
+- **La France insoumise** (FI, LFI) : bloc « extrême gauche » selon la circulaire de 2026, et famille « extrême gauche ». Signalée comme cas limite.
+- **Cas limites : libellé officiel.** DSV (« droite souverainiste ») va à droite, DVC (« divers centre ») au centre. ECO et VEC forment la famille des écologistes, REG celle des régionalistes ; dans la grille, VEC est à gauche, ECO et REG en divers. Chaque cas est signalé « cas limite » dans l'interface.
+- **Candidats à la présidentielle, qui n'ont pas de nuance** : ils prennent le code de leur parti dans la grille 2026 (Mélenchon → FI, Roussel → COM, Dupont-Aignan → DSV…). Cette règle remplace « la nuance du mouvement aux législatives suivantes », qui aurait donné NUP (NUPES), donc la gauche, à Mélenchon, en contradiction avec les deux décisions précédentes.
+- **Listes sans nuance** : le ministère n'attribue pas de nuance dans les petites communes. Ces listes sont classées « NC » (non classé) ; elles recueillent 35,3 % des voix au 1er tour des municipales 2026. Sur la carte « Tête », elles apparaissent en gris « non classé », avec une explication dans la légende (décidé le 24/09).
 
-**Proposition de familles pour la v1**, à valider dans `referentiels/nuances.csv` :
+**Familles retenues** (référentiel `referentiels/nuances.csv`) :
 
 | Famille | Législatives 2024 | Européennes 2024 | Présidentielle 2022 |
 |---|---|---|---|
-| Extrême gauche | EXG | LEXG | Arthaud, Poutou |
-| Gauche | COM, FI, SOC, RDG, UG, DVG | LCOM, LFI, LUG, LDVG | Roussel, Mélenchon, Hidalgo |
+| Extrême gauche | EXG, FI | LEXG, LFI | Arthaud, Poutou, Mélenchon |
+| Gauche | COM, SOC, RDG, UG, DVG | LCOM, LUG, LDVG | Roussel, Hidalgo |
 | Écologistes | ECO, VEC | LVEC, LECO | Jadot |
-| Centre | ENS, HOR, UDI (à vérifier dans la circulaire), DVC | LENS | Macron |
+| Centre | ENS, HOR, UDI, DVC | LENS | Macron |
 | Droite | LR, DVD, DSV | LLR, LDVD | Pécresse, Dupont-Aignan |
 | Extrême droite | RN, REC, UXD, EXD | LRN, LREC, LEXD | Le Pen, Zemmour |
 | Régionalistes | REG | — | — |
-| Divers | DIV | LDIV | Lassalle (à confirmer) |
-
-**Également décidé le 24/09** :
-- **Candidats à la présidentielle, qui n'ont pas de nuance** : ils prennent la nuance attribuée par le ministère aux candidats de leur mouvement aux législatives qui suivent (par exemple DSV pour Debout la France, d'où Dupont-Aignan à droite).
-- **Blocs, quand la circulaire n'en donne pas** : VEC (Les Écologistes, membres de l'union de la gauche) → gauche ; ECO (écologistes hors union) → divers ; REG (régionalistes) → divers.
+| Divers | DIV | LDIV | Lassalle (cas limite) |
 
 ### 8.3 Couleurs
 
@@ -549,7 +551,25 @@ HTTP        COG
 | Jointure | Au moins 98 % des inscrits de métropole joints à un contour, sinon le scrutin passe au niveau commune | 99,6 % en 2022 ; 98,2 % en 2024 |
 | Unicité | Clés (scrutin, bureau, candidat) uniques | À écrire |
 
-**CI** : GitHub Actions, déclenchée à la main ou par la publication d'un nouveau scrutin. Elle publie `data/vN` chez l'hébergeur et joint un rapport qualité.
+**CI** : GitHub Actions, déclenchée à la main ou par la publication d'un nouveau scrutin. Elle publie `publication/vN` chez l'hébergeur et joint un rapport qualité.
+
+**Pipeline v1 réalisé le 24/09** (`pipeline/`, `referentiels/`) :
+
+| Tour | Bureaux | Candidatures | Fichiers publiés | Carte (inscrits joints) | Somme des voix ≠ exprimés |
+|---|---|---|---|---|---|
+| Présidentielle 2022, T1 | 69 682 | 12 | 2,84 Mo | bureau (99,6 %) | 0 |
+| Présidentielle 2022, T2 | 69 682 | 2 | 1,46 Mo | bureau (99,6 %) | 0 |
+| Européennes 2024 | 70 104 | 38 | 3,47 Mo | bureau (98,2 %) | 0 |
+| Législatives 2024, T1 | 70 102 | 4 017 | 2,71 Mo | bureau (98,2 %) | 5 |
+| Législatives 2024, T2 | 61 615 | 1 096 | 1,47 Mo | bureau (98,3 %) | 1 |
+| Municipales 2026, T1 | 70 003 | 50 554 | 3,06 Mo | commune (97,5 %) | 69 |
+| Municipales 2026, T2 | 17 398 | 4 437 | 0,55 Mo | commune (95,9 %) | 10 |
+
+- Construction complète en 36 s, par lecture distante des Parquet officiels : 16 Mo publiés pour les 7 tours. Le fichier de carte d'un tour pèse environ 650 Ko.
+- 51 tests passent : conservation des lignes, cohérence de la participation, unicité des clés, classement de toutes les candidatures, réconciliation avec la proclamation de 2022, couverture des contours.
+- Le seuil de jointure est fixé à 98 % des inscrits de métropole : les municipales 2026 passent au niveau commune, des bureaux ayant été renumérotés depuis 2022.
+- Un bureau (`60400_0001`, municipales 2026) compte plus de votants que d'inscrits : anomalie de la source, tolérée et tracée dans le manifeste, à signaler à l'écran.
+- Les données ne donnent plus le code de circonscription depuis 2024 : les candidatures des législatives sont identifiées par département, panneau et nom. Les agrégats par circonscription restent à produire (§ 15).
 
 ## 11. Pile technique
 
@@ -610,7 +630,7 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 | Phase | Contenu | Période visée |
 |---|---|---|
 | 0 — Prototype et ménage | Prototype de carte (**fait le 24/09**, § 7.5), archivage de `Data/` hors du dépôt (**fait le 24/09**), tag `prototype-v0`, squelette du dépôt, `CLAUDE.md` du projet, maquettes (§ 16) | Fin septembre – mi-octobre 2026 |
-| 1 — Pipeline v1 | Manifeste des sources, modèle du § 6, référentiels (codes outre-mer, COG, nuances de la v1, municipales 2026), tests bloquants | Octobre |
+| 1 — Pipeline v1 | **Fait le 24/09** (§ 10) : manifeste des sources, modèle du § 6, référentiel des nuances, 51 tests. Reste : agrégats par circonscription et par région, totaux officiels des autres tours | Octobre |
 | 2 — Géographie | Carte branchée sur le PMTiles officiel et les tuiles IGN, couche des circonscriptions, encarts outre-mer, mesure des temps d'affichage | Octobre – novembre |
 | 3 — MVP front | Exigences P0, **bêta publique** | Novembre – mi-décembre |
 | 4 — Profondeur | Comparateur, évolution, symboles proportionnels, adresse vers bureau, exports, correctifs de contours | Janvier 2027 |
@@ -640,7 +660,9 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 | Q3 | Contours de bureaux après 2022 | **Réponse** : aucun, et aucune mise à jour prévue. Stratégie au § 7.3 | — |
 | Q4 | Municipales 2026 | **Tranché** : dans la v1 ; les données sont publiées | Phase 1 |
 | Q5 | Nom, domaine, charte | **Tranché** : « Atlas électoral », pas de domaine payant, charte sobre et neutre | — |
-| Q7 | Renommer le dépôt GitHub (`transparence-publique-elections` → `atlas-electoral`) ? | Ouvert | — |
+| Q7 | Renommer le dépôt GitHub | **Fait le 24/09** : `github.com/aurelien032-glitch/atlas-electoral` (l'ancienne adresse redirige) | — |
+| Q8 | Circonscriptions des législatives 2024 : le code a disparu des données. Quelle source pour la correspondance bureaux ↔ circonscriptions (table INSEE 2022, contours 2022) ? | Ouvert | Agrégats par circonscription |
+| Q9 | Totaux officiels des autres tours pour la réconciliation : sources à relever (Conseil constitutionnel, ministère) | Ouvert | Tests |
 | Q6 | Publication de nos données sur data.gouv | **Tranché** : plus tard | P2 |
 
 ## 16. Outillage Claude : skills, plugins, connecteurs
@@ -687,5 +709,6 @@ Mesures réalisées le 24/09/2026 avec DuckDB 1.5.5 sur les fichiers de `Data/` 
 | PMTiles officiel (en-tête et métadonnées lus à distance) | Version 3, zooms 2 à 14, 283 906 tuiles, 351 Mo de données, généré par tippecanoe 1.36 |
 | Jointure au bureau en métropole (code strict) | 2022 prés. T1 : 99,64 % des inscrits ; 2024 législ. T1 : 98,23 % (3 583 bureaux non joints dans 662 communes) |
 | Bases dérivées du prototype | `transparence.duckdb` 1,3 Go (géométries) ; `consolidated.duckdb` 0,9 Go (`fact_results` 1,6 M lignes, 11 tables de géométries simplifiées, `fact_votes_nuance` vide) |
+| Pipeline v1 (§ 10) | 7 tours en 36 s par lecture distante ; 16 Mo publiés ; 51 tests |
 | Prototype de carte (§ 7.5) | Données de la présidentielle 2022 : 1,6 Mo ; 1,34 s jusqu'à la carte colorée ; `setFeatureState` sur 69 682 bureaux en 73 ms |
 | Palette du prototype | Centre `#D9960A`, gauche `#C8323A`, extrême droite `#3558A6` : tous les contrôles du validateur passent en mode clair (ΔE ≥ 17,6 pour les daltoniens), avec un avertissement de contraste sur l'ambre (2,46:1) compensé par la légende et le panneau. Pâlies à 0,60 : ΔE 15,5 en vision normale et 9,5 pour les daltoniens (à 0,45 : 11,1 et 6,8, échec). Gris : autre `#B5B5AF`, égalité `#57574F`, sans résultat `#E3E3DE` |

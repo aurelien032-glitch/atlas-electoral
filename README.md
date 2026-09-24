@@ -1,11 +1,12 @@
-# Transparence Publique — Élections
+# Atlas électoral
 
 Visualisation interactive et publique des résultats de scrutins électoraux français
 (présidentielles, législatives, européennes, municipales…) jusqu'au niveau du **bureau de vote**.
 
-> **Refonte en cours.** Le code actuel est un prototype (v0). La nouvelle conception
-> (site 100 % statique, sources officielles, grille des nuances) est décrite dans le
-> [plan de conception](docs/PLAN.md), encore en brouillon.
+> **Refonte en cours.** Les dossiers `api/` et `web/` contiennent le prototype v0. La nouvelle
+> conception (site 100 % statique, sources officielles, grille des nuances) est décrite dans le
+> [plan de conception](docs/PLAN.md). Déjà en place : le [pipeline de données](pipeline/README.md),
+> les [référentiels](referentiels/README.md) et un [prototype de carte](spikes/carte-pmtiles/README.md).
 
 ## Stack (prototype v0)
 

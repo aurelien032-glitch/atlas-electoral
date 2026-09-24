@@ -31,3 +31,10 @@ Thumbs.db
 
 # Données générées par les prototypes
 spikes/*/data/
+
+# Fichiers produits par le pipeline
+publication/
+.pytest_cache/
+
+# Référentiels versionnés : exception à la règle *.parquet
+!referentiels/*.parquet
