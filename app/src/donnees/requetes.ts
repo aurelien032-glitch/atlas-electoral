@@ -58,7 +58,7 @@ export function useManifeste(scrutin: string | undefined) {
 }
 
 /** Référentiel publié en CSV (grille des nuances, totaux officiels), lu à la demande. */
-export function useReferentiel(fichier: 'nuances.csv' | 'totaux_officiels.csv', actif: boolean) {
+export function useReferentiel(fichier: 'nuances.csv' | 'totaux_officiels.csv' | 'totaux_officiels_variantes.csv', actif: boolean) {
   return useQuery({
     queryKey: ['referentiel', fichier],
     enabled: actif,

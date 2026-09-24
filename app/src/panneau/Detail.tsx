@@ -11,6 +11,7 @@ import type { Selection } from '../vue'
 import { Barres, type LigneResultat } from './Barres'
 import { couleurDuBloc, type Actions, type Contexte } from './contexte'
 import { TableNuances } from './Nuances'
+import { SignalementsTerritoire } from './Signalements'
 
 export interface Parent {
   nom: string
@@ -22,6 +23,8 @@ interface Props {
   ctx: Contexte
   selection: Selection
   resultat: Resultat | undefined
+  /** Résultat encore en route (fichier des bureaux) : ne pas conclure à son absence. */
+  enChargement?: boolean
   /** Voix de chaque candidature présente dans le territoire (undefined pendant le chargement). */
   lignes: readonly { cand: number; voix: number }[] | undefined
   parent: Parent | undefined
@@ -75,7 +78,7 @@ function FilAriane({ ctx, selection, actions }: Pick<Props, 'ctx' | 'selection' 
   )
 }
 
-export function Detail({ ctx, selection, resultat, lignes, parent, circonscriptions, supplementaires, panachage, cible, complement, actions }: Props) {
+export function Detail({ ctx, selection, resultat, enChargement, lignes, parent, circonscriptions, supplementaires, panachage, cible, complement, actions }: Props) {
   const titre = titreDe(selection, ctx.index)
   const entete = (
     <>
@@ -104,6 +107,7 @@ export function Detail({ ctx, selection, resultat, lignes, parent, circonscripti
       </div>
     </>
   )
+  if (!resultat && enChargement) return <>{entete}<p className="note">Chargement des résultats du bureau…</p></>
   if (!resultat) return <>{entete}<p className="note">Pas de résultat pour ce territoire à ce scrutin : il n'y votait pas, ou la source ne le contient pas.</p></>
   if (resultat.exprimes === 0) return <>{entete}<p className="note">Aucun suffrage exprimé.</p></>
 
@@ -180,6 +184,7 @@ export function Detail({ ctx, selection, resultat, lignes, parent, circonscripti
       {resultat.votants > resultat.inscrits && (
         <p className="alerte">Plus de votants que d'inscrits : anomalie présente dans les données officielles.</p>
       )}
+      <SignalementsTerritoire ctx={ctx} selection={selection} />
       {lignes === undefined
         ? <p className="note">Chargement des voix…</p>
         : <Barres lignes={rangees} legende={`Résultats, ${titre}`} entete={parBloc ? 'Bloc' : 'Candidature'} parent={parent?.nom} />}

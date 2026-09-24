@@ -16,10 +16,14 @@ export interface ScrutinCatalogue {
     niveau_carte: NiveauCarte
   } | null
   /**
-   * Scrutins nationaux : territoires hors de la métropole (codes « 975 », « ZZ »…) qui votaient mais dont la
-   * source ne contient aucun résultat (présidentielles 2002 et 2007, notamment).
+   * Territoires qui votaient mais dont la source ne contient aucun résultat : collectivités d'outre-mer et
+   * Français de l'étranger aux scrutins nationaux anciens, départements entiers parfois (Manche en 2004).
    */
   territoires_absents?: string[]
+  /** Départements que la source ne couvre qu'en partie : part des inscrits attendus (0,12 : 12 %). */
+  territoires_partiels?: { code: string; part: number }[]
+  /** Bureaux dont le nombre d'inscrits est une erreur manifeste de la source (971 473 pour 473 votants). */
+  inscrits_aberrants?: { code_bv: string; inscrits: number; votants: number }[]
 }
 
 export interface Catalogue {

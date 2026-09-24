@@ -63,15 +63,47 @@ const dateLisible = (texte: string | null | undefined) => {
 }
 const fois = (n: number, singulier: string, pluriel: string) => `${formatNombre(n)} ${n > 1 ? pluriel : singulier}`
 
+type Ligne = Record<string, string>
+const CHAMPS = ['inscrits', 'votants', 'exprimes'] as const
+const signe = (n: number) => (n > 0 ? `+${formatNombre(n)}` : formatNombre(n))
+
+/**
+ * Nos totaux nationaux face aux totaux officiels : proclamation, ou autre version officielle (fichier du
+ * ministère), à 0,01 % près ; sinon l'écart, et ce qui l'explique quand la source le dit.
+ */
+function rapprochement(scrutin: ScrutinCatalogue, officiel: Ligne | undefined, variantes: readonly Ligne[]): string {
+  if (!officiel) return 'pas encore rapproché pour ce scrutin'
+  if (!officiel.exprimes) return officiel.perimetre // « Aucun total national publié… » : la référence dit pourquoi
+  const t = scrutin.totaux
+  const ecart = (v: Ligne, k: (typeof CHAMPS)[number]) => t[k] - Number(v[k])
+  const egal = (v: Ligne) => CHAMPS.every((k) => Math.abs(ecart(v, k)) <= 1e-4 * Number(v[k]))
+  const source = officiel.fiabilite === 'secondaire' ? `source secondaire : ${officiel.source}` : officiel.source
+  if (CHAMPS.every((k) => ecart(officiel, k) === 0)) return `identique (${source})`
+  if (egal(officiel)) return `identique à quelques voix près (${source})`
+  const pourcent = (v: Ligne) => (Math.round(10000 * ecart(v, 'exprimes') / Number(v.exprimes)) / 100)
+    .toLocaleString('fr-FR', { signDisplay: 'exceptZero' })
+  const ecarts = (v: Ligne) =>
+    `écart de ${signe(ecart(v, 'inscrits'))} inscrits et ${signe(ecart(v, 'exprimes'))} exprimés (${pourcent(v)} %)`
+  const variante = variantes.find(egal)
+  if (variante) return `identique à l'autre version officielle (${variante.source}) ; proclamation : ${ecarts(officiel)}, ${source}`
+  const signale = [scrutin.territoires_absents, scrutin.territoires_partiels, scrutin.inscrits_aberrants].some((l) => l?.length)
+  const raison = signale ? ' ; la source est incomplète (voir ci-dessus)'
+    : officiel.fiabilite === 'secondaire' ? ` ; périmètre de la référence : ${officiel.perimetre}`
+      : scrutin.id.endsWith('_t2') ? ' ; second tour, partiel par nature : le manque ne se localise pas'
+        : ''
+  return `${ecarts(officiel)}, ${source}${raison}`
+}
+
 function Section({ titre, children }: { titre: string; children: ReactNode }) {
   return <section className="methodologie-section"><h2>{titre}</h2>{children}</section>
 }
 
 /** Contrôles d'un scrutin, lus dans son manifeste : ce qui est vérifié et ce qui est seulement signalé. */
-function Controles({ scrutin, manifeste, officiel, noms }: {
+function Controles({ scrutin, manifeste, officiel, variantes, noms }: {
   scrutin: ScrutinCatalogue
   manifeste: Manifeste
-  officiel: Record<string, string> | undefined
+  officiel: Ligne | undefined
+  variantes: readonly Ligne[]
   noms: ReadonlyMap<string, string>
 }) {
   const c = manifeste.compteurs
@@ -108,14 +140,17 @@ function Controles({ scrutin, manifeste, officiel, noms }: {
   if (scrutin.territoires_absents?.length) {
     ajouter('Territoires absents de la source', scrutin.territoires_absents.map((c) => noms.get(c) ?? c).join(', '))
   }
+  if (scrutin.territoires_partiels?.length) {
+    ajouter('Départements incomplets dans la source', scrutin.territoires_partiels
+      .map((p) => `${noms.get(p.code) ?? p.code} (${Math.round(100 * p.part)} % des inscrits attendus)`).join(', '))
+  }
+  if (scrutin.inscrits_aberrants?.length) {
+    ajouter('Inscrits manifestement erronés (tolérés)', scrutin.inscrits_aberrants
+      .map((b) => `bureau ${b.code_bv} : ${formatNombre(b.inscrits)} inscrits pour ${formatNombre(b.votants)} votants`).join(' ; '))
+  }
   const t = scrutin.totaux
   ajouter('Total France', `${formatNombre(t.inscrits)} inscrits, ${formatNombre(t.votants)} votants, ${formatNombre(t.exprimes)} exprimés`)
-  if (officiel) {
-    const egaux = ['inscrits', 'votants', 'exprimes'].every((k) => Number(officiel[k]) === t[k as 'inscrits' | 'votants' | 'exprimes'])
-    ajouter('Total officiel', egaux ? `identique (${officiel.source})` : `différent : ${officiel.source}`)
-  } else {
-    ajouter('Total officiel', 'pas encore rapproché pour ce scrutin')
-  }
+  ajouter('Total officiel', rapprochement(scrutin, officiel, variantes))
   return (
     <table className="controles">
       <caption className="visuellement-cache">Contrôles et compteurs, {scrutin.libelle}</caption>
@@ -134,7 +169,9 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
   const manifeste = useManifeste(scrutin.id)
   const grille = useReferentiel('nuances.csv', true)
   const totaux = useReferentiel('totaux_officiels.csv', true)
+  const toutesVariantes = useReferentiel('totaux_officiels_variantes.csv', true)
   const officiel = totaux.data?.find((l) => l.id_election === scrutin.id)
+  const variantes = (toutesVariantes.data ?? []).filter((l) => l.id_election === scrutin.id)
   const releve = dateLisible(catalogue.genere_le)
 
   return (
@@ -176,7 +213,7 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
         <ul className="liste">
           <li>Le site ne publie que des comptes (inscrits, votants, voix) ; les pourcentages se calculent à l'affichage, sur les suffrages exprimés, et la participation sur les inscrits.</li>
           <li>Les communes sont celles du 1er janvier 2026 : les résultats d'une commune fusionnée depuis un scrutin sont additionnés dans sa commune actuelle.</li>
-          <li>Les contours des bureaux datent de 2022. Quand moins de 98 % des inscrits de métropole trouvent leur bureau dans ces contours (scrutins antérieurs à 2022, municipales 2026), la carte s'arrête à la commune.</li>
+          <li>Les contours des bureaux datent de 2022. Avant 2022, la carte s'arrête toujours à la commune : un bureau a pu garder son numéro sans garder son périmètre. Depuis, elle descend au bureau quand au moins 98 % des inscrits de métropole y trouvent leur bureau (ce n'est pas le cas des municipales 2026).</li>
           <li>Jusqu'en 2015, les données comptent ensemble les bulletins blancs et nuls ; le site ne les sépare pas.</li>
           <li>Municipales 2014 et 2020 : dans les communes de moins de 1 000 habitants, on vote pour des personnes (panachage) ; leurs voix, multiples, n'entrent pas dans les parts des blocs.</li>
           <li>Législatives : la circonscription vient des données de 2012 à 2022, et des fichiers officiels par circonscription en 2024.</li>
@@ -236,7 +273,7 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
         {manifeste.data
           ? (
             <>
-              <Controles scrutin={scrutin} manifeste={manifeste.data} officiel={officiel} noms={noms} />
+              <Controles scrutin={scrutin} manifeste={manifeste.data} officiel={officiel} variantes={variantes} noms={noms} />
               <details className="depliant">
                 <summary>Fichiers publiés et empreintes</summary>
                 <div className="defilement" role="region" aria-label="Fichiers publiés" tabIndex={0}>
@@ -269,8 +306,7 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
           <li>Paris, Lyon et Marseille : les données ne descendent qu'à la ville ; les résultats par arrondissement sont calculés d'après le numéro des bureaux, qui commence par celui de l'arrondissement (règle vérifiée sur tous les scrutins, à un ou deux bureaux près, laissés à la ville). Jusqu'en 2020, les municipales s'y votaient par secteur : chaque arrondissement montre les listes du sien, et la ville n'a pas de liste « en tête ».</li>
           <li>Nouvelle-Calédonie, Polynésie française, Wallis-et-Futuna : pas de contours de bureaux, résultats à la commune.</li>
           <li>L'offre électorale change d'un scrutin à l'autre : une évolution de bloc peut tenir à l'absence d'une candidature.</li>
-          <li>Seule la présidentielle 2022 est, à ce jour, rapprochée des totaux officiels proclamés.</li>
-          <li>Scrutins nationaux antérieurs à 2012 (présidentielles et législatives de 2002 et 2007, européennes de 1999 à 2009) : la source ne contient pas les résultats de certains territoires d'outre-mer ni, selon les cas, des Français de l'étranger ; le rapport qualité de chaque scrutin les nomme. De 2012 à 2022, nos résultats nationaux par candidat égalent la proclamation officielle.</li>
+          <li>Totaux nationaux rapprochés des totaux officiels pour 54 des 56 tours (le ministère n'a pas publié de total national pour les départementales 2021) : identiques depuis 2010, à quelques voix près ou à l'une des deux versions officielles. Avant 2010, la source est parfois incomplète : collectivités d'outre-mer et Français de l'étranger aux scrutins nationaux, départements entiers ou en partie (législatives 2002, régionales 2004, municipales 2008), quelques bureaux aux inscrits erronés. Le rapport qualité de chaque scrutin les nomme ; rien n'y est corrigé.</li>
         </ul>
       </Section>
 

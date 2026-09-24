@@ -53,20 +53,28 @@ describe('chercher', () => {
 })
 
 describe('codes postaux', () => {
-  const lyon = entrees.find((e) => e.territoire.code === '69123')
-  const affoux = preparer([t('commune', '69001', 'Affoux')], new Map([['69001', 300]]))
-  const avecAffoux = [...entrees, ...affoux]
-  const postaux = indexerCodesPostaux([{ code_postal: '69001', commune: '69123' }, { code_postal: '69002', commune: '69123' }], avecAffoux)
+  // Comme La Poste : les codes postaux de Lyon désignent ses arrondissements, qui n'ont pas d'inscrits dans les
+  // poids de la recherche ; 69001 est aussi le code INSEE d'Affoux, et 13001 celui d'Aix-en-Provence.
+  const autres = preparer([
+    t('commune', '69001', 'Affoux'), t('arrondissement', '69381', 'Lyon 1er Arrondissement', '69'),
+    t('commune', '13001', 'Aix-en-Provence'), t('arrondissement', '13201', 'Marseille 1er Arrondissement', '13'),
+  ], new Map([['69001', 300], ['13001', 94000]]))
+  const tout = [...entrees, ...autres]
+  const postaux = indexerCodesPostaux([
+    { code_postal: '69001', commune: '69381' }, { code_postal: '69002', commune: '69382' }, { code_postal: '13001', commune: '13201' },
+    { code_postal: '69260', commune: '69123' }, { code_postal: '69290', commune: '69123' },
+  ], tout)
 
-  it('trouve une commune par son code postal, avant la commune qui porte ce code INSEE', () => {
-    const [premier, second] = chercher(avecAffoux, '69001', 8, postaux)
-    expect(premier.territoire.nom).toBe('Lyon')
+  it('trouve un territoire par son code postal, avant la commune qui porte ce code INSEE', () => {
+    const [premier, second] = chercher(tout, '69001', 8, postaux)
+    expect(premier.territoire.nom).toBe('Lyon 1er Arrondissement')
     expect(premier.precision).toBe('code postal 69001')
     expect(second.territoire.nom).toBe('Affoux')
-    expect(lyon).toBeDefined()
+    // Même devant une commune bien plus peuplée.
+    expect(chercher(tout, '13001', 8, postaux).map((e) => e.territoire.nom)).toEqual(['Marseille 1er Arrondissement', 'Aix-en-Provence'])
   })
 
-  it('ne propose une commune qu’une fois, même quand plusieurs codes postaux commencent pareil', () => {
-    expect(chercher(avecAffoux, '6900', 8, postaux).filter((e) => e.territoire.nom === 'Lyon')).toHaveLength(1)
+  it('ne propose un territoire qu’une fois, même quand plusieurs codes postaux commencent pareil', () => {
+    expect(chercher(tout, '692', 8, postaux).filter((e) => e.territoire.nom === 'Lyon')).toHaveLength(1)
   })
 })

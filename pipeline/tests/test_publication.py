@@ -91,15 +91,40 @@ def test_tete_precalculee_partout_ou_il_y_a_des_suffrages(con, scrutin):
         assert n == 0, nom
 
 
+# Écarts aux totaux officiels que la source ne permet pas de situer (aucun signalement dans le catalogue).
+ECARTS_CONNUS = {
+    # Seconds tours partiels par nature : le contrôle de couverture ne s'y applique pas. Au 1er tour, la source
+    # n'a pas les collectivités d'outre-mer ; en 2007, l'écart d'inscrits est le même aux deux tours.
+    "2002_legi_t2": "0,4 % des exprimés",
+    "2007_legi_t2": "1,0 % des exprimés",
+}
+
+
 def test_reconciliation_avec_les_totaux_officiels():
+    # Nos totaux nationaux égalent la proclamation officielle, ou l'autre version officielle (fichier du
+    # ministère), à 0,01 % près. Sinon l'écart est expliqué : territoires absents ou incomplets dans la source
+    # et inscrits aberrants (signalés par le catalogue), périmètre d'une source secondaire, ou écart connu.
     with open(REFERENTIELS / "totaux_officiels.csv", encoding="utf-8") as f:
-        officiels = [r for r in csv.DictReader(f) if r["id_election"] in SCRUTINS]
-    if not officiels:
-        pytest.skip("aucun total officiel de référence pour les scrutins publiés")
+        officiels = [r for r in csv.DictReader(f) if r["id_election"] in SCRUTINS and r["exprimes"]]
+    with open(REFERENTIELS / "totaux_officiels_variantes.csv", encoding="utf-8") as f:
+        variantes = list(csv.DictReader(f))
+    catalogue = {s["id"]: s for s in json.loads(CATALOGUE.read_text(encoding="utf-8"))["scrutins"]}
+    assert len(officiels) >= 54
+    champs = ("inscrits", "votants", "exprimes")
     for r in officiels:
-        totaux = manifeste(r["id_election"])["totaux"]
-        for champ in ("inscrits", "votants", "exprimes"):
-            assert totaux[champ] == int(r[champ]), f"{r['id_election']} : {champ}"
+        i = r["id_election"]
+        totaux = manifeste(i)["totaux"]
+        versions = [r] + [v for v in variantes if v["id_election"] == i]
+        egal = any(all(abs(totaux[k] - int(v[k])) <= 1e-4 * int(v[k]) for k in champs) for v in versions)
+        signale = any(catalogue[i].get(k) for k in ("territoires_absents", "territoires_partiels", "inscrits_aberrants"))
+        secondaire = r["fiabilite"] == "secondaire" and abs(totaux["exprimes"] - int(r["exprimes"])) <= 0.01 * int(r["exprimes"])
+        assert egal or signale or secondaire or i in ECARTS_CONNUS, f"{i} : écart non expliqué aux totaux officiels"
+    # Depuis 2010, sans exception : égalité à 0,01 % près à l'une des versions officielles.
+    for r in officiels:
+        if r["id_election"] >= "2010" and r["fiabilite"] == "officielle":
+            t = manifeste(r["id_election"])["totaux"]
+            versions = [r] + [v for v in variantes if v["id_election"] == r["id_election"]]
+            assert any(all(abs(t[k] - int(v[k])) <= 1e-4 * int(v[k]) for k in champs) for v in versions), r["id_election"]
 
 
 def test_contours_couvrent_la_presidentielle_2022():
@@ -274,3 +299,22 @@ def test_territoires_absents_de_la_source():
     assert all(not catalogue[i]["territoires_absents"] for i in nationaux if i >= "2012")
     assert {"975", "987", "988", "ZZ"} <= set(catalogue["2007_pres_t1"]["territoires_absents"])
     assert "ZZ" not in catalogue["2007_legi_t1"]["territoires_absents"]  # députés des Français de l'étranger : 2012
+    # Européennes de 2004 et 2009 : pas de vote dans les consulats, donc rien à attendre des Français de l'étranger.
+    assert "ZZ" not in catalogue["2004_euro_t1"]["territoires_absents"] + catalogue["2009_euro_t1"]["territoires_absents"]
+
+
+def test_couverture_de_la_source():
+    # Départements manquants ou incomplets dans la source, et bureaux aux inscrits aberrants : signalés, jamais
+    # corrigés. Constat du 25/09 (comparaison aux scrutins voisins et aux totaux officiels).
+    catalogue = {s["id"]: s for s in json.loads(CATALOGUE.read_text(encoding="utf-8"))["scrutins"]}
+    partiels = lambda i: {p["code"] for p in catalogue[i]["territoires_partiels"]}
+    assert "71" in catalogue["2002_legi_t1"]["territoires_absents"]  # Saône-et-Loire
+    assert "50" in catalogue["2004_regi_t1"]["territoires_absents"] and {"06", "63", "974"} <= partiels("2004_regi_t1")
+    assert {"06", "50", "974"} <= set(catalogue["2004_regi_t2"]["territoires_absents"])
+    assert {"17", "61", "65"} <= set(catalogue["2008_muni_t1"]["territoires_absents"]) and "59" in partiels("2008_muni_t1")
+    # Depuis 2010, la source est complète : aucun signalement.
+    for i, s in catalogue.items():
+        if i >= "2010":
+            assert not s["territoires_partiels"] and not s["inscrits_aberrants"], i
+    aberrants = {b["code_bv"] for s in catalogue.values() for b in s["inscrits_aberrants"]}
+    assert "59512_0164" in aberrants and "75056_JUS1" not in aberrants

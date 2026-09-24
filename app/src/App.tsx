@@ -211,7 +211,7 @@ export default function App() {
   const cibles = useMemo(() => optionsCibles(scrutin, candidats.data), [scrutin, candidats.data])
   const entreesRecherche = useMemo(() => {
     if (!rechercheActive) return []
-    const inscrits = new Map((agregats.data ?? []).filter((a) => a.niveau === 'commune').map((a) => [a.code, a.inscrits]))
+    const inscrits = new Map((agregats.data ?? []).filter((a) => a.niveau === 'commune' || a.niveau === 'arrondissement').map((a) => [a.code, a.inscrits]))
     // L'index contient départements, communes et, aux législatives, circonscriptions (« rhône 2e »).
     return preparer([...index.territoires.values()], inscrits)
   }, [rechercheActive, agregats.data, index])
@@ -322,6 +322,8 @@ export default function App() {
     // Les noms des communes arrivent avec l'index complet, juste après la carte : pas de code INSEE en attendant.
     const nomAttendu = !communesNommees && survol.niveau !== 'circonscription'
     const titre = nomAttendu ? 'Chargement du nom…' : titreDe({ niveau: survol.niveau, code: survol.code }, index)
+    // Bureaux demandés après la carte : pas de « Pas de résultat » pendant leur téléchargement.
+    if (survol.niveau === 'bureau' && bureaux.data === undefined && !bureaux.error) return { titre, lignes: ['Chargement des résultats…'] }
     const lignes: string[] = []
     if (survol.niveau === 'commune' && communesPanachage.has(survol.code) && vue.mode !== 'participation') {
       lignes.push('Vote pour des personnes (panachage)')
@@ -348,7 +350,7 @@ export default function App() {
       else lignes.push(vue.mode === 'evolution' ? `${formatEcart(v)} ${unitePoints(v)}` : formatPourcent(v))
     }
     return { titre, lignes }
-  }, [vue.mode, resultats, parCand, etatCarte, index, communesNommees, communesPanachage, scrutin])
+  }, [vue.mode, resultats, parCand, etatCarte, index, communesNommees, communesPanachage, scrutin, bureaux.data, bureaux.error])
 
   const actions: Actions = useMemo(() => ({
     scrutin: (valeur) => modifierUrl({ scrutin: valeur, cible: null }),
@@ -420,6 +422,13 @@ export default function App() {
     // Le niveau de comparaison n'a de sens que si les mêmes candidatures s'y présentent : la commune
     // pour un bureau (la circonscription aux législatives), le département pour une commune à un
     // scrutin national, la France pour un département (par bloc hors scrutin national).
+    // Une commune qui s'étend sur plusieurs cantons ou circonscriptions, ou Paris, Lyon et Marseille votant par
+    // secteur, ont d'autres candidatures que leurs bureaux et arrondissements : pas de comparaison alors.
+    const memesCandidatures = (lignes: readonly { cand: number }[] | undefined, p: Parent | undefined) => {
+      if (!lignes || !p) return p
+      const ici = new Set(lignes.map((l) => l.cand))
+      return [...p.voix.keys()].every((cand) => ici.has(cand)) ? p : undefined
+    }
     if (selection.niveau === 'bureau') {
       const lignes = panachees
         ? voixDuPanachage(panachees.filter((l) => l.code_bv === selection.code))
@@ -438,7 +447,9 @@ export default function App() {
           ? (circos.length === 1 ? parent('circonscription', circos[0], nom(circos[0])) : undefined)
           : panachees && agregatCommune
             ? { nom: nom(commune), exprimes: agregatCommune.exprimes, voix: new Map(voixDuPanachage(panachees).map((l) => [l.cand, l.voix])) }
-            : arrondissement ? parent('arrondissement', arrondissement, nom(arrondissement)) : parent('commune', commune, nom(commune)),
+            : memesCandidatures(lignes, arrondissement ? parent('arrondissement', arrondissement, nom(arrondissement)) : parent('commune', commune, nom(commune))),
+        // Bureaux demandés à part : « pas de résultat » n'est dit qu'une fois leur fichier arrivé.
+        enChargement: bureaux.data === undefined && !bureaux.error,
       }
     }
     if (selection.niveau === 'commune') {
@@ -454,10 +465,11 @@ export default function App() {
       const lignes = voixDe('arrondissement', selection.code)
       const circos = circonscriptionsDe(lignes)
       const ville = villeDe(selection.code)
-      // Comparaison avec la ville, sauf aux municipales par secteur (listes différentes d'un secteur à l'autre).
+      // Comparaison avec la ville quand les mêmes candidatures s'y présentent (pas aux municipales par secteur,
+      // ni aux cantonales ou aux législatives d'avant 2012, où chaque arrondissement a les siennes).
       let comparaison: Parent | undefined
       if (portee === 'circonscription') comparaison = circos.length === 1 ? parent('circonscription', circos[0], nom(circos[0])) : undefined
-      else if (!(scrutin && voteParSecteur(scrutin, ville))) comparaison = parent('commune', ville, nom(ville))
+      else comparaison = memesCandidatures(lignes, parent('commune', ville, nom(ville)))
       return { resultat: trouver('arrondissement', selection.code), lignes, circonscriptions: circos, parent: comparaison }
     }
     if (selection.niveau === 'circonscription') {
@@ -469,7 +481,7 @@ export default function App() {
       circonscriptions: [],
       parent: parent('france', 'FR', 'France'),
     }
-  }, [selection, scrutin, agregats.data, agregatsVoix.data, bureaux.data, voix.data, index, parCand, auPanachage, communeChoisie, panachage.data])
+  }, [selection, scrutin, agregats.data, agregatsVoix.data, bureaux.data, bureaux.error, voix.data, index, parCand, auPanachage, communeChoisie, panachage.data])
 
   const complement = useMemo(() => {
     if (!selection || !detail?.lignes || !detail.resultat || detail.resultat.exprimes === 0) return undefined
@@ -531,7 +543,8 @@ export default function App() {
             />
           )}
           {vue.page !== 'methodologie' && ctx && (selection
-            ? <Detail ctx={ctx} selection={selection} resultat={detail?.resultat} lignes={detail?.lignes} parent={detail?.parent}
+            ? <Detail ctx={ctx} selection={selection} resultat={detail?.resultat} enChargement={detail !== null && 'enChargement' in detail && detail.enChargement}
+                lignes={detail?.lignes} parent={detail?.parent}
                 circonscriptions={detail?.circonscriptions ?? []} supplementaires={detail?.supplementaires} panachage={auPanachage}
                 cible={vue.mode === 'score' ? cible : undefined} complement={complement} actions={actions} />
             : <Apercu ctx={ctx} mode={vue.mode} cibles={cibles} cible={cible} bloc={bloc} evolution={apercuEvolution} actions={actions} />)}

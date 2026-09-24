@@ -82,21 +82,23 @@ export function chercher(
   if (requete.length < 2) return []
   const parCode = /^[0-9][0-9ab]?[0-9]*$/.test(requete)
   const mots = requete.split(' ')
-  const trouves: [Entree, number][] = []
+  // [entrée, pertinence, 0 si trouvée par code postal] : à pertinence égale, le code postal passe devant le
+  // code INSEE (« 13001 » est Marseille 1er pour La Poste, Aix-en-Provence pour l'Insee).
+  const trouves: [Entree, number, number][] = []
   for (const entree of entrees) {
     const score = parCode
       ? (entree.territoire.code.toLowerCase().startsWith(requete) ? (entree.territoire.code.length === requete.length ? 0 : 1) : null)
       : pertinence(entree, requete, mots)
-    if (score !== null) trouves.push([entree, score])
+    if (score !== null) trouves.push([entree, score, 1])
   }
-  // Un nombre peut aussi être un code postal : « 69001 » est Affoux (code INSEE) et Lyon (code postal).
+  // Un nombre peut aussi être un code postal : « 69001 » est Affoux (code INSEE) et Lyon 1er (code postal).
   if (parCode && postaux && /^[0-9]+$/.test(requete)) {
     for (const [code, communes] of postaux) {
       if (!code.startsWith(requete)) continue
-      for (const entree of communes) trouves.push([{ ...entree, precision: `code postal ${code}` }, code.length === requete.length ? 0 : 1])
+      for (const entree of communes) trouves.push([{ ...entree, precision: `code postal ${code}` }, code.length === requete.length ? 0 : 1, 0])
     }
   }
-  trouves.sort((a, b) => a[1] - b[1] || b[0].poids - a[0].poids || a[0].forme.localeCompare(b[0].forme))
+  trouves.sort((a, b) => a[1] - b[1] || a[2] - b[2] || b[0].poids - a[0].poids || a[0].forme.localeCompare(b[0].forme))
   const vus = new Set<string>()
   return trouves
     .filter(([entree]) => !vus.has(entree.territoire.code) && vus.add(entree.territoire.code))

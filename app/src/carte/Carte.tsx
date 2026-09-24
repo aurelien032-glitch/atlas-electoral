@@ -10,7 +10,7 @@ import type { Feature } from 'geojson'
 import { Protocol } from 'pmtiles'
 import { useEffect, useRef, useState } from 'react'
 import { RACINE_DONNEES } from '../donnees/requetes'
-import { arrondissementDu, estArrondissement } from '../donnees/territoires'
+import { arrondissementDu, estArrondissement, villeDe } from '../donnees/territoires'
 import type { BureauContour } from '../donnees/types'
 import type { Coloriage } from '../modes'
 import type { Etat } from './etats'
@@ -164,6 +164,8 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
   const refCarte = useRef<CarteMapLibre | null>(null)
   const refSelection = useRef<Selection | undefined>(undefined)
   const refPoses = useRef(new Map<string, ReadonlyMap<string, Etat>>())
+  // États posés sur les bureaux, pour ne reposer que ceux qui changent.
+  const refBureaux = useRef(new Map<string, Etat>())
 
   /**
    * États d'une source, posés en ne touchant qu'aux territoires qui changent : MapLibre met près d'une
@@ -253,12 +255,15 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
   useEffect(() => {
     const carte = refCarte.current
     if (!carte || !prete || !coloriage) return
-    // Paris, Lyon et Marseille : leurs arrondissements, dessinés par-dessus la ville, ont leurs propres résultats.
-    poser(carte, 'communes', new Map([...coloriage.communes, ...(coloriage.arrondissements ?? [])]))
+    // Paris, Lyon et Marseille : leurs arrondissements, dessinés par-dessus la ville, ont leurs propres
+    // résultats. La ville n'est alors pas peinte : un arrondissement sans résultat doit rester vide.
+    const decoupees = new Set<string>([...(coloriage.arrondissements?.keys() ?? [])].map(villeDe))
+    const communes = new Map([...coloriage.communes].filter(([code]) => !decoupees.has(code)))
+    for (const [code, etat] of coloriage.arrondissements ?? []) communes.set(code, etat)
+    poser(carte, 'communes', communes)
     // Aux législatives, la vue nationale montre les circonscriptions à la place des communes.
     const parCirconscription = (coloriage.circonscriptions?.size ?? 0) > 0
     poser(carte, 'circonscriptions', coloriage.circonscriptions ?? new Map())
-    carte.removeFeatureState({ source: 'bureaux', sourceLayer: COUCHE_BUREAUX })
     for (const couche of ['circonscriptions', 'circonscriptions-hachures']) carte.setLayoutProperty(couche, 'visibility', parCirconscription ? 'visible' : 'none')
     for (const couche of ['communes', 'communes-hachures']) carte.setLayoutProperty(couche, 'visibility', parCirconscription ? 'none' : 'visible')
     carte.setLayoutProperty('bureaux-contours', 'visibility', auBureau ? 'visible' : 'none')
@@ -266,27 +271,60 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
     const surlignee = refSelection.current && cible(refSelection.current)
     if (surlignee) carte.setFeatureState(surlignee, { selection: true })
 
-    // Les 70 000 bureaux ne se voient qu'à partir du zoom des bureaux : leurs états (plusieurs secondes sur
-    // un téléphone) ne sont posés qu'à l'approche de ce zoom, une fois par coloriage.
-    let bureauxPoses = false
+    // Les 70 000 bureaux ne se voient qu'à partir du zoom des bureaux : leurs états ne sont posés qu'à
+    // l'approche de ce zoom (dès le début de l'animation), par lots d'une image à l'autre pour ne pas figer
+    // la page, et seulement pour les bureaux qui changent.
+    let lance = false
+    let image = 0
     const poserBureaux = () => {
-      if (bureauxPoses || carte.getZoom() < ZOOM_BUREAUX - 1) return
-      bureauxPoses = true
-      const bureau = (code: string, etat: object) => carte.setFeatureState({ source: 'bureaux', sourceLayer: COUCHE_BUREAUX, id: code }, etat)
+      if (lance || carte.getZoom() < ZOOM_BUREAUX - 1) return
+      lance = true
+      const voulus = new Map<string, Etat>()
       if (coloriage.bureaux) {
-        for (const [code, etat] of coloriage.bureaux) bureau(code, { ...etat })
+        for (const [code, etat] of coloriage.bureaux) voulus.set(code, etat)
       } else {
         for (const { code_bv, code_commune } of contours) {
+          // Un bureau de Paris, Lyon ou Marseille prend la couleur de son arrondissement, jamais de la ville.
           const arrondissement = arrondissementDu(code_bv)
-          const etat = (arrondissement && coloriage.arrondissements?.get(arrondissement)) || coloriage.communes.get(code_commune)
-          if (etat) bureau(code_bv, { ...etat })
+          const etat = arrondissement ? coloriage.arrondissements?.get(arrondissement) : coloriage.communes.get(code_commune)
+          if (etat) voulus.set(code_bv, etat)
         }
       }
-      if (refSelection.current?.niveau === 'bureau') bureau(refSelection.current.code, { selection: true })
+      const poses = refBureaux.current
+      const id = (code: string) => ({ source: 'bureaux', sourceLayer: COUCHE_BUREAUX, id: code })
+      const aRetirer = [...poses.keys()].filter((code) => !voulus.has(code))
+      const aPoser = [...voulus].filter(([code, etat]) => {
+        const a = poses.get(code)
+        return !a || a.couleur !== etat.couleur || a.opacite !== etat.opacite || a.hachure !== etat.hachure
+      })
+      const lot = () => {
+        let n = 0
+        while (n < 5000 && aRetirer.length > 0) {
+          const code = aRetirer.pop() as string
+          carte.removeFeatureState(id(code))
+          poses.delete(code)
+          n++
+        }
+        while (n < 5000 && aPoser.length > 0) {
+          const [code, etat] = aPoser.pop() as [string, Etat]
+          carte.setFeatureState(id(code), { ...etat })
+          poses.set(code, etat)
+          n++
+        }
+        if (aRetirer.length > 0 || aPoser.length > 0) {
+          image = requestAnimationFrame(lot)
+        } else if (refSelection.current?.niveau === 'bureau') {
+          carte.setFeatureState(id(refSelection.current.code), { selection: true })
+        }
+      }
+      lot()
     }
     poserBureaux()
-    carte.on('zoomend', poserBureaux)
-    return () => { carte.off('zoomend', poserBureaux) }
+    carte.on('zoom', poserBureaux)
+    return () => {
+      carte.off('zoom', poserBureaux)
+      cancelAnimationFrame(image)
+    }
   }, [prete, coloriage, contours, auBureau])
 
   useEffect(() => {

@@ -24,6 +24,7 @@ import json
 import re
 import shutil
 import time
+from datetime import date
 from pathlib import Path
 
 import duckdb
@@ -445,7 +446,8 @@ def territoires_absents(con, sortie: Path, identifiant: str, catalogue: dict) ->
 
     Exceptions connues : Saint-Barthélemy et Saint-Martin étaient des communes de la Guadeloupe jusqu'en
     juillet 2007 (leurs résultats sont alors comptés en Guadeloupe) ; les Français de l'étranger n'élisent
-    leurs députés que depuis 2012.
+    leurs députés que depuis 2012, et ne votaient pas dans les consulats aux européennes de 2004 et 2009
+    (vote supprimé par la réforme de 2003 des circonscriptions européennes, rétabli à partir de 2014).
     """
     annee, type_, tour = identifiant.split("_")
     # Un second tour de législatives n'a lieu que là où personne n'est élu au premier : ses absences sont
@@ -458,9 +460,86 @@ def territoires_absents(con, sortie: Path, identifiant: str, catalogue: dict) ->
     attendus = presents(meme_type[-1]) & set(HORS_METROPOLE)
     if catalogue[identifiant]["date"] < "2007-07-15":
         attendus -= {"977", "978"}
-    if type_ == "legi" and annee < "2012":
+    if (type_ == "legi" and annee < "2012") or (type_ == "euro" and annee in ("2004", "2009")):
         attendus -= {"ZZ"}
     return sorted(attendus - presents(identifiant))
+
+
+# Couverture de la source, département par département. Seuls les premiers tours où toutes les communes
+# votent se comparent : cantonales et départementales (une partie des cantons), seconds tours (là où il en
+# faut un) et municipales jusqu'en 2008 (communes de 3 500 habitants et plus seulement) ne couvrent pas tout.
+SEUIL_PARTIEL = 0.8
+DEPARTEMENT_DE_COMMUNE = "CASE WHEN code LIKE '97%' OR code LIKE '98%' THEN left(code, 3) ELSE left(code, 2) END"
+
+
+def complet(identifiant: str) -> bool:
+    annee, type_, tour = identifiant.split("_")
+    return (type_ in ("pres", "euro") or (tour == "t1" and type_ in ("legi", "regi"))
+            or (type_ == "muni" and tour == "t1" and annee >= "2014"))
+
+
+def couverture(con, sortie: Path, identifiant: str, catalogue: dict) -> tuple[list[str], list[dict]]:
+    """Départements absents de la source, ou incomplets (moins de 80 % des inscrits attendus).
+
+    La référence est le scrutin complet d'un autre type le plus proche dans le temps (les deux tours d'un
+    même scrutin partagent les manques de la source). Municipales 2008 : la source ne contient que les
+    communes de 3 500 habitants et plus ; on les compare aux communes de 2014 d'au moins 2 500 inscrits
+    qui votaient par listes, au seuil de 60 %. Les collectivités d'outre-mer et les Français de l'étranger
+    relèvent de territoires_absents ; Mayotte n'a pas de conseil régional.
+    """
+    annee, type_, tour = identifiant.split("_")
+    agregats = lambda i: chemin_sql(sortie / i / "agregats.parquet")
+
+    def par_departement(i: str) -> dict[str, int]:
+        # Inscrits de chaque département, sans ceux des bureaux aberrants (un seul fausse tout un département).
+        inscrits = dict(con.sql(f"SELECT code, inscrits FROM {agregats(i)} WHERE niveau = 'departement'").fetchall())
+        for b in inscrits_aberrants(con, sortie, i):
+            commune = b["code_bv"].split("_")[0]
+            departement = commune[:3] if commune.startswith(("97", "98")) else commune[:2]
+            inscrits[departement] -= b["inscrits"]
+        return inscrits
+
+    # Second tour des régionales : presque partout, pas toujours (une région peut élire dès le premier tour).
+    # Seuls les départements déjà signalés au premier tour, et toujours manquants, sont retenus.
+    signales = None
+    premier = f"{annee}_regi_t1"
+    if type_ == "regi" and tour == "t2" and premier in catalogue:
+        absents1, partiels1 = couverture(con, sortie, premier, catalogue)
+        signales = set(absents1) | {p["code"] for p in partiels1}
+    if identifiant == "2008_muni_t1" and "2014_muni_t1" in catalogue:
+        seuil = 0.6
+        reference = dict(con.sql(f"""SELECT {DEPARTEMENT_DE_COMMUNE}, sum(inscrits) FROM {agregats('2014_muni_t1')}
+                                     WHERE niveau = 'commune' AND inscrits >= 2500 AND NOT coalesce(panachage, false)
+                                     GROUP BY 1""").fetchall())
+    elif complet(identifiant) or signales:
+        seuil = SEUIL_PARTIEL
+        jour = lambda i: date.fromisoformat(catalogue[i]["date"])
+        autres = [i for i in catalogue if complet(i) and i.split("_")[1] != type_]
+        if not autres:
+            return [], []
+        reference = par_departement(min(autres, key=lambda i: abs((jour(i) - jour(identifiant)).days)))
+    else:
+        return [], []
+    ici = par_departement(identifiant)
+    ignores = set(HORS_METROPOLE) - {"971", "972", "973", "974", "976"} | ({"976"} if type_ == "regi" else set())
+    absents, partiels = [], []
+    for code, attendus in sorted(reference.items()):
+        if code in ignores or not attendus or (signales is not None and code not in signales):
+            continue
+        if code not in ici:
+            absents.append(code)
+        elif ici[code] / attendus < seuil:
+            partiels.append({"code": code, "part": round(ici[code] / attendus, 2)})
+    return absents, partiels
+
+
+def inscrits_aberrants(con, sortie: Path, identifiant: str) -> list[dict]:
+    """Bureaux dont le nombre d'inscrits est manifestement une erreur de saisie de la source (971 473 inscrits
+    pour 473 votants) : plus de 4 000 inscrits et plus de dix fois les votants. Les bureaux des Français de
+    l'étranger, très étendus et peu votants, sont à part. Toléré et tracé : la participation y est faussée."""
+    return [{"code_bv": b, "inscrits": i, "votants": v} for b, i, v in con.sql(f"""
+        SELECT code_bv, inscrits, votants FROM {chemin_sql(sortie / identifiant / 'bureaux.parquet')}
+        WHERE inscrits > 4000 AND inscrits > 10 * votants AND code_bv NOT LIKE 'ZZ%' ORDER BY code_bv""").fetchall()]
 
 
 def main(argv=None) -> None:
@@ -497,7 +576,7 @@ def main(argv=None) -> None:
 
     (args.sortie / "referentiels").mkdir(exist_ok=True)
     # Grille des nuances et totaux officiels : publiés tels quels, la page Méthodologie les affiche.
-    for nom in ("nuances.csv", "totaux_officiels.csv"):
+    for nom in ("nuances.csv", "totaux_officiels.csv", "totaux_officiels_variantes.csv"):
         shutil.copy2(REFERENTIELS / nom, args.sortie / "referentiels" / nom)
 
     # Catalogue : on fusionne avec les scrutins déjà construits lors d'un passage précédent.
@@ -507,8 +586,12 @@ def main(argv=None) -> None:
         existants = {s["id"]: s for s in json.loads(chemin.read_text(encoding="utf-8"))["scrutins"]}
     for m in manifestes:
         existants[m["id"]] = {k: m[k] for k in ("id", "libelle", "date", "portee", "totaux", "jointure_contours")}
+    # Contrôles de couverture, relus dans les fichiers publiés : ils comparent les scrutins entre eux.
     for identifiant, entree in existants.items():
-        entree["territoires_absents"] = territoires_absents(con, args.sortie, identifiant, existants)
+        absents, partiels = couverture(con, args.sortie, identifiant, existants)
+        entree["territoires_absents"] = sorted(set(territoires_absents(con, args.sortie, identifiant, existants)) | set(absents))
+        entree["territoires_partiels"] = partiels
+        entree["inscrits_aberrants"] = inscrits_aberrants(con, args.sortie, identifiant)
     catalogue = {
         "version": 1,
         "genere_le": verrou["releve_le"],

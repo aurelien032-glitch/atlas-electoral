@@ -19,7 +19,7 @@ Le prototype v0 (FastAPI + DuckDB) est conservé sous le tag `prototype-v0` : ne
 ## Commandes
 
 ```bash
-cd pipeline && python -m atlas_pipeline.construire && python -m pytest   # données, séries + 636 tests
+cd pipeline && python -m atlas_pipeline.construire && python -m pytest   # données, séries + 639 tests
 cd pipeline && python -m atlas_pipeline.series                           # séries seules (≈ 15 s)
 cd pipeline && python -m atlas_pipeline.geo                              # contours Etalab + index des territoires
 cd pipeline && python -m atlas_pipeline.cog                              # passage des communes vers le COG 2026
@@ -46,6 +46,10 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
 - Contrôles **bloquants** (le build échoue) : conservation des lignes, votants = blancs + nuls + exprimés,
   unicité des clés, toute nuance présente dans le référentiel. Anomalies **tolérées et tracées** dans le
   manifeste : somme des voix ≠ exprimés, votants > inscrits.
+- Couverture de la source (catalogue, calculée à chaque construction) : territoires absents, départements
+  incomplets (moins de 80 % des inscrits du scrutin complet le plus proche), bureaux aux inscrits aberrants
+  (plus de 4 000 et plus de dix fois les votants). **Signalés, jamais corrigés** ; nos totaux se rapprochent
+  des totaux officiels (`referentiels/totaux_officiels.csv`, test de réconciliation).
 - Les codes de département se déduisent du code commune INSEE (le champ source mélange `ZA` et `971`).
 - Les législatives n'ont plus de code de circonscription depuis 2024 : on le reprend des fichiers officiels
   « résultats par circonscription » (département, panneau, nom, prénom). Une candidature y est identifiée par
@@ -59,7 +63,8 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   construction. Voix d'un bloc **vides** quand il n'avait pas de candidat : ne jamais les remplacer par 0.
 - Paris, Lyon et Marseille : niveau « arrondissement » des agrégats, tiré du numéro de bureau (« 75056_1512 »
   → 75115, `construire.ARRONDISSEMENT`, `arrondissementDu` côté client). Sur la carte, les arrondissements
-  sont dessinés par-dessus leur ville dans la couche des communes.
+  sont dessinés par-dessus leur ville dans la couche des communes ; la ville n'est alors pas peinte (un
+  arrondissement sans résultat reste vide), et un bureau prend la couleur de son arrondissement, jamais de la ville.
 - Les agrégats par commune sont au **COG 2026** (`referentiels/passage_communes_2026.csv`) ; les bureaux gardent
   le code de commune de l'année du vote (le client passe par `communeDu(code, passage)`).
 
@@ -92,7 +97,7 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   d'un bureau demandent tout de suite ce dont ils ont besoin.
 - Ne jamais passer à la carte un tableau ou un objet recréé à chaque rendu (`?? []`) : son effet de coloriage
   se relancerait à chaque mise à jour (plusieurs secondes sur un téléphone). Les états ne sont posés que
-  s'ils changent ; ceux des bureaux, à l'approche du zoom des bureaux.
+  s'ils changent ; ceux des bureaux, dès le début d'un zoom qui s'en approche, par lots d'une image à l'autre.
 - Les Parquet sont téléchargés sur la page (préchargements de `index.html`) puis décodés dans un worker
   (`donnees/decodeur.worker.ts`) : décoder l'index des territoires ou 70 000 bureaux bloquerait la page.
 - Appliquer les résultats dès `style.load`, pas `load` (qui attend un rendu complet, bloqué en arrière-plan).

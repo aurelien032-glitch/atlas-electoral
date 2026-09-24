@@ -3,7 +3,7 @@ import type { Mesure } from '../calculs/parts'
 import { BLOCS_COLORES, DU_BLOC, LIBELLE_BLOC, type BlocColore } from '../carte/couleurs'
 import type { Cible } from '../cibles'
 import { nomCandidature, nuanceCourte } from '../donnees/libelles'
-import { grouper } from '../donnees/scrutins'
+import { grouper, voteParSecteur } from '../donnees/scrutins'
 import { exprimesPourParts, type Bloc, type ScrutinCatalogue } from '../donnees/types'
 import { formatEcart, formatNombre, formatPart } from '../format'
 import { partsAuNiveau, type Mode } from '../modes'
@@ -11,6 +11,7 @@ import { Barres, type LigneResultat } from './Barres'
 import { TableNuances } from './Nuances'
 import { couleurDuBloc, pluriel, type Actions, type Contexte } from './contexte'
 import { Extremes } from './Extremes'
+import { CouvertureNationale } from './Signalements'
 import { compterTetes, enumerer, extremes } from './resume'
 
 /** Mode Évolution : écarts déjà calculés (ils demandent les données des deux scrutins). */
@@ -61,25 +62,11 @@ function Titre({ surtitre, titre, children }: { surtitre?: string; titre: string
 const choisirDepartement = (actions: Actions) => (code: string) => actions.territoire({ niveau: 'departement', code })
 
 export function Apercu(props: Props) {
-  switch (props.mode) {
-    case 'tete': return <ApercuTete {...props} />
-    case 'score': return <ApercuScore {...props} />
-    case 'participation': return <ApercuParticipation {...props} />
-    case 'evolution': return <ApercuEvolutionBloc {...props} />
-  }
-}
-
-/** Scrutins anciens : territoires qui votaient mais dont la source ne contient pas les résultats. */
-function TerritoiresAbsents({ ctx }: { ctx: Contexte }) {
-  const absents = ctx.scrutin.territoires_absents ?? []
-  if (absents.length === 0) return null
-  return (
-    <p className="note-bas">
-      Données partielles : la source (data.gouv.fr) ne contient pas de résultats pour{' '}
-      {enumerer(absents.map((code) => ctx.index.noms.get(code) ?? code))}. Les totaux et les parts de la France
-      entière diffèrent donc un peu des résultats officiels.
-    </p>
-  )
+  const Contenu = {
+    tete: ApercuTete, score: ApercuScore, participation: ApercuParticipation, evolution: ApercuEvolutionBloc,
+  }[props.mode]
+  // Ce que la source ne contient pas vaut pour tous les modes : signalé sous chacun.
+  return <><Contenu {...props} /><CouvertureNationale ctx={props.ctx} /></>
 }
 
 function ApercuTete({ ctx, actions }: Props) {
@@ -104,7 +91,9 @@ function ApercuTete({ ctx, actions }: Props) {
   } else {
     const blocDe = (cand: number): Bloc => ctx.parCand.get(cand)?.bloc ?? 'NC'
     const parCirconscription = ctx.scrutin.portee === 'circonscription'
-    const tetes = compterTetes(ctx.agregats, parCirconscription ? 'circonscription' : 'commune', blocDe)
+    // Municipales jusqu'en 2020 : Paris, Lyon et Marseille votaient par secteur, aucune liste n'y est « en tête ».
+    const agregats = ctx.agregats.filter((a) => a.niveau !== 'commune' || !voteParSecteur(ctx.scrutin, a.code))
+    const tetes = compterTetes(agregats, parCirconscription ? 'circonscription' : 'commune', blocDe)
     phrase = `Bloc en tête, par ${parCirconscription ? 'circonscription' : 'commune'} : ${enumerer(tetes.map(([b, n]) => `${LIBELLE_BLOC[b].toLowerCase()} dans ${formatNombre(n)}`))}.`
     const elus = ctx.candidats.filter((c) => c.elu)
     if (elus.length > 0) {
@@ -143,7 +132,6 @@ function ApercuTete({ ctx, actions }: Props) {
           </p>
         )}
         {national && <TableNuances candidatures={[...ctx.candidats].sort((a, b) => b.voix_total - a.voix_total)} />}
-        <TerritoiresAbsents ctx={ctx} />
       </section>
     </>
   )
