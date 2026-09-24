@@ -18,7 +18,7 @@
 > - squelette de l'application réalisé (`app/`, § 11) ; prototype v0 retiré, conservé sous le tag `prototype-v0` ;
 > - contours administratifs : versions simplifiées d'Etalab, les tuiles IGN étant trop lourdes (§ 4.1) ;
 > - maquettes : direction **« A · Éditorial »** retenue (Newsreader et Source Sans 3, papier chaud) ; mode Score dans la **teinte du bloc** de la cible ; mode Évolution en **orange ↔ violet** (d'après ColorBrewer PuOr) ;
-> - direction A codée dans `app/` (§ 11) : modes Tête, Score, Participation et Évolution, détail d'un territoire jusqu'au bureau. Choix d'affichage proposés, à valider : Q11.
+> - direction A codée dans `app/` (§ 11) : modes Tête, Score, Participation et Évolution, détail d'un territoire jusqu'au bureau ; choix d'affichage validés (Q11).
 >
 > Méthode : profilage des données (`data:explore-data`), décision d'architecture au format ADR (`engineering:architecture`), cadrage produit (`product-management:write-spec`), principes de visualisation (`dataviz`), audit du prototype (`api-coverage-auditor`, `feature-dev:code-explorer`), recherche des sources et des hébergeurs vérifiée par de vraies requêtes HTTP. Les chiffres « mesurés » viennent de requêtes DuckDB sur les fichiers de `Data/` (annexe A).
 
@@ -613,6 +613,7 @@ Budgets : moins de 450 Ko de JavaScript initial compressé (MapLibre compris) et
 - nouvel index `geo/territoires.parquet` (617 Ko : nom, département et emprise des 35 124 départements et communes) pour le fil d'Ariane et le cadrage ;
 - vérifications : TypeScript, oxlint, 16 tests Vitest, 65 tests pytest ; parcours vérifiés dans le navigateur (ordinateur et mobile) ;
 - JavaScript : 466 Ko compressés (budget 450) ; polices : 87 Ko au premier chargement (Newsreader sans l'axe de taille optique : 58 Ko au lieu de 132).
+- **recherche d'une commune ou d'un département** (en haut du panneau) : sans accents ni tirets, « st » vaut « saint », code INSEE accepté ; homonymes départagés par le département ; à pertinence égale, les communes qui comptent le plus d'inscrits d'abord ; motif « combobox » de l'ARIA (clavier complet). La recherche par adresse (Géoplateforme) viendra ensuite.
 
 ## 12. Exigences priorisées
 
@@ -689,7 +690,7 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 | Q8 | Circonscriptions des législatives 2024 : le code a disparu des données. Quelle source pour la correspondance bureaux ↔ circonscriptions (table INSEE 2022, contours 2022) ? | Ouvert | Agrégats par circonscription |
 | Q9 | Totaux officiels des autres tours pour la réconciliation : sources à relever (Conseil constitutionnel, ministère) | Ouvert | Tests |
 | Q10 | Communes fusionnées depuis le scrutin : les contours sont au COG 2026, les résultats 2022 et 2024 au COG de leur année, d'où quelques communes blanches. Appliquer la table de passage du COG dans le pipeline ? | Ouvert | Carte nationale |
-| Q11 | Choix d'affichage proposés en codant la direction A : hachures pour « pas de candidat » et « non comparable » ; évolution lue à la commune ; participation en sarcelle ; colonne de comparaison seulement quand elle a un sens (scrutin national, ou bureau comparé à sa commune) ; noms de famille en casse d'usage (« LE PEN » → « Le Pen »), noms de listes inchangés | Proposé le 24/09, à valider | Bêta |
+| Q11 | Choix d'affichage proposés en codant la direction A : hachures pour « pas de candidat » et « non comparable » ; évolution lue à la commune ; participation en sarcelle ; colonne de comparaison seulement quand elle a un sens (scrutin national, ou bureau comparé à sa commune) ; noms de famille en casse d'usage (« LE PEN » → « Le Pen »), noms de listes inchangés | **Tranché le 24/09** : tous validés | — |
 | Q6 | Publication de nos données sur data.gouv | **Tranché** : plus tard | P2 |
 
 ## 16. Outillage Claude : skills, plugins, connecteurs

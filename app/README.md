@@ -21,4 +21,5 @@ Organisation :
 | `src/cibles.ts` | Ce que montre le mode Score : une candidature ou un bloc |
 | `src/carte/` | Carte MapLibre, palettes validées, feature-states, légende, onglets, infobulle |
 | `src/panneau/` | Aperçu de chaque mode et détail d'un territoire (fil d'Ariane, résultats en tableau) |
+| `src/recherche/` | Recherche d'une commune ou d'un département (normalisation des noms, classement, combobox) |
 | `src/vue.ts`, `src/url.ts` | État de la vue dans l'URL (`?scrutin=…&mode=…&cible=…&bloc=…&de=…&sel=…`) |

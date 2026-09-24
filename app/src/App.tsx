@@ -12,7 +12,7 @@ import {
   useAgregats, useAgregatsVoix, useBureaux, useCandidats, useCatalogue, useContours, useTerritoires, useVoix,
 } from './donnees/requetes'
 import { communeDu, departementDe, emprise, indexer, titreDe } from './donnees/territoires'
-import type { Agregat, BureauContour, Resultat, ScrutinCatalogue } from './donnees/types'
+import type { Agregat, BureauContour, Resultat, ScrutinCatalogue, Territoire } from './donnees/types'
 import { formatEcart, formatPart, formatPourcent } from './format'
 import {
   LIBELLES_EVOLUTION, classesLegende, coloriageClasses, coloriageTete, couleursPour, ecartsAuNiveau, partDe,
@@ -21,6 +21,8 @@ import {
 import { Apercu, type ApercuEvolution } from './panneau/Apercu'
 import type { Actions, Contexte } from './panneau/contexte'
 import { Detail, type Parent } from './panneau/Detail'
+import { preparer } from './recherche/chercher'
+import { Recherche } from './recherche/Recherche'
 import { useUrl } from './url'
 import { ecrireSelection, lireVue, type Selection } from './vue'
 
@@ -95,6 +97,11 @@ export default function App() {
   const parCand = useMemo(() => new Map((candidats.data ?? []).map((c) => [c.cand, c])), [candidats.data])
   const index = useMemo(() => indexer(territoires.data ?? []), [territoires.data])
   const cibles = useMemo(() => optionsCibles(scrutin, candidats.data), [scrutin, candidats.data])
+  // Recherche : à pertinence égale, les communes qui comptent le plus d'inscrits passent devant.
+  const entreesRecherche = useMemo(() => {
+    const inscrits = new Map((agregats.data ?? []).filter((a) => a.niveau === 'commune').map((a) => [a.code, a.inscrits]))
+    return preparer(territoires.data ?? [], inscrits)
+  }, [territoires.data, agregats.data])
   const cible = cibles.find((c) => c.valeur === vue.cible) ?? cibles[0]
   const bloc: BlocColore = vue.bloc ?? blocEnTete(candidats.data) ?? 'DTE'
 
@@ -236,6 +243,11 @@ export default function App() {
     setDeplie(true)
   }, [modifierUrl])
 
+  const allerA = useCallback((t: Territoire) => {
+    actions.territoire({ niveau: t.niveau, code: t.code })
+    setDeplie(true)
+  }, [actions])
+
   const changerMode = useCallback((mode: Mode) => modifierUrl({ mode: mode === 'tete' ? null : mode }), [modifierUrl])
 
   const ctx: Contexte | null = scrutin && agregats.data && candidats.data
@@ -309,6 +321,7 @@ export default function App() {
           <span className="marque">Atlas électoral</span>
           <a href={METHODOLOGIE}>Méthodologie</a>
         </header>
+        <Recherche entrees={entreesRecherche} onChoisir={allerA} />
         <div id="panneau-corps" className="panneau-corps">
           {erreur && <p className="alerte">Données indisponibles : {erreur.message}</p>}
           {chargement && !erreur && <p className="note">Chargement…</p>}

@@ -50,10 +50,24 @@ a:hover, .lien:hover { color: var(--encre-2); }
 }
 
 .champ { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--encre-2); }
-.champ select {
+.champ select, .champ input {
   font: inherit; font-size: 16px; color: var(--encre); min-height: 44px; padding: 8px 12px;
   border: 1px solid var(--bord-champ); border-radius: 6px; background: #fff;
 }
+
+.recherche { position: relative; padding: 18px 40px 0; }
+.suggestions {
+  position: absolute; left: 40px; right: 40px; top: calc(100% + 4px); z-index: 5;
+  list-style: none; margin: 0; padding: 4px; max-height: 320px; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--bord-champ); border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(27, 26, 23, 0.12);
+}
+.suggestions li {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  min-height: 44px; padding: 10px 12px; border-radius: 4px; cursor: pointer; font-size: 15px;
+}
+.suggestions li .discret { font-size: 13px; text-align: right; }
+.suggestions li[aria-selected='true'], .suggestions li:hover { background: var(--piste); }
 
 .titre { display: flex; flex-direction: column; gap: 8px; }
 .titre h1 { margin: 0; font: 500 40px/1.08 var(--titre); }
@@ -178,6 +192,8 @@ a:hover, .lien:hover { color: var(--encre-2); }
     border: 0; background: linear-gradient(var(--bord-champ), var(--bord-champ)) no-repeat center / 40px 4px;
   }
   .panneau-entete { padding: 0 22px; }
+  .recherche { padding: 12px 22px 0; }
+  .suggestions { left: 22px; right: 22px; }
   .panneau-corps { padding: 14px 22px 24px; gap: 16px; }
   .titre h1 { font-size: 28px; }
   .chapo { font-size: 17px; }
