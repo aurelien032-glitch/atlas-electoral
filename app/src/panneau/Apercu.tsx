@@ -83,8 +83,16 @@ function ApercuTete({ ctx, actions }: Props) {
     }))
   } else {
     const blocDe = (cand: number): Bloc => ctx.parCand.get(cand)?.bloc ?? 'NC'
-    const tetes = compterTetes(ctx.agregats, 'commune', blocDe).slice(0, 3)
-    phrase = `Bloc en tête, par commune : ${enumerer(tetes.map(([b, n]) => `${LIBELLE_BLOC[b].toLowerCase()} dans ${formatNombre(n)}`))}.`
+    const parCirconscription = ctx.scrutin.portee === 'circonscription'
+    const tetes = compterTetes(ctx.agregats, parCirconscription ? 'circonscription' : 'commune', blocDe).slice(0, 3)
+    phrase = `Bloc en tête, par ${parCirconscription ? 'circonscription' : 'commune'} : ${enumerer(tetes.map(([b, n]) => `${LIBELLE_BLOC[b].toLowerCase()} dans ${formatNombre(n)}`))}.`
+    const elus = ctx.candidats.filter((c) => c.elu)
+    if (elus.length > 0) {
+      const parBloc = new Map<Bloc, number>()
+      for (const c of elus) parBloc.set(c.bloc, (parBloc.get(c.bloc) ?? 0) + 1)
+      const detail = [...parBloc].sort((a, b) => b[1] - a[1]).map(([b, n]) => `${LIBELLE_BLOC[b].toLowerCase()} ${n}`)
+      phrase += ` ${formatNombre(elus.length)} ${pluriel(elus.length, 'élu')} à ce tour : ${enumerer(detail)}.`
+    }
     const sommes = new Map<Bloc, number>()
     for (const c of ctx.candidats) sommes.set(c.bloc, (sommes.get(c.bloc) ?? 0) + c.voix_total)
     lignes = [...sommes].sort((a, b) => b[1] - a[1]).map(([b, voix]) => ({

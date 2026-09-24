@@ -119,8 +119,10 @@ function marges() {
 
 const FRANCE_METROPOLITAINE: [[number, number], [number, number]] = [[-5.2, 41.3], [9.6, 51.1]]
 
-function cible(selection: Selection): FeatureIdentifier {
+// Territoire à surligner ; une circonscription n'a pas de contour publié (seulement une emprise).
+function cible(selection: Selection): FeatureIdentifier | null {
   if (selection.niveau === 'bureau') return { source: 'bureaux', sourceLayer: COUCHE_BUREAUX, id: selection.code }
+  if (selection.niveau === 'circonscription') return null
   return { source: selection.niveau === 'commune' ? 'communes' : 'departements', id: selection.code }
 }
 
@@ -192,16 +194,19 @@ export function Carte({ coloriage, contours, auBureau, selection, contour, cadra
     }
     carte.setLayoutProperty('bureaux-contours', 'visibility', auBureau ? 'visible' : 'none')
     // Retirer les états a aussi effacé la sélection : on la remet.
-    if (refSelection.current) carte.setFeatureState(cible(refSelection.current), { selection: true })
+    const surlignee = refSelection.current && cible(refSelection.current)
+    if (surlignee) carte.setFeatureState(surlignee, { selection: true })
   }, [prete, coloriage, contours, auBureau])
 
   useEffect(() => {
     const carte = refCarte.current
     if (!carte || !prete) return
-    if (refSelection.current) carte.removeFeatureState(cible(refSelection.current), 'selection')
+    const precedente = refSelection.current && cible(refSelection.current)
+    if (precedente) carte.removeFeatureState(precedente, 'selection')
     // Le contour détaillé, s'il est là, remplace le contour simplifié de la commune.
     const detaille = selection?.niveau === 'commune' && contour !== undefined
-    if (selection && !detaille) carte.setFeatureState(cible(selection), { selection: true })
+    const nouvelle = selection && !detaille ? cible(selection) : null
+    if (nouvelle) carte.setFeatureState(nouvelle, { selection: true })
     refSelection.current = detaille ? undefined : selection
     const source = carte.getSource<GeoJSONSource>('contour')
     source?.setData(detaille ? contour : { type: 'FeatureCollection', features: [] })

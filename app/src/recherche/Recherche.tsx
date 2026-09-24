@@ -85,7 +85,9 @@ export function Recherche({ entrees, onChoisir }: Props) {
             >
               <span>{entree.territoire.nom}</span>
               <span className="discret">
-                {entree.territoire.niveau === 'departement' ? `département (${entree.territoire.code})` : entree.departement}
+                {entree.territoire.niveau === 'departement'
+                  ? `département (${entree.territoire.code})`
+                  : entree.territoire.niveau === 'circonscription' ? 'circonscription' : entree.departement}
               </span>
             </li>
           ))}

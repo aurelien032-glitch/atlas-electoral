@@ -1,7 +1,7 @@
 import { LIBELLE_BLOC, palier } from '../carte/couleurs'
 import type { Cible } from '../cibles'
 import { nomCandidature } from '../donnees/libelles'
-import { communeDu, departementDe, numeroDu, titreDe } from '../donnees/territoires'
+import { communeDu, departementDe, departementDeCirconscription, numeroDu, titreDe } from '../donnees/territoires'
 import type { Bloc, Candidature, Resultat } from '../donnees/types'
 import { formatNombre, formatPart } from '../format'
 import type { Selection } from '../vue'
@@ -21,6 +21,8 @@ interface Props {
   /** Voix de chaque candidature présente dans le territoire (undefined pendant le chargement). */
   lignes: readonly { cand: number; voix: number }[] | undefined
   parent: Parent | undefined
+  /** Législatives : circonscription(s) des candidatures du territoire. */
+  circonscriptions: string[]
   cible: Cible | undefined
   /** Valeur du territoire dans le mode courant (score, évolution…), déjà rédigée. */
   complement: string | undefined
@@ -29,13 +31,21 @@ interface Props {
 
 function FilAriane({ ctx, selection, actions }: Pick<Props, 'ctx' | 'selection' | 'actions'>) {
   const nom = (code: string) => ctx.index.noms.get(code) ?? code
-  const commune = selection.niveau === 'bureau' ? communeDu(selection.code) : selection.code
-  const departement = selection.niveau === 'departement' ? selection.code : departementDe(commune)
+  const commune = selection.niveau === 'bureau' ? communeDu(selection.code, ctx.index.passage) : selection.code
+  const departement = selection.niveau === 'departement'
+    ? selection.code
+    : selection.niveau === 'circonscription'
+      ? departementDeCirconscription(selection.code)
+      : ctx.index.territoires.get(commune)?.departement ?? departementDe(commune)
   const etapes: { libelle: string; selection: Selection | undefined }[] = [
     { libelle: 'France', selection: undefined },
     { libelle: nom(departement), selection: { niveau: 'departement', code: departement } },
   ]
-  if (selection.niveau !== 'departement') etapes.push({ libelle: nom(commune), selection: { niveau: 'commune', code: commune } })
+  if (selection.niveau === 'circonscription') {
+    etapes.push({ libelle: nom(selection.code).split(', ').pop() ?? selection.code, selection })
+  } else if (selection.niveau !== 'departement') {
+    etapes.push({ libelle: nom(commune), selection: { niveau: 'commune', code: commune } })
+  }
   if (selection.niveau === 'bureau') etapes.push({ libelle: `Bureau ${numeroDu(selection.code)}`, selection })
   return (
     <nav aria-label="Fil d'Ariane" className="ariane">
@@ -52,8 +62,8 @@ function FilAriane({ ctx, selection, actions }: Pick<Props, 'ctx' | 'selection' 
   )
 }
 
-export function Detail({ ctx, selection, resultat, lignes, parent, cible, complement, actions }: Props) {
-  const titre = titreDe(selection, ctx.index.noms)
+export function Detail({ ctx, selection, resultat, lignes, parent, circonscriptions, cible, complement, actions }: Props) {
+  const titre = titreDe(selection, ctx.index)
   const entete = (
     <>
       <div className="detail-haut">
@@ -65,6 +75,19 @@ export function Detail({ ctx, selection, resultat, lignes, parent, cible, comple
       <div className="titre">
         <h1>{titre}</h1>
         <p className="surtitre-bas">{ctx.scrutin.libelle}</p>
+        {circonscriptions.length > 0 && (
+          <p className="circonscriptions">
+            {circonscriptions.length === 1 ? 'Circonscription : ' : 'Circonscriptions : '}
+            {circonscriptions.map((code, i) => (
+              <span key={code}>
+                {i > 0 && ' ; '}
+                <button type="button" className="lien" onClick={() => actions.territoire({ niveau: 'circonscription', code })}>
+                  {ctx.index.noms.get(code) ?? code}
+                </button>
+              </span>
+            ))}
+          </p>
+        )}
       </div>
     </>
   )
@@ -75,8 +98,8 @@ export function Detail({ ctx, selection, resultat, lignes, parent, cible, comple
     const c = ctx.parCand.get(cand)
     return c ? nomCandidature(c) : `candidature ${cand}`
   }
-  // Au département, les législatives et les municipales comptent des dizaines de candidatures
-  // locales : on les regroupe par bloc.
+  // Au département (et au-delà), les législatives et les municipales comptent des dizaines de
+  // candidatures locales : on les regroupe par bloc. Une circonscription garde ses candidatures.
   const parBloc = ctx.scrutin.portee !== 'national' && selection.niveau === 'departement'
   const tries = [...(lignes ?? [])].sort((a, b) => b.voix - a.voix)
   let phrase: string | undefined
@@ -111,6 +134,7 @@ export function Detail({ ctx, selection, resultat, lignes, parent, cible, comple
       const voixParent = parent?.voix.get(l.cand)
       return {
         cle: String(l.cand), nom: nom(l.cand), couleur: couleurDuBloc(c?.bloc ?? 'NC'), part: l.voix / resultat.exprimes,
+        mention: c?.elu ? (c.sexe === 'F' ? 'élue' : 'élu') : undefined,
         partParent: parent && voixParent !== undefined ? voixParent / parent.exprimes : undefined,
         marquee: cible?.retenue(l.cand) ?? false,
       }

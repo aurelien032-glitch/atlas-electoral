@@ -7,7 +7,8 @@ export interface ScrutinCatalogue {
   id: string
   libelle: string
   date: string
-  portee: 'national' | 'departement' | 'commune'
+  /** Territoire où se présente une candidature : la France, une circonscription ou une commune. */
+  portee: 'national' | 'circonscription' | 'commune'
   totaux: { inscrits: number; votants: number; blancs: number; nuls: number; exprimes: number }
   jointure_contours: {
     millesime_contours: number
@@ -47,7 +48,7 @@ export interface BureauContour {
 }
 
 export interface Agregat extends Resultat {
-  niveau: 'commune' | 'departement' | 'france'
+  niveau: 'commune' | 'circonscription' | 'departement' | 'france'
   code: string
 }
 
@@ -68,7 +69,7 @@ export interface VoixAgregat {
 
 /** Département ou commune du découpage 2026 : nom et emprise (geo/territoires.parquet). */
 export interface Territoire {
-  niveau: 'departement' | 'commune'
+  niveau: 'departement' | 'commune' | 'circonscription'
   code: string
   nom: string
   departement: string
@@ -91,5 +92,26 @@ export interface Candidature {
   famille: string
   bloc: Bloc
   cas_limite: boolean
+  sexe: string | null
+  /** Législatives : circonscription (« 69-02 ») et élection à ce tour. */
+  circonscription: string | null
+  elu: boolean | null
   voix_total: number
+}
+
+/** Circonscription législative : libellé (« Rhône, 2e circonscription ») et emprise approchée. */
+export interface Circonscription {
+  code: string
+  libelle: string
+  departement: string
+  ouest: number | null
+  sud: number | null
+  est: number | null
+  nord: number | null
+}
+
+/** Ancien code de commune (fusionnée depuis) → commune du COG 2026. */
+export interface Passage {
+  ancien: string
+  actuel: string
 }

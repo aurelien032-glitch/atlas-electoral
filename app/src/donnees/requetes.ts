@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import type { Feature } from 'geojson'
 import { lireParquet } from './parquet'
-import type { Agregat, Bureau, BureauContour, Candidature, Catalogue, Territoire, VoixAgregat, VoixBureau } from './types'
+import type {
+  Agregat, Bureau, BureauContour, Candidature, Catalogue, Circonscription, Passage, Territoire, VoixAgregat, VoixBureau,
+} from './types'
 
 /** Racine des fichiers publiés par le pipeline (servis sous /data en développement, cf. vite.config.ts). */
 export const RACINE_DONNEES = `${import.meta.env.BASE_URL}data/v1`
@@ -31,6 +33,8 @@ export const useAgregats = (scrutin?: string) => useFichier<Agregat>(scrutin, 'a
 export const useCandidats = (scrutin?: string) => useFichier<Candidature>(scrutin, 'candidats.parquet')
 export const useVoix = (scrutin?: string) => useFichier<VoixBureau>(scrutin, 'voix.parquet')
 export const useAgregatsVoix = (scrutin?: string) => useFichier<VoixAgregat>(scrutin, 'agregats_voix.parquet')
+/** Législatives seulement : libellés et emprises des circonscriptions. */
+export const useCirconscriptions = (scrutin?: string) => useFichier<Circonscription>(scrutin, 'circonscriptions.parquet')
 
 function useGeo<T>(fichier: string) {
   return useQuery({
@@ -44,6 +48,9 @@ export const useContours = () => useGeo<BureauContour>('bureaux_contours_2022.pa
 
 /** Noms et emprises des départements et des communes (découpage 2026). */
 export const useTerritoires = () => useGeo<Territoire>('territoires.parquet')
+
+/** Communes fusionnées depuis 2022 : ancien code → commune du COG 2026. */
+export const usePassage = () => useGeo<Passage>('passage_communes.parquet')
 
 /**
  * Contour détaillé d'une commune, demandé à l'API Découpage administratif (geo.api.gouv.fr) au moment

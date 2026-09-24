@@ -75,6 +75,8 @@ a:hover, .lien:hover { color: var(--encre-2); }
   margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--encre-2);
 }
 .surtitre-bas { margin: 0; font-size: 15px; color: var(--encre-2); }
+.circonscriptions { margin: 0; font-size: 14px; color: var(--encre-2); }
+.mention { margin-left: 6px; padding: 0 5px; border-radius: 3px; background: var(--piste); font-size: 12px; font-weight: 600; color: var(--encre); }
 .chapo { margin: 0; font: 19px/1.45 var(--titre); color: var(--chapo); }
 .complement { margin: 0; font-size: 15px; font-weight: 600; }
 

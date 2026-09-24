@@ -9,6 +9,8 @@ export interface LigneResultat {
   partParent?: number
   /** Ligne mise en avant (la cible du mode Score). */
   marquee?: boolean
+  /** Précision après le nom (« élue »). */
+  mention?: string
 }
 
 interface Props {
@@ -37,7 +39,7 @@ export function Barres({ lignes, legende, entete = 'Candidature', parent }: Prop
       <tbody>
         {lignes.map((l) => (
           <tr key={l.cle} className={l.marquee ? 'marquee' : undefined}>
-            <th scope="row">{l.nom}</th>
+            <th scope="row">{l.nom}{l.mention && <span className="mention">{l.mention}</span>}</th>
             <td className="barre" aria-hidden="true">
               <span style={{ width: `${(100 * l.part) / max}%`, background: l.couleur }} />
             </td>

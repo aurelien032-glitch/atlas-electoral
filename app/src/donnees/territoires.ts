@@ -1,29 +1,48 @@
 import type { Selection } from '../vue'
-import type { Territoire } from './types'
+import type { Circonscription, Passage, Territoire } from './types'
 
 /** Département d'une commune : même règle que le pipeline (trois caractères outre-mer, deux ailleurs). */
 export const departementDe = (codeCommune: string) =>
   codeCommune.startsWith('97') || codeCommune.startsWith('98') ? codeCommune.slice(0, 3) : codeCommune.slice(0, 2)
 
-/** Commune d'un bureau : les codes de bureau sont « commune_numéro ». */
-export const communeDu = (codeBureau: string) => codeBureau.split('_')[0]
+/**
+ * Commune d'un bureau, au COG 2026 : les codes de bureau sont « commune_numéro », avec la commune de
+ * l'année du vote ; une commune fusionnée depuis est remplacée par sa commune nouvelle.
+ */
+export const communeDu = (codeBureau: string, passage?: ReadonlyMap<string, string>) => {
+  const commune = codeBureau.split('_')[0]
+  return passage?.get(commune) ?? commune
+}
 export const numeroDu = (codeBureau: string) => codeBureau.split('_')[1] ?? codeBureau
 
 // Métropole et départements d'outre-mer ; 975 (Saint-Pierre-et-Miquelon) est une collectivité.
 const DEPARTEMENT = /^(\d{2}|2A|2B|97[12346])$/
 
-/** Index des territoires par code (départements et communes ne partagent aucun code). */
+/**
+ * Index des territoires par code : départements (« 69 »), circonscriptions (« 69-02 ») et communes
+ * (« 69123 ») ne partagent aucun code.
+ */
 export interface Index {
   noms: Map<string, string>
   territoires: Map<string, Territoire>
+  passage: Map<string, string>
   /** Départements de métropole et d'outre-mer (hors collectivités d'outre-mer et Français de l'étranger). */
   departements: Set<string>
 }
 
-export function indexer(territoires: readonly Territoire[]): Index {
+export function indexer(
+  communes: readonly Territoire[],
+  passage: readonly Passage[] = [],
+  circonscriptions: readonly Circonscription[] = [],
+): Index {
+  const territoires: Territoire[] = [
+    ...communes,
+    ...circonscriptions.map((c) => ({ ...c, niveau: 'circonscription' as const, nom: c.libelle })),
+  ]
   return {
     noms: new Map(territoires.map((t) => [t.code, t.nom])),
     territoires: new Map(territoires.map((t) => [t.code, t])),
+    passage: new Map(passage.map((p) => [p.ancien, p.actuel])),
     departements: new Set(territoires.filter((t) => t.niveau === 'departement' && DEPARTEMENT.test(t.code)).map((t) => t.code)),
   }
 }
@@ -33,11 +52,14 @@ export function emprise(t: Territoire | undefined): [number, number, number, num
   return [t.ouest, t.sud, t.est, t.nord]
 }
 
-/** Nom affiché d'un territoire sélectionné : « Lyon, bureau 0816 », « Lyon », « Rhône ». */
-export function titreDe(selection: Selection, noms: ReadonlyMap<string, string>): string {
+/** Nom affiché d'un territoire sélectionné : « Lyon, bureau 0816 », « Lyon », « Rhône, 2e circonscription ». */
+export function titreDe(selection: Selection, index: Pick<Index, 'noms' | 'passage'>): string {
   if (selection.niveau === 'bureau') {
-    const commune = communeDu(selection.code)
-    return `${noms.get(commune) ?? commune}, bureau ${numeroDu(selection.code)}`
+    const commune = communeDu(selection.code, index.passage)
+    return `${index.noms.get(commune) ?? commune}, bureau ${numeroDu(selection.code)}`
   }
-  return noms.get(selection.code) ?? selection.code
+  return index.noms.get(selection.code) ?? selection.code
 }
+
+/** Département d'une circonscription (« 69-02 » → « 69 » ; « ZX-01 » : Saint-Barthélemy et Saint-Martin). */
+export const departementDeCirconscription = (code: string) => code.split('-')[0]

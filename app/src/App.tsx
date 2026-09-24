@@ -10,9 +10,10 @@ import { Onglets } from './carte/Onglets'
 import { blocEnTete, optionsCibles, retenueDuBloc } from './cibles'
 import { nomCandidature } from './donnees/libelles'
 import {
-  useAgregats, useAgregatsVoix, useBureaux, useCandidats, useCatalogue, useContourCommune, useContours, useTerritoires, useVoix,
+  useAgregats, useAgregatsVoix, useBureaux, useCandidats, useCatalogue, useCirconscriptions, useContourCommune, useContours,
+  usePassage, useTerritoires, useVoix,
 } from './donnees/requetes'
-import { communeDu, departementDe, emprise, indexer, titreDe } from './donnees/territoires'
+import { communeDu, emprise, indexer, titreDe } from './donnees/territoires'
 import type { Agregat, BureauContour, Resultat, ScrutinCatalogue, Territoire } from './donnees/types'
 import { formatEcart, formatPart, formatPourcent } from './format'
 import {
@@ -88,6 +89,8 @@ export default function App() {
   const voix = useVoix((vue.mode === 'score' && carteAuBureau) || selection?.niveau === 'bureau' ? id : undefined)
   const contours = useContours()
   const territoires = useTerritoires()
+  const passage = usePassage()
+  const circonscriptions = useCirconscriptions(scrutin?.portee === 'circonscription' ? id : undefined)
   const contourCommune = useContourCommune(selection?.niveau === 'commune' ? selection.code : undefined)
 
   const scrutinDe = vue.mode === 'evolution' && scrutin
@@ -98,13 +101,17 @@ export default function App() {
   const agregatsVoixDe = useAgregatsVoix(scrutinDe?.id)
 
   const parCand = useMemo(() => new Map((candidats.data ?? []).map((c) => [c.cand, c])), [candidats.data])
-  const index = useMemo(() => indexer(territoires.data ?? []), [territoires.data])
+  const index = useMemo(
+    () => indexer(territoires.data ?? [], passage.data, circonscriptions.data),
+    [territoires.data, passage.data, circonscriptions.data],
+  )
   const cibles = useMemo(() => optionsCibles(scrutin, candidats.data), [scrutin, candidats.data])
   // Recherche : à pertinence égale, les communes qui comptent le plus d'inscrits passent devant.
   const entreesRecherche = useMemo(() => {
     const inscrits = new Map((agregats.data ?? []).filter((a) => a.niveau === 'commune').map((a) => [a.code, a.inscrits]))
-    return preparer(territoires.data ?? [], inscrits)
-  }, [territoires.data, agregats.data])
+    // L'index contient départements, communes et, aux législatives, circonscriptions (« rhône 2e »).
+    return preparer([...index.territoires.values()], inscrits)
+  }, [agregats.data, index])
   const cible = cibles.find((c) => c.valeur === vue.cible) ?? cibles[0]
   const bloc: BlocColore = vue.bloc ?? blocEnTete(candidats.data) ?? 'DTE'
 
@@ -198,7 +205,7 @@ export default function App() {
   }), [bureaux.data, agregats.data])
 
   const contenuInfobulle = useCallback((survol: Survol) => {
-    const titre = titreDe({ niveau: survol.niveau, code: survol.code }, index.noms)
+    const titre = titreDe({ niveau: survol.niveau, code: survol.code }, index)
     const lignes: string[] = []
     if (vue.mode === 'tete') {
       const r = resultats[survol.niveau === 'bureau' ? 'bureaux' : 'communes'].get(survol.code)
@@ -237,7 +244,7 @@ export default function App() {
   const cadrageInitial = useMemo((): Cadrage | null => {
     if (!selectionInitiale) return null
     const s = selectionInitiale
-    const zone = emprise(index.territoires.get(s.niveau === 'bureau' ? communeDu(s.code) : s.code))
+    const zone = emprise(index.territoires.get(s.niveau === 'bureau' ? communeDu(s.code, index.passage) : s.code))
     return zone && { emprise: zone, jeton: 0 }
   }, [selectionInitiale, index])
 
@@ -270,26 +277,45 @@ export default function App() {
       return a && v ? { nom, exprimes: a.exprimes, voix: new Map(v.map((l) => [l.cand, l.voix])) } : undefined
     }
     const nom = (code: string) => index.noms.get(code) ?? code
+    const portee = scrutin?.portee
+    // Circonscriptions des candidatures présentes : une pour un bureau, parfois plusieurs pour une grande ville.
+    const circonscriptionsDe = (lignes: readonly { cand: number }[] | undefined) =>
+      [...new Set((lignes ?? []).map((l) => parCand.get(l.cand)?.circonscription).filter((c): c is string => !!c))].sort()
+    // Le niveau de comparaison n'a de sens que si les mêmes candidatures s'y présentent : la commune
+    // pour un bureau (la circonscription aux législatives), le département pour une commune à un
+    // scrutin national, la France pour un département (par bloc hors scrutin national).
     if (selection.niveau === 'bureau') {
-      const commune = communeDu(selection.code)
+      const lignes = voix.data?.filter((v) => v.code_bv === selection.code)
+      const circos = circonscriptionsDe(lignes)
+      const commune = communeDu(selection.code, index.passage)
       return {
         resultat: bureaux.data?.find((b) => b.code_bv === selection.code),
-        lignes: voix.data?.filter((v) => v.code_bv === selection.code),
-        parent: parent('commune', commune, nom(commune)),
+        lignes,
+        circonscriptions: circos,
+        parent: portee === 'circonscription'
+          ? (circos.length === 1 ? parent('circonscription', circos[0], nom(circos[0])) : undefined)
+          : parent('commune', commune, nom(commune)),
       }
     }
     if (selection.niveau === 'commune') {
-      // Une candidature locale (circonscription, commune) n'a pas de score départemental comparable.
-      const departement = departementDe(selection.code)
-      const comparable = scrutin?.portee === 'national'
-      return {
-        resultat: trouver('commune', selection.code),
-        lignes: voixDe('commune', selection.code),
-        parent: comparable ? parent('departement', departement, nom(departement)) : undefined,
-      }
+      const lignes = voixDe('commune', selection.code)
+      const circos = circonscriptionsDe(lignes)
+      const departement = index.territoires.get(selection.code)?.departement ?? selection.code.slice(0, 2)
+      let comparaison: Parent | undefined
+      if (portee === 'national') comparaison = parent('departement', departement, nom(departement))
+      else if (portee === 'circonscription' && circos.length === 1) comparaison = parent('circonscription', circos[0], nom(circos[0]))
+      return { resultat: trouver('commune', selection.code), lignes, circonscriptions: circos, parent: comparaison }
     }
-    return { resultat: trouver('departement', selection.code), lignes: voixDe('departement', selection.code), parent: parent('france', 'FR', 'France') }
-  }, [selection, scrutin, agregats.data, agregatsVoix.data, bureaux.data, voix.data, index])
+    if (selection.niveau === 'circonscription') {
+      return { resultat: trouver('circonscription', selection.code), lignes: voixDe('circonscription', selection.code), circonscriptions: [], parent: undefined }
+    }
+    return {
+      resultat: trouver('departement', selection.code),
+      lignes: voixDe('departement', selection.code),
+      circonscriptions: [],
+      parent: parent('france', 'FR', 'France'),
+    }
+  }, [selection, scrutin, agregats.data, agregatsVoix.data, bureaux.data, voix.data, index, parCand])
 
   const complement = useMemo(() => {
     if (!selection || !detail?.lignes || !detail.resultat || detail.resultat.exprimes === 0) return undefined
@@ -299,8 +325,8 @@ export default function App() {
       return `${cible.libelle} : ${formatPart(retenues.reduce((s, l) => s + l.voix, 0) / detail.resultat.exprimes)} des suffrages exprimés.`
     }
     if (vue.mode === 'evolution' && evolution && scrutinDe) {
-      const niveau: Agregat['niveau'] = selection.niveau === 'departement' ? 'departement' : 'commune'
-      const code = selection.niveau === 'bureau' ? communeDu(selection.code) : selection.code
+      const niveau: Agregat['niveau'] = selection.niveau === 'bureau' ? 'commune' : selection.niveau
+      const code = selection.niveau === 'bureau' ? communeDu(selection.code, index.passage) : selection.code
       const avant = partDe(evolution.avant.agregats, evolution.avant.agregatsVoix, niveau, code, evolution.avant.retenue)
       const apres = partDe(evolution.apres.agregats, evolution.apres.agregatsVoix, niveau, code, evolution.apres.retenue)
       const ou = selection.niveau === 'bureau' ? ` (à la commune, ${index.noms.get(code) ?? code})` : ''
@@ -330,6 +356,7 @@ export default function App() {
           {chargement && !erreur && <p className="note">Chargement…</p>}
           {ctx && (selection
             ? <Detail ctx={ctx} selection={selection} resultat={detail?.resultat} lignes={detail?.lignes} parent={detail?.parent}
+                circonscriptions={detail?.circonscriptions ?? []}
                 cible={vue.mode === 'score' ? cible : undefined} complement={complement} actions={actions} />
             : <Apercu ctx={ctx} mode={vue.mode} cibles={cibles} cible={cible} bloc={bloc} evolution={apercuEvolution} actions={actions} />)}
           {etatCarte && <Legende description={etatCarte.legende} className="legende-panneau" />}
