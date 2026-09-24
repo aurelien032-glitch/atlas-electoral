@@ -1,0 +1,52 @@
+/* Charte sobre et neutre (décision du 24/09) : fond clair, couleur réservée aux données.
+   Pas de codes visuels de l'État (DSFR, Marianne), réservés aux sites publics.
+   Mode sombre : à recalculer avec sa propre palette validée, pas une simple inversion. */
+:root {
+  --fond: #f6f6f3;
+  --surface: #ffffff;
+  --texte: #1d1d1b;
+  --texte-2: #5b5b57;
+  --bord: #d9d9d4;
+  --alerte: #8a3b12;
+  --rayon: 8px;
+  color: var(--texte);
+  background: var(--fond);
+  font: 14px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; height: 100%; }
+
+.atlas { position: fixed; inset: 0; }
+.carte { position: absolute; inset: 0; }
+
+.panneau {
+  position: absolute; top: 12px; left: 12px;
+  width: min(360px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto;
+  padding: 14px 16px; background: var(--surface);
+  border: 1px solid var(--bord); border-radius: var(--rayon);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+.panneau h1 { font-size: 17px; margin: 0 0 10px; }
+.panneau h2 { font-size: 14px; margin: 0 0 4px; }
+
+.selecteur { display: grid; gap: 4px; margin-bottom: 12px; font-size: 12px; color: var(--texte-2); }
+.selecteur select { font: inherit; font-size: 14px; color: var(--texte); padding: 6px 8px; border: 1px solid var(--bord); border-radius: 6px; background: var(--surface); }
+
+.legende .entete { font-size: 12px; color: var(--texte-2); margin: 0 0 4px; }
+.legende ul { list-style: none; padding: 0; margin: 0 0 10px; }
+.legende li { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+.legende small { color: var(--texte-2); }
+.pastilles { display: inline-flex; gap: 2px; flex: none; width: 46px; }
+.pastille { width: 14px; height: 14px; border-radius: 3px; flex: none; border: 1px solid rgba(0, 0, 0, 0.15); }
+
+.detail { border-top: 1px solid var(--bord); padding-top: 10px; min-height: 56px; }
+.detail p { margin: 0 0 6px; }
+.note { color: var(--texte-2); font-size: 12px; }
+.alerte { color: var(--alerte); font-size: 12px; }
+.sources { color: var(--texte-2); font-size: 11px; border-top: 1px solid var(--bord); margin: 10px 0 0; padding-top: 8px; }
+
+/* Mobile : le panneau devient un tiroir en bas de l'écran. */
+@media (max-width: 640px) {
+  .panneau { top: auto; bottom: 0; left: 0; width: 100%; max-height: 45%; border-radius: 12px 12px 0 0; }
+}

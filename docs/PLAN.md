@@ -14,7 +14,9 @@
 > - données locales archivées hors du dépôt ; publication de nos données nettoyées : plus tard ;
 > - prototype de carte réalisé le 24/09 (`spikes/carte-pmtiles/`, § 7.5) : l'architecture proposée fonctionne ;
 > - carte « Tête » : intensité en 3 paliers selon l'avance (serré, net, large), catégorie dédiée pour les égalités ;
-> - pipeline de données v1 réalisé (§ 10) ; dépôt renommé `atlas-electoral`.
+> - pipeline de données v1 réalisé (§ 10) ; dépôt renommé `atlas-electoral` ;
+> - squelette de l'application réalisé (`app/`, § 11) ; prototype v0 retiré, conservé sous le tag `prototype-v0` ;
+> - contours administratifs : versions simplifiées d'Etalab, les tuiles IGN étant trop lourdes (§ 4.1).
 >
 > Méthode : profilage des données (`data:explore-data`), décision d'architecture au format ADR (`engineering:architecture`), cadrage produit (`product-management:write-spec`), principes de visualisation (`dataviz`), audit du prototype (`api-coverage-auditor`, `feature-dev:code-explorer`), recherche des sources et des hébergeurs vérifiée par de vraies requêtes HTTP. Les chiffres « mesurés » viennent de requêtes DuckDB sur les fichiers de `Data/` (annexe A).
 
@@ -170,7 +172,7 @@ Total actuel : environ 7 Go. Cible : moins de 1 Go sur le poste, et aucune donn�
 |---|---|---|
 | Lire les résultats bruts pendant le build | **Oui** : DuckDB lit le Parquet officiel par morceaux (requêtes Range, vérifié) | Aucune copie brute sur le disque ; on ne garde que nos sorties compactes |
 | Géométrie des bureaux de vote | **Oui** : PMTiles officiel (zooms 2 à 14) branché directement dans MapLibre | Rien à générer ni à héberger pour la bêta ; une copie de secours en production |
-| Limites administratives (communes, départements, régions) | **Oui** : tuiles vectorielles IGN `ADMIN_EXPRESS` | Rien à héberger. Il n'existe pas de couche des circonscriptions (§ 7.2) |
+| Limites administratives (communes, départements, régions) | **Oui, mais simplifiées** : contours administratifs d'Etalab (COG 2026, dérivés d'ADMIN EXPRESS), recopiés par le pipeline | Les tuiles vectorielles `ADMIN_EXPRESS` de l'IGN sont inutilisables en vue nationale : **une tuile au zoom 5 pèse 11,4 Mo** et met 40 s à arriver (mesuré le 24/09). Etalab publie les mêmes contours simplifiés : communes à 1 000 m (1,5 Mo compressé), départements à 100 m, régions à 1 000 m. Leur serveur n'envoie pas d'en-tête CORS : on les recopie |
 | Géocodage d'une adresse (« mon bureau de vote ») | **Oui** : service de géocodage de la Géoplateforme | Appel ponctuel, léger, sans stockage |
 | Colorer la carte d'un scrutin | **Non** : nos Parquet compacts | L'API tabulaire renvoie 20 à 50 lignes par page, soit plus de 1 400 appels pour un scrutin. Le Parquet officiel serait lisible depuis le navigateur, mais plusieurs fois plus lourd et à nettoyer côté client |
 
@@ -181,7 +183,8 @@ Total actuel : environ 7 Go. Cible : moins de 1 Go sur le poste, et aucune donn�
 | Données des élections agrégées (data.gouv, mise à jour le 07/07/2026) | `data.gouv.fr/datasets/donnees-des-elections-agregees` ; fichiers sur `data-pipeline-open.s3.sbg.io.cloud.ovh.net/elections/` | Parquet : 70,9 Mo (participation), 161,3 Mo (voix) ; CSV : 406 Mo et 2,4 Go ; de 1999 aux municipales 2026 | `*` / 206 | Build |
 | Proposition de contours des bureaux de vote (data.gouv) | `data-pipeline-open…/reu/reu-france-entiere-2022-06-01-v2.pmtiles` | PMTiles de 351 Mo, zooms 2 à 14, couche `repertoire-unique-electoral-polygons` (champs `codeBureauVote`, `codeCommune`, `codeCirconscription`…) ; GeoJSON de 645 Mo. Millésime 2022, « pas de mise à jour prévue ». Voronoï sur les adresses du REU (code : `github.com/etalab/bureau-vote`) | `*` / 206 | Exécution (carte) |
 | API tabulaire data.gouv | `tabular-api.data.gouv.fr/api/resources/{id}/data/` | JSON, 20 lignes par page par défaut (50 documentées) ; 0,37 s pour un filtre | — | Aucun (inadaptée aux cartes) |
-| IGN Géoplateforme, tuiles `ADMIN_EXPRESS` | `data.geopf.fr/tms/1.0.0/ADMIN_EXPRESS` (TileJSON `metadata.json`, style fourni) | MVT, zooms 2 à 16, édition du 2026-08-25 ; couches commune, département, région, EPCI, canton, arrondissement… ; pas de circonscriptions | `*` | Exécution (fond administratif) |
+| IGN Géoplateforme, tuiles `ADMIN_EXPRESS` | `data.geopf.fr/tms/1.0.0/ADMIN_EXPRESS` (TileJSON `metadata.json`, style fourni) | MVT, zooms 2 à 16, édition du 2026-08-25 ; toutes les couches en pleine précision dans chaque tuile : 11,4 Mo au zoom 5 | `*` | **Écartée** pour l'affichage |
+| Etalab, contours administratifs simplifiés | `etalab-datasets.geo.data.gouv.fr/contours-administratifs/2026/geojson/` | GeoJSON compressé, COG 2026 : communes, EPCI, départements, régions, à 1 000 m, 100 m, 50 m et 5 m ; départements à 1 000 m : 99 Ko | pas de CORS | Build (copie dans `publication/v1/geo/`) |
 | Géoplateforme, géocodage | `data.geopf.fr/geocodage/search` | JSON | `*` | Exécution (recherche d'adresse) |
 | INSEE, historique des communes (COG) | `insee.fr/fr/metadonnees/historique-commune` | Fichier à récupérer (lien chargé dynamiquement) | — | Build |
 | INSEE, bureaux de vote ↔ circonscriptions (2022) | `insee.fr` (`2022-bureaux_vote.zip`) | Table de correspondance | — | Build (couche des circonscriptions) |
@@ -373,7 +376,7 @@ Trois vues spéciales :
 ### 7.2 Géométrie et jointure
 
 - **Bureaux** : le PMTiles officiel, couche `repertoire-unique-electoral-polygons`. MapLibre identifie chaque bureau par `promoteId: 'codeBureauVote'` ; une propriété texte convient.
-- **Communes, départements, régions** : tuiles IGN `ADMIN_EXPRESS` (`code_insee` dans chaque couche).
+- **Communes, départements, régions** : contours simplifiés d'Etalab (COG 2026), copiés par `python -m atlas_pipeline.geo`. En dessous du zoom 9, la carte colore les communes (`promoteId: 'code'`) ; au-delà, les bureaux. Pour un scrutin cartographié à la commune, chaque bureau prend la couleur de sa commune, grâce à la correspondance bureau → commune des contours.
 - **Circonscriptions législatives** : aucune couche officielle en tuiles. On les produit au build en fusionnant les contours des bureaux par `codeCirconscription` (ou avec la table INSEE bureaux ↔ circonscriptions), ce qui donne un petit PMTiles.
 - **Jointure dans le navigateur** : les résultats du scrutin sont appliqués par `setFeatureState`. Aucun plafond d'entités ; changer de scrutin ne recharge aucune géométrie. `feature-state` ne sert qu'au style de remplissage : tout ce qui doit servir à filtrer doit être présent dans la tuile.
 
@@ -578,7 +581,7 @@ Nouvelle base, mais avec des outils déjà maîtrisés :
 | Besoin | Choix | Remarque |
 |---|---|---|
 | Application | React 19 + TypeScript + Vite | Base connue |
-| Carte | MapLibre GL JS (v6, ESM ; v5 dans le prototype) + `pmtiles` (`addProtocol`) | Pas de deck.gl : MapLibre gère seul les aplats et les cercles pour environ 70 000 entités, et deck.gl ajouterait un second contexte WebGL sans bénéfice à cette échelle |
+| Carte | MapLibre GL JS 6 (ESM seul : `optimizeDeps.exclude`, worker compilé par Vite et déclaré par `setWorkerUrl`) + `pmtiles` (`addProtocol`) | Pas de deck.gl : MapLibre gère seul les aplats et les cercles pour environ 70 000 entités, et deck.gl ajouterait un second contexte WebGL sans bénéfice à cette échelle |
 | Graphiques | ECharts (import à la carte) via un petit wrapper maison | Leçon du projet finances : `echarts-for-react` avec React 19 peut afficher un graphique vide sans erreur |
 | Lecture Parquet | hyparquet + `hyparquet-compressors` (pour le ZSTD) | Environ 10 Ko compressé, lecture par requêtes Range. DuckDB-WASM (environ 2,8 Mo compressé, démarrage de 150 à 300 ms) seulement pour un futur mode requêtes |
 | Données et cache | TanStack Query | Annulation et mise en cache des requêtes |
@@ -588,6 +591,13 @@ Nouvelle base, mais avec des outils déjà maîtrisés :
 | Hébergement | Cloudflare Pages, 0 € strict | Voir l'ADR-001 |
 
 Budgets : moins de 450 Ko de JavaScript initial compressé (MapLibre compris) et 3 Mo de données au plus par scrutin. Lighthouse mobile d'au moins 90.
+
+**Squelette réalisé le 24/09** (`app/`) :
+- sélecteur de scrutin dans l'URL (`?scrutin=…`), carte « Tête » par bloc avec trois paliers d'intensité, légende, détail du territoire survolé ;
+- vue nationale par commune, bureaux à partir du zoom 9, bascule automatique au niveau commune pour les municipales 2026 ;
+- palette des cinq blocs validée : extrême gauche `#A0283C`, gauche `#E0607E`, centre `#D9960A`, droite `#5AA0D0`, extrême droite `#3558A6` (écart minimal de 13 pour les daltoniens) ; avec cinq couleurs, **le plancher d'intensité remonte à 0,8** (à 0,6, extrême gauche et gauche pâlies se confondent) ;
+- vérifications : TypeScript, oxlint, 5 tests Vitest, build de production testé dans le navigateur ;
+- JavaScript : 457 Ko compressés, juste au-dessus du budget, plus le worker de MapLibre (510 Ko, chargé à part) : découpage à prévoir.
 
 ## 12. Exigences priorisées
 
@@ -629,7 +639,7 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 
 | Phase | Contenu | Période visée |
 |---|---|---|
-| 0 — Prototype et ménage | Prototype de carte (**fait le 24/09**, § 7.5), archivage de `Data/` hors du dépôt (**fait le 24/09**), tag `prototype-v0`, squelette du dépôt, `CLAUDE.md` du projet, maquettes (§ 16) | Fin septembre – mi-octobre 2026 |
+| 0 — Prototype et ménage | **Fait le 24/09** : prototype de carte (§ 7.5), archivage de `Data/`, tag `prototype-v0`, squelette de l'application (§ 11), `CLAUDE.md`. Reste : maquettes (§ 16) | Fin septembre – mi-octobre 2026 |
 | 1 — Pipeline v1 | **Fait le 24/09** (§ 10) : manifeste des sources, modèle du § 6, référentiel des nuances, 51 tests. Reste : agrégats par circonscription et par région, totaux officiels des autres tours | Octobre |
 | 2 — Géographie | Carte branchée sur le PMTiles officiel et les tuiles IGN, couche des circonscriptions, encarts outre-mer, mesure des temps d'affichage | Octobre – novembre |
 | 3 — MVP front | Exigences P0, **bêta publique** | Novembre – mi-décembre |
@@ -663,6 +673,7 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 | Q7 | Renommer le dépôt GitHub | **Fait le 24/09** : `github.com/aurelien032-glitch/atlas-electoral` (l'ancienne adresse redirige) | — |
 | Q8 | Circonscriptions des législatives 2024 : le code a disparu des données. Quelle source pour la correspondance bureaux ↔ circonscriptions (table INSEE 2022, contours 2022) ? | Ouvert | Agrégats par circonscription |
 | Q9 | Totaux officiels des autres tours pour la réconciliation : sources à relever (Conseil constitutionnel, ministère) | Ouvert | Tests |
+| Q10 | Communes fusionnées depuis le scrutin : les contours sont au COG 2026, les résultats 2022 et 2024 au COG de leur année, d'où quelques communes blanches. Appliquer la table de passage du COG dans le pipeline ? | Ouvert | Carte nationale |
 | Q6 | Publication de nos données sur data.gouv | **Tranché** : plus tard | P2 |
 
 ## 16. Outillage Claude : skills, plugins, connecteurs

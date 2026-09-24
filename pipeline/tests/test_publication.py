@@ -83,6 +83,13 @@ def test_agregat_france_egal_a_la_somme_des_bureaux(con, scrutin):
     assert france == bureaux
 
 
+@pytest.mark.parametrize("scrutin", SCRUTINS)
+def test_tete_precalculee_partout_ou_il_y_a_des_suffrages(con, scrutin):
+    for nom in ("bureaux.parquet", "agregats.parquet"):
+        n = con.sql(f"SELECT count(*) FROM {fichier(scrutin, nom)} WHERE exprimes > 0 AND tete IS NULL").fetchone()[0]
+        assert n == 0, nom
+
+
 def test_reconciliation_avec_les_totaux_officiels():
     with open(REFERENTIELS / "totaux_officiels.csv", encoding="utf-8") as f:
         officiels = [r for r in csv.DictReader(f) if r["id_election"] in SCRUTINS]

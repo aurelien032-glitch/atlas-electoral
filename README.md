@@ -1,61 +1,36 @@
 # Atlas électoral
 
-Visualisation interactive et publique des résultats de scrutins électoraux français
-(présidentielles, législatives, européennes, municipales…) jusqu'au niveau du **bureau de vote**.
+Visualisation interactive et publique des résultats des élections françaises (présidentielles, législatives,
+européennes, municipales…), de la France entière jusqu'au **bureau de vote**, à partir des données officielles.
 
-> **Refonte en cours.** Les dossiers `api/` et `web/` contiennent le prototype v0. La nouvelle
-> conception (site 100 % statique, sources officielles, grille des nuances) est décrite dans le
-> [plan de conception](docs/PLAN.md). Déjà en place : le [pipeline de données](pipeline/README.md),
-> les [référentiels](referentiels/README.md) et un [prototype de carte](spikes/carte-pmtiles/README.md).
+> **En construction.** La conception, les choix et leurs raisons sont décrits dans le
+> [plan de conception](docs/PLAN.md).
 
-## Stack (prototype v0)
+## Organisation
 
-| Couche | Technologies |
+| Dossier | Contenu |
 |---|---|
-| API | Python · FastAPI · DuckDB · tuiles vectorielles (mercantile, shapely) |
-| Web | React 19 · TypeScript · Vite · MapLibre GL · deck.gl · ECharts |
-| Déploiement | Docker Compose (API :8000, Web :8080 via nginx) |
+| [`pipeline/`](pipeline/README.md) | Python + DuckDB : lit les résultats officiels de data.gouv.fr à distance et publie des fichiers compacts (16 Mo pour 7 tours de scrutin), contrôlés par 58 tests |
+| [`referentiels/`](referentiels/README.md) | Grille des nuances politiques, attributions, totaux officiels, liste des bureaux des contours |
+| [`app/`](app/README.md) | Site statique : React, TypeScript, Vite, MapLibre GL JS |
+| [`docs/`](docs/PLAN.md) | Plan de conception et décisions |
+| [`spikes/`](spikes/carte-pmtiles/README.md) | Prototypes exploratoires |
 
-## Structure
-
-```
-api/        API FastAPI, endpoints élections / géo / recherche / tuiles, ETL (api/etl)
-web/        Front-end React (cartes choroplèthes, graphiques de résultats)
-Data/       Données sources — NON versionnées (voir ci-dessous)
-```
-
-## Données
-
-Les données ne sont pas incluses dans le dépôt (plusieurs Go). Sources open data :
-
-- Résultats électoraux : [data.gouv.fr — Ministère de l'Intérieur](https://www.data.gouv.fr/fr/pages/donnees-des-elections/)
-- Répertoire électoral unique (bureaux de vote) : INSEE
-- Fonds de carte : IGN / data.gouv.fr
-
-Placer les fichiers dans `Data/Election/` et `Data/Map/`, puis construire la base :
+## Démarrer
 
 ```bash
-cd api
-python etl/processor.py
-python etl/precalc_geometries.py
-python etl/add_indexes.py
+cd pipeline && pip install -r requirements.txt
+python -m atlas_pipeline.construire   # résultats des scrutins → ../publication/v1
+python -m atlas_pipeline.geo          # contours simplifiés (Etalab) → ../publication/v1/geo
+cd ../app && npm install && npm run dev
 ```
 
-## Lancer le projet
+## Sources
 
-```bash
-docker compose up --build
-```
-
-- Web : http://localhost:8080
-- API : http://localhost:8000 (docs : http://localhost:8000/docs)
-
-En développement :
-
-```bash
-cd api && pip install -r requirements.txt && uvicorn main:app --reload
-cd web && npm ci && npm run dev
-```
+- Résultats : ministère de l'Intérieur, jeu « Données des élections agrégées » sur data.gouv.fr
+- Contours des bureaux de vote : « Proposition de contours des bureaux de vote », data.gouv.fr (2022, indicatifs)
+- Contours administratifs : IGN (ADMIN EXPRESS), versions simplifiées publiées par Etalab
+- Blocs politiques : circulaire du ministère de l'Intérieur de février 2026 (INTP2602966C)
 
 ## Licence
 

@@ -156,11 +156,29 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
                sum(votants)::INTEGER AS votants, sum(blancs)::INTEGER AS blancs,
                sum(nuls)::INTEGER AS nuls, sum(exprimes)::INTEGER AS exprimes
         FROM g GROUP BY ALL""" for niveau, expr in NIVEAUX.items())
-    ecrire(con, f"SELECT * FROM ({participation}) ORDER BY niveau, code", dossier / "agregats.parquet")
     voix = " UNION ALL ".join(f"""
         SELECT '{niveau}' AS niveau, {expr} AS code, c.cand, sum(b.voix)::INTEGER AS voix
         FROM brut_cle b JOIN cand c USING (cle) GROUP BY ALL""" for niveau, expr in NIVEAUX.items())
-    ecrire(con, f"SELECT * FROM ({voix}) ORDER BY niveau, code, cand", dossier / "agregats_voix.parquet")
+    con.sql(f"CREATE OR REPLACE TEMP TABLE agr_voix AS {voix}")
+    con.sql("""
+        CREATE OR REPLACE TEMP TABLE agr_classement AS
+        SELECT *, row_number() OVER (PARTITION BY niveau, code ORDER BY voix DESC, cand) AS rang
+        FROM agr_voix""")
+    # Comme pour les bureaux, la candidature en tête et son avance sont précalculées : la vue
+    # nationale (communes) s'affiche sans décoder les voix de chaque candidature.
+    ecrire(con, f"""
+        SELECT a.*,
+               CASE WHEN a.exprimes > 0 THEN p.cand END AS tete,
+               coalesce(a.exprimes > 0 AND p.voix = s.voix, false) AS egalite,
+               CASE WHEN a.exprimes > 0
+                    THEN round(10000.0 * (p.voix - coalesce(s.voix, 0)) / a.exprimes)::SMALLINT
+               END AS avance_x10000
+        FROM ({participation}) a
+        LEFT JOIN agr_classement p ON p.niveau = a.niveau AND p.code = a.code AND p.rang = 1
+        LEFT JOIN agr_classement s ON s.niveau = a.niveau AND s.code = a.code AND s.rang = 2
+        ORDER BY a.niveau, a.code""", dossier / "agregats.parquet")
+    ecrire(con, "SELECT niveau, code, cand, voix FROM agr_voix ORDER BY niveau, code, cand",
+           dossier / "agregats_voix.parquet")
 
     # 6. Contrôles : les écarts bloquants arrêtent le build, les autres vont dans le manifeste.
     c = {}
