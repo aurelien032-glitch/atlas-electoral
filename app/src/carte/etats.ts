@@ -1,37 +1,39 @@
+import { classeDe } from '../calculs/classes'
+import type { Mesure } from '../calculs/parts'
 import type { Bloc, Resultat } from '../donnees/types'
-import { BLOCS_COLORES, COULEUR_BLOC, GRIS, estColore, palier } from './couleurs'
+import { COULEUR_BLOC, FOND_CARTE, GRIS, estColore, palier } from './couleurs'
 
-/** Catégories de la carte « Tête », dans l'ordre de l'expression de couleur MapLibre. */
-export const CATEGORIES = [...BLOCS_COLORES, 'DIV', 'NC', 'EGALITE'] as const
-export type Categorie = (typeof CATEGORIES)[number]
-
-export const COULEUR_CATEGORIE: Record<Categorie, string> = {
-  ...COULEUR_BLOC,
-  DIV: GRIS.divers,
-  NC: GRIS.nonClasse,
-  EGALITE: GRIS.egalite,
-}
-
-/** État MapLibre (feature-state) d'un territoire : catégorie de couleur et opacité. */
+/**
+ * État MapLibre (feature-state) d'un territoire. Sans état, un territoire n'est pas peint : il reste
+ * « sans résultat ». Les hachures signalent une valeur qui n'a pas de sens (pas de candidat du bloc,
+ * territoire non comparable).
+ */
 export interface Etat {
-  categorie: number
+  couleur: string
   opacite: number
+  hachure: boolean
 }
+
+const HACHURE: Etat = { couleur: FOND_CARTE, opacite: 1, hachure: false }
 
 /**
  * Couleur d'un territoire sur la carte « Tête » : le bloc de la candidature en tête, plus ou moins
  * intense selon son avance. Les égalités et les gris ne sont pas nuancés. Renvoie null quand il n'y a
  * aucun suffrage exprimé : le territoire reste alors « sans résultat ».
  */
-export function etatTerritoire(resultat: Resultat, blocDe: (cand: number) => Bloc): Etat | null {
+export function etatTete(resultat: Resultat, blocDe: (cand: number) => Bloc): Etat | null {
   if (resultat.tete === null || resultat.exprimes === 0) return null
-  if (resultat.egalite) return { categorie: CATEGORIES.indexOf('EGALITE'), opacite: 1 }
+  if (resultat.egalite) return { couleur: GRIS.egalite, opacite: 1, hachure: false }
   const bloc = blocDe(resultat.tete)
-  return {
-    categorie: CATEGORIES.indexOf(bloc),
-    opacite: estColore(bloc) ? palier(resultat.avance_x10000 ?? 0).opacite : 1,
-  }
+  if (estColore(bloc)) return { couleur: COULEUR_BLOC[bloc], opacite: palier(resultat.avance_x10000 ?? 0).opacite, hachure: false }
+  return { couleur: bloc === 'DIV' ? GRIS.divers : GRIS.nonClasse, opacite: 1, hachure: false }
 }
 
-/** Paires (index de catégorie, couleur) pour l'expression MapLibre 'match'. */
-export const COULEURS_PAR_INDEX: (number | string)[] = CATEGORIES.flatMap((c, i) => [i, COULEUR_CATEGORIE[c]])
+/**
+ * Couleur d'un territoire sur une carte en classes (score, participation, évolution) : la couleur de
+ * sa classe, ou des hachures quand la valeur n'a pas de sens. Valeur et seuils dans la même unité.
+ */
+export function etatClasse(valeur: Mesure, seuils: readonly number[], couleurs: readonly string[]): Etat {
+  if (valeur === null) return { ...HACHURE, hachure: true }
+  return { couleur: couleurs[classeDe(valeur, seuils)], opacite: 1, hachure: false }
+}

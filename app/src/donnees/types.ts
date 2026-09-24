@@ -51,6 +51,33 @@ export interface Agregat extends Resultat {
   code: string
 }
 
+/** Voix d'une candidature dans un bureau (voix.parquet). */
+export interface VoixBureau {
+  code_bv: string
+  cand: number
+  voix: number
+}
+
+/** Voix d'une candidature dans un territoire agrégé (agregats_voix.parquet). */
+export interface VoixAgregat {
+  niveau: Agregat['niveau']
+  code: string
+  cand: number
+  voix: number
+}
+
+/** Département ou commune du découpage 2026 : nom et emprise (geo/territoires.parquet). */
+export interface Territoire {
+  niveau: 'departement' | 'commune'
+  code: string
+  nom: string
+  departement: string
+  ouest: number | null
+  sud: number | null
+  est: number | null
+  nord: number | null
+}
+
 export interface Candidature {
   cand: number
   portee: string

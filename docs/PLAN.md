@@ -16,7 +16,9 @@
 > - carte « Tête » : intensité en 3 paliers selon l'avance (serré, net, large), catégorie dédiée pour les égalités ;
 > - pipeline de données v1 réalisé (§ 10) ; dépôt renommé `atlas-electoral` ;
 > - squelette de l'application réalisé (`app/`, § 11) ; prototype v0 retiré, conservé sous le tag `prototype-v0` ;
-> - contours administratifs : versions simplifiées d'Etalab, les tuiles IGN étant trop lourdes (§ 4.1).
+> - contours administratifs : versions simplifiées d'Etalab, les tuiles IGN étant trop lourdes (§ 4.1) ;
+> - maquettes : direction **« A · Éditorial »** retenue (Newsreader et Source Sans 3, papier chaud) ; mode Score dans la **teinte du bloc** de la cible ; mode Évolution en **orange ↔ violet** (d'après ColorBrewer PuOr) ;
+> - direction A codée dans `app/` (§ 11) : modes Tête, Score, Participation et Évolution, détail d'un territoire jusqu'au bureau. Choix d'affichage proposés, à valider : Q11.
 >
 > Méthode : profilage des données (`data:explore-data`), décision d'architecture au format ADR (`engineering:architecture`), cadrage produit (`product-management:write-spec`), principes de visualisation (`dataviz`), audit du prototype (`api-coverage-auditor`, `feature-dev:code-explorer`), recherche des sources et des hébergeurs vérifiée par de vraies requêtes HTTP. Les chiffres « mesurés » viennent de requêtes DuckDB sur les fichiers de `Data/` (annexe A).
 
@@ -403,10 +405,14 @@ La couleur suit le rôle de la donnée (skill `dataviz`) :
 | Mode | Question | Encodage |
 |---|---|---|
 | Tête | Qui arrive en tête ? | Catégoriel. Au plus 3 ou 4 couleurs (les forces dominantes du scrutin), les autres en gris. L'intensité traduit l'avance du premier |
-| Score | Où tel candidat ou tel bloc fait-il ses meilleurs scores ? | Séquentiel : une seule teinte, du clair au foncé, avec des seuils ronds |
-| Participation | Où vote-t-on le plus ? | Séquentiel |
-| Évolution | Qui progresse entre deux scrutins ? | Divergent, en points, avec un gris neutre au centre |
+| Score | Où tel candidat ou tel bloc fait-il ses meilleurs scores ? | Séquentiel dans la teinte du bloc de la cible (décidé le 24/09), 5 classes aux seuils ronds. Candidature pour les scrutins nationaux, bloc pour tous |
+| Participation | Où vote-t-on le plus ? | Séquentiel sarcelle, sans lien avec les blocs |
+| Évolution | Qui progresse entre deux scrutins ? | Divergent orange ↔ violet (décidé le 24/09), en points (seuils ±1, ±5, ±10), gris « stable » au centre ; lu à la commune |
 | Voix | Où sont les électeurs ? | Symboles proportionnels ou cartogramme de Dorling : taille = voix, couleur = bloc |
+
+**Seuils des classes (Score, Participation).** Quantiles pondérés par les électeurs (chaque classe regroupe à peu près autant d'exprimés ou d'inscrits, pas autant de territoires, que les petites communes domineraient), arrondis au plus grand pas rond (20, 10, 5, 2, 1, 0,5… points) qui ne les déplace pas de plus de 40 % de leur plus petit écart. Exemple : Emmanuel Macron en 2022, au bureau : seuils 20, 25, 30 et 35 %.
+
+**Valeurs sans objet.** Un territoire sans résultat n'est pas peint (il laisse voir le fond). Un bloc sans candidature dans un territoire (législatives, municipales), ou un territoire absent de l'un des deux scrutins comparés, est **hachuré** : une texture qui se lit sans la couleur, plutôt qu'un faux « 0 % » ou une fausse chute. Aux législatives 2024, la droite n'avait aucun candidat dans 6 955 communes (dont tout le Tarn-et-Garonne).
 
 **Biais de surface.** Les communes rurales couvrent l'essentiel du territoire. Une carte en aplats surreprésente donc visuellement le vote rural. Le mode « Voix » et le rappel systématique du nombre d'inscrits corrigent cette lecture.
 
@@ -499,6 +505,7 @@ Les conventions politiques (rouge, rose, vert, bleu, marine…) ne garantissent 
 Règles qui en découlent :
 
 - partir des couleurs d'usage, puis ajuster clarté et teinte jusqu'à ce que le validateur passe (en mode clair et en mode sombre) ;
+- dégradés validés le 24/09 (`--ordinal` : clarté monotone, écart d'au moins 0,06 entre classes, classe la plus claire à 2:1 au moins sur le fond papier) : Score dans la teinte OKLCH de chaque bloc, par exemple extrême droite `#97aedd` → `#1e3b7d` ; Participation en sarcelle `#72b7b7` → `#034b4b` ; Évolution `#914601` · `#cd6a1d` · `#efa374` · `#dddbd5` · `#bda7e5` · `#8c6ebc` · `#5e388f` (toutes paires : écart d'au moins 13,3 pour les daltoniens, 15,1 en vision normale) ;
 - au plus 3 ou 4 couleurs sur une même carte « Tête », les autres forces en gris ;
 - toujours doubler la couleur : étiquettes, légende, vue tableau, texture optionnelle.
 
@@ -586,7 +593,7 @@ Nouvelle base, mais avec des outils déjà maîtrisés :
 | Lecture Parquet | hyparquet + `hyparquet-compressors` (pour le ZSTD) | Environ 10 Ko compressé, lecture par requêtes Range. DuckDB-WASM (environ 2,8 Mo compressé, démarrage de 150 à 300 ms) seulement pour un futur mode requêtes |
 | Données et cache | TanStack Query | Annulation et mise en cache des requêtes |
 | État | L'URL comme source de vérité, plus un petit store | Permaliens gratuits |
-| Style | Tailwind v4 | — |
+| Style | CSS avec variables (direction A) ; polices auto-hébergées par `@fontsource-variable` | Pas de Google Fonts : aucune requête vers un tiers |
 | Tests | Vitest ; Playwright pour les parcours ; pytest pour le pipeline | — |
 | Hébergement | Cloudflare Pages, 0 € strict | Voir l'ADR-001 |
 
@@ -598,6 +605,14 @@ Budgets : moins de 450 Ko de JavaScript initial compressé (MapLibre compris) et
 - palette des cinq blocs validée : extrême gauche `#A0283C`, gauche `#E0607E`, centre `#D9960A`, droite `#5AA0D0`, extrême droite `#3558A6` (écart minimal de 13 pour les daltoniens) ; avec cinq couleurs, **le plancher d'intensité remonte à 0,8** (à 0,6, extrême gauche et gauche pâlies se confondent) ;
 - vérifications : TypeScript, oxlint, 5 tests Vitest, build de production testé dans le navigateur ;
 - JavaScript : 457 Ko compressés, juste au-dessus du budget, plus le worker de MapLibre (510 Ko, chargé à part) : découpage à prévoir.
+
+**Direction A codée le 24/09** (`app/`) :
+- panneau éditorial à gauche (volet en bas sur mobile), onglets de mode et légende posés sur la carte, infobulle au survol ;
+- modes **Tête**, **Score** (candidature ou bloc), **Participation** et **Évolution** (bloc, scrutin de départ, scrutin d'arrivée) ; l'état complet est dans l'URL (`?scrutin=…&mode=…&cible=…&bloc=…&de=…&sel=…`) ;
+- **détail d'un territoire** (clic sur la carte) : fil d'Ariane France › département › commune › bureau, participation, toutes les candidatures en tableau avec barres et comparaison au niveau supérieur, cas limites et nuances attribuées signalés ;
+- nouvel index `geo/territoires.parquet` (617 Ko : nom, département et emprise des 35 124 départements et communes) pour le fil d'Ariane et le cadrage ;
+- vérifications : TypeScript, oxlint, 16 tests Vitest, 65 tests pytest ; parcours vérifiés dans le navigateur (ordinateur et mobile) ;
+- JavaScript : 466 Ko compressés (budget 450) ; polices : 87 Ko au premier chargement (Newsreader sans l'axe de taille optique : 58 Ko au lieu de 132).
 
 ## 12. Exigences priorisées
 
@@ -639,10 +654,10 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 
 | Phase | Contenu | Période visée |
 |---|---|---|
-| 0 — Prototype et ménage | **Fait le 24/09** : prototype de carte (§ 7.5), archivage de `Data/`, tag `prototype-v0`, squelette de l'application (§ 11), `CLAUDE.md`. Reste : maquettes (§ 16) | Fin septembre – mi-octobre 2026 |
+| 0 — Prototype et ménage | **Fait le 24/09** : prototype de carte (§ 7.5), archivage de `Data/`, tag `prototype-v0`, squelette de l'application (§ 11), `CLAUDE.md`, maquettes (direction A retenue) | Fin septembre – mi-octobre 2026 |
 | 1 — Pipeline v1 | **Fait le 24/09** (§ 10) : manifeste des sources, modèle du § 6, référentiel des nuances, 51 tests. Reste : agrégats par circonscription et par région, totaux officiels des autres tours | Octobre |
 | 2 — Géographie | Carte branchée sur le PMTiles officiel et les tuiles IGN, couche des circonscriptions, encarts outre-mer, mesure des temps d'affichage | Octobre – novembre |
-| 3 — MVP front | Exigences P0, **bêta publique** | Novembre – mi-décembre |
+| 3 — MVP front | Exigences P0, **bêta publique**. Commencé le 24/09 : direction A et quatre modes de carte (§ 11) | Novembre – mi-décembre |
 | 4 — Profondeur | Comparateur, évolution, symboles proportionnels, adresse vers bureau, exports, correctifs de contours | Janvier 2027 |
 | 5 — Historique | 1999–2021 au niveau commune, COG, séries longues | Février 2027 |
 | 6 — Présidentielle 2027 | Tuiles de production découpées (moins de 25 Mio par fichier), ingestion rapide dès la publication, tests de charge | Mars – avril 2027 |
@@ -674,6 +689,7 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 | Q8 | Circonscriptions des législatives 2024 : le code a disparu des données. Quelle source pour la correspondance bureaux ↔ circonscriptions (table INSEE 2022, contours 2022) ? | Ouvert | Agrégats par circonscription |
 | Q9 | Totaux officiels des autres tours pour la réconciliation : sources à relever (Conseil constitutionnel, ministère) | Ouvert | Tests |
 | Q10 | Communes fusionnées depuis le scrutin : les contours sont au COG 2026, les résultats 2022 et 2024 au COG de leur année, d'où quelques communes blanches. Appliquer la table de passage du COG dans le pipeline ? | Ouvert | Carte nationale |
+| Q11 | Choix d'affichage proposés en codant la direction A : hachures pour « pas de candidat » et « non comparable » ; évolution lue à la commune ; participation en sarcelle ; colonne de comparaison seulement quand elle a un sens (scrutin national, ou bureau comparé à sa commune) ; noms de famille en casse d'usage (« LE PEN » → « Le Pen »), noms de listes inchangés | Proposé le 24/09, à valider | Bêta |
 | Q6 | Publication de nos données sur data.gouv | **Tranché** : plus tard | P2 |
 
 ## 16. Outillage Claude : skills, plugins, connecteurs

@@ -109,3 +109,22 @@ def test_contours_couvrent_la_presidentielle_2022():
     if jointure is None:
         pytest.skip("référentiel des contours absent")
     assert jointure["taux_inscrits_metropole"] >= 0.99
+
+
+TERRITOIRES = PUBLICATION / "geo" / "territoires.parquet"
+
+
+@pytest.mark.skipif(not TERRITOIRES.exists(), reason="lancer d'abord python -m atlas_pipeline.geo")
+@pytest.mark.parametrize("scrutin", SCRUTINS)
+def test_territoires_nommes(con, scrutin):
+    # Chaque département des résultats a un nom. Les communes absentes du COG 2026 (fusionnées depuis,
+    # question Q10) restent marginales en inscrits ; les Français de l'étranger n'ont pas de commune.
+    t = "'" + TERRITOIRES.as_posix() + "'"
+    agregats = fichier(scrutin, "agregats.parquet")
+    sans_nom = con.sql(f"""SELECT count(*) FROM {agregats} WHERE niveau = 'departement'
+                           AND code NOT IN (SELECT code FROM {t} WHERE niveau = 'departement')""").fetchone()[0]
+    assert sans_nom == 0
+    hors_cog = con.sql(f"""SELECT sum(inscrits) FILTER (WHERE code NOT IN (SELECT code FROM {t} WHERE niveau = 'commune'))
+                                  / sum(inscrits)
+                           FROM {agregats} WHERE niveau = 'commune' AND code NOT LIKE 'ZZ%'""").fetchone()[0]
+    assert (hors_cog or 0) < 0.005

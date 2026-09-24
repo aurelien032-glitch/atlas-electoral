@@ -19,8 +19,8 @@ Le prototype v0 (FastAPI + DuckDB) est conservé sous le tag `prototype-v0` : ne
 ## Commandes
 
 ```bash
-cd pipeline && python -m atlas_pipeline.construire && python -m pytest   # données + 58 tests
-cd pipeline && python -m atlas_pipeline.geo                              # contours simplifiés Etalab
+cd pipeline && python -m atlas_pipeline.construire && python -m pytest   # données + 65 tests
+cd pipeline && python -m atlas_pipeline.geo                              # contours Etalab + index des territoires
 cd app && npm run dev        # sert aussi ../publication sous /data
 cd app && npx tsc -b && npm run lint && npm test && npm run build          # avant tout commit
 ```
@@ -59,13 +59,21 @@ cd app && npx tsc -b && npm run lint && npm test && npm run build          # ava
 - MapLibre 6 est en ESM seul : garder `optimizeDeps.exclude: ['maplibre-gl']`, `worker.format: 'es'` et
   `setWorkerUrl(urlWorker)` (import `?worker&url`), sinon le worker ne se charge pas.
 - Appliquer les résultats dès `style.load`, pas `load` (qui attend un rendu complet, bloqué en arrière-plan).
+- Le feature-state porte `couleur`, `opacite`, `hachure` et `selection`. Sans état, un territoire n'est pas
+  peint (« sans résultat ») ; les hachures marquent une valeur sans objet (pas de candidat du bloc, pas
+  comparable). `removeFeatureState` efface aussi la sélection : la remettre après chaque coloriage.
+- Le mode Évolution se lit à la commune : les numéros de bureaux changent d'un scrutin à l'autre.
 
 ## Couleurs et accessibilité
 
 - Toute palette passe le validateur du skill `dataviz` (`node scripts/validate_palette.js "<hex,…>" --pairs all`)
-  **à chaque niveau d'opacité utilisé** : avec cinq blocs, le plancher d'intensité est 0,8.
+  **à chaque niveau d'opacité utilisé** : avec cinq blocs, le plancher d'intensité est 0,8. Les dégradés
+  (Score dans la teinte du bloc, Participation en sarcelle, bras de l'Évolution) passent `--ordinal`, sur le
+  fond papier `#F6F4EF`. Palettes dans `app/src/carte/couleurs.ts`.
 - Couleur toujours doublée (légende, panneau de détail, vue tableau à venir). Charte sobre et neutre, sans
   codes visuels de l'État (DSFR, Marianne).
+- Direction visuelle « A · Éditorial » : Newsreader (titres) et Source Sans 3 (texte), **auto-hébergées** par
+  `@fontsource-variable` (pas de Google Fonts : aucune requête vers un tiers).
 
 ## Style de code
 

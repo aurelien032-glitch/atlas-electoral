@@ -1,7 +1,8 @@
 # Application
 
 Site statique de l'Atlas électoral : React 19, TypeScript, Vite, MapLibre GL JS 6 (tuiles PMTiles officielles
-des bureaux de vote et tuiles IGN), hyparquet pour lire les fichiers publiés par le pipeline.
+des bureaux de vote, contours simplifiés d'Etalab), hyparquet pour lire les fichiers publiés par le pipeline.
+Direction visuelle « A · Éditorial » : Newsreader et Source Sans 3, auto-hébergées (`@fontsource-variable`).
 
 ```bash
 npm install
@@ -12,9 +13,12 @@ npm run build    # vérification TypeScript puis build de production
 
 Organisation :
 
-| Dossier | Rôle |
+| Dossier ou fichier | Rôle |
 |---|---|
-| `src/donnees/` | Types, lecture des Parquet (hyparquet), requêtes TanStack Query |
-| `src/carte/` | Carte MapLibre, couleurs validées, calcul des feature-states |
-| `src/panneau/` | Légende et détail du territoire survolé |
-| `src/url.ts` | État de la vue dans l'URL (`?scrutin=…`) |
+| `src/donnees/` | Types, lecture des Parquet (hyparquet), requêtes TanStack Query, index des territoires, noms |
+| `src/calculs/` | Parts, écarts entre scrutins, seuils de classes lisibles (fonctions pures, testées) |
+| `src/modes.ts` | Valeurs et coloriage de chaque mode de carte : Tête, Score, Participation, Évolution |
+| `src/cibles.ts` | Ce que montre le mode Score : une candidature ou un bloc |
+| `src/carte/` | Carte MapLibre, palettes validées, feature-states, légende, onglets, infobulle |
+| `src/panneau/` | Aperçu de chaque mode et détail d'un territoire (fil d'Ariane, résultats en tableau) |
+| `src/vue.ts`, `src/url.ts` | État de la vue dans l'URL (`?scrutin=…&mode=…&cible=…&bloc=…&de=…&sel=…`) |

@@ -1,47 +1,149 @@
-import type { Survol } from '../carte/Carte'
 import { LIBELLE_BLOC, palier } from '../carte/couleurs'
+import type { Cible } from '../cibles'
 import { nomCandidature } from '../donnees/libelles'
-import type { Candidature, Resultat } from '../donnees/types'
+import { communeDu, departementDe, numeroDu, titreDe } from '../donnees/territoires'
+import type { Bloc, Candidature, Resultat } from '../donnees/types'
+import { formatNombre, formatPart } from '../format'
+import type { Selection } from '../vue'
+import { Barres, type LigneResultat } from './Barres'
+import { couleurDuBloc, type Actions, type Contexte } from './contexte'
 
-const nombre = new Intl.NumberFormat('fr-FR')
-const pourcentage = (x: number) => `${(100 * x).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
-
-interface Props {
-  survol: Survol | null
-  resultat: Resultat | undefined
-  candidats: Map<number, Candidature>
+export interface Parent {
+  nom: string
+  exprimes: number
+  voix: ReadonlyMap<number, number>
 }
 
-export function Detail({ survol, resultat, candidats }: Props) {
-  if (!survol) return <p className="note">Survolez ou touchez un territoire.</p>
-  const titre = survol.niveau === 'bureau' ? `${survol.nom} — bureau ${survol.numero ?? ''}` : survol.nom
-  if (!resultat) return <><h2>{titre}</h2><p className="note">Aucun résultat rattaché à ce territoire pour ce scrutin.</p></>
-  if (resultat.exprimes === 0 || resultat.tete === null) return <><h2>{titre}</h2><p className="note">Aucun suffrage exprimé.</p></>
+interface Props {
+  ctx: Contexte
+  selection: Selection
+  resultat: Resultat | undefined
+  /** Voix de chaque candidature présente dans le territoire (undefined pendant le chargement). */
+  lignes: readonly { cand: number; voix: number }[] | undefined
+  parent: Parent | undefined
+  cible: Cible | undefined
+  /** Valeur du territoire dans le mode courant (score, évolution…), déjà rédigée. */
+  complement: string | undefined
+  actions: Actions
+}
 
-  const tete = candidats.get(resultat.tete)
-  const avance = resultat.egalite
-    ? 'égalité en tête'
-    : `avance de ${((resultat.avance_x10000 ?? 0) / 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} points (${palier(resultat.avance_x10000 ?? 0).libelle})`
+function FilAriane({ ctx, selection, actions }: Pick<Props, 'ctx' | 'selection' | 'actions'>) {
+  const nom = (code: string) => ctx.index.noms.get(code) ?? code
+  const commune = selection.niveau === 'bureau' ? communeDu(selection.code) : selection.code
+  const departement = selection.niveau === 'departement' ? selection.code : departementDe(commune)
+  const etapes: { libelle: string; selection: Selection | undefined }[] = [
+    { libelle: 'France', selection: undefined },
+    { libelle: nom(departement), selection: { niveau: 'departement', code: departement } },
+  ]
+  if (selection.niveau !== 'departement') etapes.push({ libelle: nom(commune), selection: { niveau: 'commune', code: commune } })
+  if (selection.niveau === 'bureau') etapes.push({ libelle: `Bureau ${numeroDu(selection.code)}`, selection })
+  return (
+    <nav aria-label="Fil d'Ariane" className="ariane">
+      <ol>
+        {etapes.map((e, i) => (
+          <li key={e.libelle + i}>
+            {i === etapes.length - 1
+              ? <span aria-current="page">{e.libelle}</span>
+              : <button type="button" className="lien" onClick={() => actions.territoire(e.selection)}>{e.libelle}</button>}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  )
+}
+
+export function Detail({ ctx, selection, resultat, lignes, parent, cible, complement, actions }: Props) {
+  const titre = titreDe(selection, ctx.index.noms)
+  const entete = (
+    <>
+      <div className="detail-haut">
+        <FilAriane ctx={ctx} selection={selection} actions={actions} />
+        <button type="button" className="fermer" aria-label="Fermer le détail et revenir à la France entière" onClick={() => actions.territoire(undefined)}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </div>
+      <div className="titre">
+        <h1>{titre}</h1>
+        <p className="surtitre-bas">{ctx.scrutin.libelle}</p>
+      </div>
+    </>
+  )
+  if (!resultat) return <>{entete}<p className="note">Aucun résultat rattaché à ce territoire pour ce scrutin.</p></>
+  if (resultat.exprimes === 0) return <>{entete}<p className="note">Aucun suffrage exprimé.</p></>
+
+  const nom = (cand: number) => {
+    const c = ctx.parCand.get(cand)
+    return c ? nomCandidature(c) : `candidature ${cand}`
+  }
+  // Au département, les législatives et les municipales comptent des dizaines de candidatures
+  // locales : on les regroupe par bloc.
+  const parBloc = ctx.scrutin.portee !== 'national' && selection.niveau === 'departement'
+  const tries = [...(lignes ?? [])].sort((a, b) => b.voix - a.voix)
+  let phrase: string | undefined
+  if (!parBloc && tries.length >= 2 && resultat.tete !== null) {
+    phrase = resultat.egalite
+      ? `Égalité en tête entre ${nom(tries[0].cand)} et ${nom(tries[1].cand)}.`
+      : `${nom(resultat.tete)} arrive en tête, ${((resultat.avance_x10000 ?? 0) / 100).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} points devant ${nom(tries.find((l) => l.cand !== resultat.tete)?.cand ?? tries[1].cand)} : une avance ${palier(resultat.avance_x10000 ?? 0).libelle}.`
+  }
+
+  let rangees: LigneResultat[]
+  const presentes: Candidature[] = []
+  if (parBloc) {
+    const somme = (paires: Iterable<[number, number]>) => {
+      const m = new Map<Bloc, number>()
+      for (const [cand, voix] of paires) {
+        const bloc = ctx.parCand.get(cand)?.bloc ?? 'NC'
+        m.set(bloc, (m.get(bloc) ?? 0) + voix)
+      }
+      return m
+    }
+    const ici = somme(tries.map((l) => [l.cand, l.voix]))
+    const ailleurs = parent ? somme(parent.voix) : undefined
+    rangees = [...ici].sort((a, b) => b[1] - a[1]).map(([bloc, voix]) => ({
+      cle: bloc, nom: LIBELLE_BLOC[bloc], couleur: couleurDuBloc(bloc), part: voix / resultat.exprimes,
+      partParent: ailleurs && parent ? (ailleurs.get(bloc) ?? 0) / parent.exprimes : undefined,
+      marquee: cible?.bloc === bloc,
+    }))
+  } else {
+    rangees = tries.map((l) => {
+      const c = ctx.parCand.get(l.cand)
+      if (c) presentes.push(c)
+      const voixParent = parent?.voix.get(l.cand)
+      return {
+        cle: String(l.cand), nom: nom(l.cand), couleur: couleurDuBloc(c?.bloc ?? 'NC'), part: l.voix / resultat.exprimes,
+        partParent: parent && voixParent !== undefined ? voixParent / parent.exprimes : undefined,
+        marquee: cible?.retenue(l.cand) ?? false,
+      }
+    })
+  }
+  const casLimites = presentes.filter((c) => c.cas_limite)
+  const attribuees = presentes.some((c) => c.origine_nuance === 'attribuée')
+
   return (
     <>
-      <h2>{titre}</h2>
-      <p className="note">
-        {nombre.format(resultat.inscrits)} inscrits · participation {pourcentage(resultat.votants / resultat.inscrits)}
-      </p>
+      {entete}
+      {phrase && <p className="chapo">{phrase}</p>}
+      {complement && <p className="complement">{complement}</p>}
+      <div className="chiffres trois">
+        <div><strong>{formatNombre(resultat.inscrits)}</strong><span>inscrits</span></div>
+        <div><strong>{formatPart(resultat.votants / resultat.inscrits)}</strong><span>de participation</span></div>
+        <div><strong>{formatNombre(resultat.exprimes)}</strong><span>suffrages exprimés</span></div>
+        <p className="chiffres-note">
+          {formatNombre(resultat.votants)} votants, dont {formatNombre(resultat.blancs)} bulletins blancs et {formatNombre(resultat.nuls)} nuls
+        </p>
+      </div>
       {resultat.votants > resultat.inscrits && (
         <p className="alerte">Plus de votants que d'inscrits : anomalie présente dans les données officielles.</p>
       )}
-      {tete && (
-        <p>
-          En tête : <strong>{nomCandidature(tete)}</strong>
-          <br />
-          {LIBELLE_BLOC[tete.bloc]} · nuance {tete.nuance}
-          {tete.origine_nuance === 'attribuée' && ' (attribuée)'}
-          {tete.cas_limite && ' · cas limite'}
-          <br />
-          {avance}
-        </p>
-      )}
+      {lignes === undefined
+        ? <p className="note">Chargement des voix…</p>
+        : <Barres lignes={rangees} legende={`Résultats, ${titre}`} entete={parBloc ? 'Bloc' : 'Candidature'} parent={parent?.nom} />}
+      <p className="note-bas">
+        En % des suffrages exprimés.
+        {selection.niveau === 'bureau' && ' Contours de bureaux indicatifs, reconstitués à partir du Répertoire électoral unique (2022).'}
+        {attribuees && " Nuances attribuées par le projet quand le ministère n'en donne pas."}
+        {casLimites.length > 0 && ` Classement signalé comme cas limite : ${casLimites.map((c) => `${nomCandidature(c)} (nuance ${c.nuance}, ${LIBELLE_BLOC[c.bloc].toLowerCase()})`).join(', ')}.`}
+      </p>
     </>
   )
 }
