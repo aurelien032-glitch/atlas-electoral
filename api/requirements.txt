@@ -1,8 +1,0 @@
-fastapi
-uvicorn
-duckdb
-pandas
-pyarrow
-numpy
-mercantile
-shapely
