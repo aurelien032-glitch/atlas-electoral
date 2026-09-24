@@ -478,7 +478,10 @@ export default function App() {
           {erreur && <p className="alerte">Données indisponibles : {erreur.message}</p>}
           {chargement && !erreur && <p className="note">Chargement…</p>}
           {vue.page === 'methodologie' && catalogue.data && scrutin && (
-            <Methodologie catalogue={catalogue.data} scrutin={scrutin} onScrutin={actions.scrutin} onRetour={() => modifierUrl({ page: null })} />
+            <Methodologie
+              catalogue={catalogue.data} scrutin={scrutin} noms={index.noms} onScrutin={actions.scrutin}
+              onRetour={() => modifierUrl({ page: null })}
+            />
           )}
           {vue.page !== 'methodologie' && ctx && (selection
             ? <Detail ctx={ctx} selection={selection} resultat={detail?.resultat} lignes={detail?.lignes} parent={detail?.parent}

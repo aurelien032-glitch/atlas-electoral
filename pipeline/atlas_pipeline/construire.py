@@ -433,6 +433,36 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
     return manifeste
 
 
+# Territoires hors de la métropole qui votent à tous les scrutins nationaux (présidentielle, législatives,
+# européennes). Les autres scrutins ne les concernent pas tous (pas de communes à Wallis-et-Futuna, pas de
+# conseil départemental en Martinique ni en Guyane…) : leur absence n'y est pas un manque de la source.
+HORS_METROPOLE = ("971", "972", "973", "974", "975", "976", "977", "978", "986", "987", "988", "ZZ")
+NATIONAUX = ("pres", "legi", "euro")
+
+
+def territoires_absents(con, sortie: Path, identifiant: str, catalogue: dict) -> list[str]:
+    """Territoires hors de la métropole présents au dernier scrutin du même type et du même tour, absents de celui-ci.
+
+    Exceptions connues : Saint-Barthélemy et Saint-Martin étaient des communes de la Guadeloupe jusqu'en
+    juillet 2007 (leurs résultats sont alors comptés en Guadeloupe) ; les Français de l'étranger n'élisent
+    leurs députés que depuis 2012.
+    """
+    annee, type_, tour = identifiant.split("_")
+    # Un second tour de législatives n'a lieu que là où personne n'est élu au premier : ses absences sont
+    # normales. La présidentielle, elle, a un second tour partout.
+    if type_ not in NATIONAUX or (type_ == "legi" and tour == "t2"):
+        return []
+    meme_type = sorted(i for i in catalogue if i.split("_")[1:] == [type_, tour])
+    presents = lambda i: {c for (c,) in con.sql(
+        f"SELECT code FROM {chemin_sql(sortie / i / 'agregats.parquet')} WHERE niveau = 'departement'").fetchall()}
+    attendus = presents(meme_type[-1]) & set(HORS_METROPOLE)
+    if catalogue[identifiant]["date"] < "2007-07-15":
+        attendus -= {"977", "978"}
+    if type_ == "legi" and annee < "2012":
+        attendus -= {"ZZ"}
+    return sorted(attendus - presents(identifiant))
+
+
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("scrutins", nargs="*", help="identifiants à construire (défaut : toute la v1)")
@@ -477,6 +507,8 @@ def main(argv=None) -> None:
         existants = {s["id"]: s for s in json.loads(chemin.read_text(encoding="utf-8"))["scrutins"]}
     for m in manifestes:
         existants[m["id"]] = {k: m[k] for k in ("id", "libelle", "date", "portee", "totaux", "jointure_contours")}
+    for identifiant, entree in existants.items():
+        entree["territoires_absents"] = territoires_absents(con, args.sortie, identifiant, existants)
     catalogue = {
         "version": 1,
         "genere_le": verrou["releve_le"],

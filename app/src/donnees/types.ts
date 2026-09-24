@@ -15,6 +15,11 @@ export interface ScrutinCatalogue {
     taux_inscrits_metropole: number
     niveau_carte: NiveauCarte
   } | null
+  /**
+   * Scrutins nationaux : territoires hors de la métropole (codes « 975 », « ZZ »…) qui votaient mais dont la
+   * source ne contient aucun résultat (présidentielles 2002 et 2007, notamment).
+   */
+  territoires_absents?: string[]
 }
 
 export interface Catalogue {

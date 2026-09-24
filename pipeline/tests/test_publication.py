@@ -252,3 +252,13 @@ def test_arrondissements_de_paris_lyon_et_marseille(con, scrutin):
                            WHERE commune = '{ville}' AND ({ARRONDISSEMENT}) IS NULL""").fetchone()[0]
         assert inscrits + hors == villes[ville], ville
         assert hors <= 0.015 * villes[ville], ville
+
+
+def test_territoires_absents_de_la_source():
+    # Depuis 2012, la source couvre tout l'outre-mer et les Français de l'étranger aux scrutins nationaux ;
+    # avant, des territoires manquent (présidentielles 2002 et 2007…) : le catalogue les nomme.
+    catalogue = {s["id"]: s for s in json.loads(CATALOGUE.read_text(encoding="utf-8"))["scrutins"]}
+    nationaux = [i for i in catalogue if i.split("_")[1] in ("pres", "legi", "euro")]
+    assert all(not catalogue[i]["territoires_absents"] for i in nationaux if i >= "2012")
+    assert {"975", "987", "988", "ZZ"} <= set(catalogue["2007_pres_t1"]["territoires_absents"])
+    assert "ZZ" not in catalogue["2007_legi_t1"]["territoires_absents"]  # députés des Français de l'étranger : 2012

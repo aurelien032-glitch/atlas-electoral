@@ -8,6 +8,8 @@ import { formatNombre, formatPart } from '../format'
 interface Props {
   catalogue: Catalogue
   scrutin: ScrutinCatalogue
+  /** Noms des territoires, pour nommer ceux qui manquent à la source. */
+  noms: ReadonlyMap<string, string>
   onScrutin: (id: string) => void
   onRetour: () => void
 }
@@ -66,10 +68,11 @@ function Section({ titre, children }: { titre: string; children: ReactNode }) {
 }
 
 /** Contrôles d'un scrutin, lus dans son manifeste : ce qui est vérifié et ce qui est seulement signalé. */
-function Controles({ scrutin, manifeste, officiel }: {
+function Controles({ scrutin, manifeste, officiel, noms }: {
   scrutin: ScrutinCatalogue
   manifeste: Manifeste
   officiel: Record<string, string> | undefined
+  noms: ReadonlyMap<string, string>
 }) {
   const c = manifeste.compteurs
   const n = (cle: string) => (typeof c[cle] === 'number' ? (c[cle] as number) : undefined)
@@ -102,6 +105,9 @@ function Controles({ scrutin, manifeste, officiel }: {
   if (j) {
     ajouter('Carte', `${j.niveau_carte === 'bureau' ? 'au bureau de vote' : 'à la commune'} : ${formatPart(j.taux_inscrits_metropole)} des inscrits de métropole trouvent leur bureau dans les contours de ${j.millesime_contours}`)
   }
+  if (scrutin.territoires_absents?.length) {
+    ajouter('Territoires absents de la source', scrutin.territoires_absents.map((c) => noms.get(c) ?? c).join(', '))
+  }
   const t = scrutin.totaux
   ajouter('Total France', `${formatNombre(t.inscrits)} inscrits, ${formatNombre(t.votants)} votants, ${formatNombre(t.exprimes)} exprimés`)
   if (officiel) {
@@ -124,7 +130,7 @@ function Controles({ scrutin, manifeste, officiel }: {
  * Méthodologie, sources et qualité des données : ce que le site montre, d'où cela vient et ce qui a
  * été vérifié. Affichée dans le panneau (?page=methodologie) : la carte reste visible.
  */
-export function Methodologie({ catalogue, scrutin, onScrutin, onRetour }: Props) {
+export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: Props) {
   const manifeste = useManifeste(scrutin.id)
   const grille = useReferentiel('nuances.csv', true)
   const totaux = useReferentiel('totaux_officiels.csv', true)
@@ -230,7 +236,7 @@ export function Methodologie({ catalogue, scrutin, onScrutin, onRetour }: Props)
         {manifeste.data
           ? (
             <>
-              <Controles scrutin={scrutin} manifeste={manifeste.data} officiel={officiel} />
+              <Controles scrutin={scrutin} manifeste={manifeste.data} officiel={officiel} noms={noms} />
               <details className="depliant">
                 <summary>Fichiers publiés et empreintes</summary>
                 <div className="defilement" role="region" aria-label="Fichiers publiés" tabIndex={0}>
@@ -264,6 +270,7 @@ export function Methodologie({ catalogue, scrutin, onScrutin, onRetour }: Props)
           <li>Nouvelle-Calédonie, Polynésie française, Wallis-et-Futuna : pas de contours de bureaux, résultats à la commune.</li>
           <li>L'offre politique change d'un scrutin à l'autre : une évolution de bloc peut tenir à l'absence d'une candidature.</li>
           <li>Seule la présidentielle 2022 est, à ce jour, rapprochée des totaux officiels proclamés.</li>
+          <li>Scrutins nationaux antérieurs à 2012 (présidentielles et législatives de 2002 et 2007, européennes de 1999 à 2009) : la source ne contient pas les résultats de certains territoires d'outre-mer ni, selon les cas, des Français de l'étranger ; le rapport qualité de chaque scrutin les nomme. De 2012 à 2022, nos résultats nationaux par candidat égalent la proclamation officielle.</li>
         </ul>
       </Section>
 

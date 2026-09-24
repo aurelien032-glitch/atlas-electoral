@@ -69,6 +69,19 @@ export function Apercu(props: Props) {
   }
 }
 
+/** Scrutins anciens : territoires qui votaient mais dont la source ne contient pas les résultats. */
+function TerritoiresAbsents({ ctx }: { ctx: Contexte }) {
+  const absents = ctx.scrutin.territoires_absents ?? []
+  if (absents.length === 0) return null
+  return (
+    <p className="note-bas">
+      Données partielles : la source (data.gouv.fr) ne contient pas de résultats pour{' '}
+      {enumerer(absents.map((code) => ctx.index.noms.get(code) ?? code))}. Les totaux et les parts de la France
+      entière diffèrent donc un peu des résultats officiels.
+    </p>
+  )
+}
+
 function ApercuTete({ ctx, actions }: Props) {
   const [tout, setTout] = useState(false)
   const france = ctx.agregats.find((a) => a.niveau === 'france')
@@ -130,6 +143,7 @@ function ApercuTete({ ctx, actions }: Props) {
           </p>
         )}
         {national && <TableNuances candidatures={[...ctx.candidats].sort((a, b) => b.voix_total - a.voix_total)} />}
+        <TerritoiresAbsents ctx={ctx} />
       </section>
     </>
   )
