@@ -53,10 +53,12 @@ METROPOLE = r"regexp_matches(code_bv, '^([0-8][0-9]|9[0-5]|2A|2B)[0-9]{3}_')"
 # l'arrondissement (« 75056_1512 » : 15e arrondissement, code INSEE 75115). Règle vérifiée sur les 56 tours ;
 # les rares bureaux qui y échappent restent à la seule échelle de la ville : « 00… » à Lyon, et à Paris le
 # bureau « JUS1 » où sont dépouillés les votes par correspondance des personnes détenues (depuis 2019).
+# Même règle que le client (arrondissementDu) : code de bureau brut, deux chiffres (vérifié le 25/09 : mêmes
+# arrondissements que l'ancienne écriture sur les 76 836 codes de bureau des 56 tours).
 ARRONDISSEMENT = """CASE
-    WHEN commune = '75056' AND substr(code_bv, 7, 2) BETWEEN '01' AND '20' THEN '751' || substr(code_bv, 7, 2)
-    WHEN commune = '69123' AND substr(code_bv, 7, 2) BETWEEN '01' AND '09' THEN '6938' || substr(code_bv, 8, 1)
-    WHEN commune = '13055' AND substr(code_bv, 7, 2) BETWEEN '01' AND '16' THEN '132' || substr(code_bv, 7, 2)
+    WHEN regexp_matches(code_bv, '^75056_(0[1-9]|1[0-9]|20)') THEN '751' || substr(code_bv, 7, 2)
+    WHEN regexp_matches(code_bv, '^69123_0[1-9]') THEN '6938' || substr(code_bv, 8, 1)
+    WHEN regexp_matches(code_bv, '^13055_(0[1-9]|1[0-6])') THEN '132' || substr(code_bv, 7, 2)
 END"""
 NIVEAUX = {"commune": "commune", "arrondissement": ARRONDISSEMENT, "departement": "departement", "france": "'FR'"}
 
@@ -542,6 +544,23 @@ def inscrits_aberrants(con, sortie: Path, identifiant: str) -> list[dict]:
         WHERE inscrits > 4000 AND inscrits > 10 * votants AND code_bv NOT LIKE 'ZZ%' ORDER BY code_bv""").fetchall()]
 
 
+def restreindre_passage(con, sortie: Path) -> None:
+    """Table de passage publiée pour l'application (python -m atlas_pipeline.geo) : seuls les anciens codes
+    présents dans les bureaux d'au moins un tour y restent. Une commune fusionnée avant 1999 (Lyon et
+    Saint-Rambert-l'Île-Barbe, en 1963) n'a pas de résultats anciens additionnés : l'historique ne doit pas
+    la dire « née d'une fusion »."""
+    passage = sortie / "geo" / "passage_communes.parquet"
+    bureaux = [sortie / s.id / "bureaux.parquet" for s in SCRUTINS if (sortie / s.id / "bureaux.parquet").exists()]
+    if not passage.exists() or not bureaux:
+        return
+    con.sql(f"""CREATE OR REPLACE TABLE passage_publiee AS
+                SELECT * FROM {chemin_sql(passage)}
+                WHERE ancien IN (SELECT DISTINCT split_part(code_bv, '_', 1)
+                                 FROM read_parquet([{', '.join(chemin_sql(b) for b in bureaux)}]))
+                ORDER BY ancien""")
+    con.sql(f"COPY passage_publiee TO {chemin_sql(passage)} (FORMAT parquet, COMPRESSION zstd)")
+
+
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("scrutins", nargs="*", help="identifiants à construire (défaut : toute la v1)")
@@ -600,6 +619,7 @@ def main(argv=None) -> None:
         "scrutins": [existants[s.id] for s in SCRUTINS if s.id in existants],
     }
     chemin.write_text(json.dumps(catalogue, ensure_ascii=False, indent=2), encoding="utf-8")
+    restreindre_passage(con, args.sortie)
 
     # Les séries relisent tous les tours publiés : elles suivent chaque construction, même partielle.
     from .series import construire as construire_series, resume

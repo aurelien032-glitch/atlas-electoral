@@ -169,6 +169,20 @@ def test_departements_a_part(con):
     assert con.sql(f"SELECT count(*) FROM {d}").fetchone()[0] >= 101
 
 
+def test_passage_publie_limite_aux_codes_rencontres(con):
+    # L'historique dit « née d'une fusion » d'une commune dont un ancien code a des résultats : pas de Lyon
+    # (Saint-Rambert-l'Île-Barbe, rattachée en 1963, n'apparaît dans aucun des 56 tours).
+    passage = PUBLICATION / "geo" / "passage_communes.parquet"
+    if not passage.exists():
+        pytest.skip("lancer d'abord python -m atlas_pipeline.geo")
+    p = "'" + passage.as_posix() + "'"
+    bureaux = ", ".join("'" + (PUBLICATION / s / "bureaux.parquet").as_posix() + "'" for s in SCRUTINS)
+    inutiles = con.sql(f"""SELECT count(*) FROM {p} WHERE ancien NOT IN
+                           (SELECT DISTINCT split_part(code_bv, '_', 1) FROM read_parquet([{bureaux}]))""").fetchone()[0]
+    assert inutiles == 0
+    assert con.sql(f"SELECT count(*) FROM {p} WHERE actuel = '69123'").fetchone()[0] == 0
+
+
 def test_passage_vers_des_communes_de_2026(con):
     passage = "'" + (REFERENTIELS / "passage_communes_2026.csv").as_posix() + "'"
     t = "'" + TERRITOIRES.as_posix() + "'"
