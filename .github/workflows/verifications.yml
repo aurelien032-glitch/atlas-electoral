@@ -49,5 +49,5 @@ jobs:
           cache-dependency-path: pipeline/requirements.txt
       - run: pip install -r requirements.txt
       - run: python -m compileall -q atlas_pipeline
-      # Sans publication, les contrôles de données sont sautés : on vérifie qu'ils se chargent.
+      # Tests unitaires ; sans publication, les contrôles sur les données sont sautés.
       - run: python -m pytest

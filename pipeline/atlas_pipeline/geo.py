@@ -40,8 +40,8 @@ AUTRES_TERRITOIRES = {
 
 
 def arrondissement_municipal(code: str) -> bool:
-    """Arrondissements de Paris, Lyon et Marseille : les résultats sont publiés à la commune (75056,
-    69123, 13055), les arrondissements n'en ont pas. Voir docs/etude-paris-lyon-marseille.md."""
+    """Arrondissements de Paris, Lyon et Marseille : leurs résultats viennent des numéros de bureau (niveau
+    « arrondissement » des agrégats). Voir docs/etude-paris-lyon-marseille.md."""
     return "75101" <= code <= "75120" or "69381" <= code <= "69389" or "13201" <= code <= "13216"
 
 
@@ -73,7 +73,8 @@ def ecrire_territoires(couches: dict[str, dict], chemin: Path) -> int:
         for entite in couches[couche]["features"]:
             code, nom = entite["properties"]["code"], entite["properties"]["nom"]
             departement = code if niveau == "departement" else departement_de(code)
-            lignes.append((niveau, code, nom, departement, *emprise(entite["geometry"])))
+            propre = "arrondissement" if niveau == "commune" and arrondissement_municipal(code) else niveau
+            lignes.append((propre, code, nom, departement, *emprise(entite["geometry"])))
     connus = {ligne[1] for ligne in lignes if ligne[0] == "departement"}
     lignes += [("departement", code, nom, code, None, None, None, None)
                for code, nom in AUTRES_TERRITOIRES.items() if code not in connus]
@@ -109,18 +110,15 @@ def publier_codes_postaux(con, sortie: Path) -> int:
     con.sql("INSTALL httpfs; LOAD httpfs;")
     con.sql(f"""
         CREATE OR REPLACE TABLE codes_postaux AS
-        SELECT DISTINCT l.code_postal,
-               -- La Poste code Paris, Lyon et Marseille par arrondissement : on revient à la commune.
-               CASE WHEN l.insee BETWEEN '75101' AND '75120' THEN '75056'
-                    WHEN l.insee BETWEEN '69381' AND '69389' THEN '69123'
-                    WHEN l.insee BETWEEN '13201' AND '13216' THEN '13055'
-                    ELSE coalesce(p.actuel, l.insee) END AS commune
+        -- Paris, Lyon et Marseille : La Poste donne l'arrondissement, qui a ses propres résultats.
+        SELECT DISTINCT l.code_postal, coalesce(p.actuel, l.insee) AS commune
         FROM read_csv('{url}', delim = ';', header = true, encoding = 'latin-1', all_varchar = true,
                       names = ['insee', 'nom', 'code_postal', 'acheminement', 'ligne_5']) l
         LEFT JOIN passage p ON p.ancien = l.insee
         ORDER BY 1, 2""")
     con.sql(f"""DELETE FROM codes_postaux WHERE commune NOT IN (
-                    SELECT code FROM '{(sortie / 'territoires.parquet').as_posix()}' WHERE niveau = 'commune')""")
+                    SELECT code FROM '{(sortie / 'territoires.parquet').as_posix()}'
+                    WHERE niveau IN ('commune', 'arrondissement'))""")
     con.sql(f"COPY codes_postaux TO '{(sortie / 'codes_postaux.parquet').as_posix()}' (FORMAT parquet, COMPRESSION zstd)")
     return con.sql("SELECT count(*) FROM codes_postaux").fetchone()[0]
 
@@ -132,9 +130,9 @@ def main() -> None:
     for couche, nom in COUCHES.items():
         debut = time.time()
         collection = telecharger(nom)
-        # Pas d'arrondissement municipal : superposés à leur commune, ils captaient survol et clic sans
-        # avoir de résultat. On ne garde que le code et le nom, les autres propriétés alourdiraient tout.
-        collection["features"] = [e for e in collection["features"] if not arrondissement_municipal(e["properties"]["code"])]
+        # Les arrondissements de Paris, Lyon et Marseille suivent leur ville dans le fichier : dessinés
+        # par-dessus, ce sont eux que la carte colore et que le survol désigne. On ne garde que le code et
+        # le nom : les autres propriétés alourdiraient chaque chargement.
         for entite in collection["features"]:
             p = entite["properties"]
             entite["properties"] = {"code": p.get("code"), "nom": p.get("nom")}

@@ -18,10 +18,14 @@ import urllib.request
 from .config import PUBLICATION
 
 API = "https://geo.api.gouv.fr/departements/{dep}/communes?format=geojson&geometry=contour&fields=code"
+# Paris : ses arrondissements, qui ont leurs propres résultats (niveau « arrondissement » des agrégats).
+API_ARRONDISSEMENTS = ("https://geo.api.gouv.fr/communes?codeDepartement={dep}&type=arrondissement-municipal"
+                       "&format=geojson&geometry=contour&fields=code")
 
 # Taille des encarts, en pixels : la petite couronne, plus dense, a droit à un cadre plus grand.
 ENCARTS = [
-    {"code": "IDF", "nom": "Paris et petite couronne", "departements": ["75", "92", "93", "94"], "cadre": (180, 110)},
+    {"code": "IDF", "nom": "Paris et petite couronne", "departements": ["75", "92", "93", "94"], "cadre": (180, 110),
+     "par_arrondissement": ["75"]},
     {"code": "971", "nom": "Guadeloupe", "departements": ["971"], "cadre": (86, 64)},
     {"code": "972", "nom": "Martinique", "departements": ["972"], "cadre": (86, 64)},
     {"code": "973", "nom": "Guyane", "departements": ["973"], "cadre": (86, 64)},
@@ -71,8 +75,8 @@ def chemin(geometrie: dict, projeter) -> str:
     return "".join(morceaux)
 
 
-def telecharger(dep: str) -> list[dict]:
-    with urllib.request.urlopen(API.format(dep=dep), timeout=120) as reponse:
+def telecharger(dep: str, par_arrondissement: bool = False) -> list[dict]:
+    with urllib.request.urlopen((API_ARRONDISSEMENTS if par_arrondissement else API).format(dep=dep), timeout=120) as reponse:
         return json.loads(reponse.read())["features"]
 
 
@@ -106,7 +110,8 @@ def main() -> None:
         print("Contours des circonscriptions absents : encarts sans circonscriptions (python -m atlas_pipeline.circonscriptions).")
     encarts = []
     for encart in ENCARTS:
-        communes = [f for dep in encart["departements"] for f in telecharger(dep)]
+        communes = [f for dep in encart["departements"]
+                    for f in telecharger(dep, dep in encart.get("par_arrondissement", []))]
         propres = [f for f in circonscriptions if f["properties"]["code"].split("-")[0] in encart["departements"]]
         encarts.append(construire_encart(encart, communes, propres))
         print(f"{encart['nom']} : {len(communes)} communes, {len(propres)} circonscriptions")

@@ -1,4 +1,5 @@
 import { useId, type PointerEvent } from 'react'
+import { estArrondissement } from '../donnees/territoires'
 import type { Encart } from '../donnees/types'
 import type { Coloriage } from '../modes'
 import type { Selection } from '../vue'
@@ -22,11 +23,13 @@ interface Props {
  */
 export function Encarts({ encarts, coloriage, parCirconscription, onSurvol, onChoisir, onCadrer }: Props) {
   const motif = useId()
-  const niveau = parCirconscription ? 'circonscription' : 'commune'
-  const etats = parCirconscription ? coloriage?.circonscriptions : coloriage?.communes
+  // Paris figure par arrondissements, comme sur la carte principale.
+  const niveauDe = (code: string) => parCirconscription ? 'circonscription' : estArrondissement(code) ? 'arrondissement' : 'commune'
+  const etatDe = (code: string) => parCirconscription ? coloriage?.circonscriptions?.get(code)
+    : estArrondissement(code) ? coloriage?.arrondissements?.get(code) : coloriage?.communes.get(code)
   const survoler = (e: PointerEvent<SVGPathElement>, code: string) => {
     const zone = e.currentTarget.closest('.zone-carte-fond')?.getBoundingClientRect()
-    if (zone) onSurvol({ niveau, code, x: e.clientX - zone.left, y: e.clientY - zone.top, largeur: zone.width })
+    if (zone) onSurvol({ niveau: niveauDe(code), code, x: e.clientX - zone.left, y: e.clientY - zone.top, largeur: zone.width })
   }
   return (
     <div className="encarts" role="group" aria-label="Encarts : Paris et petite couronne, outre-mer">
@@ -40,7 +43,7 @@ export function Encarts({ encarts, coloriage, parCirconscription, onSurvol, onCh
               </pattern>
             </defs>
             {Object.entries(parCirconscription ? encart.circonscriptions : encart.communes).map(([code, d]) => {
-              const etat = etats?.get(code)
+              const etat = etatDe(code)
               return (
                 <path
                   key={code} d={d} className="forme"
@@ -48,7 +51,7 @@ export function Encarts({ encarts, coloriage, parCirconscription, onSurvol, onCh
                   fillOpacity={etat && !etat.hachure ? etat.opacite : 1}
                   onPointerMove={(e) => survoler(e, code)}
                   onPointerLeave={() => onSurvol(null)}
-                  onClick={() => { onSurvol(null); onChoisir({ niveau, code }) }}
+                  onClick={() => { onSurvol(null); onChoisir({ niveau: niveauDe(code), code }) }}
                 />
               )
             })}

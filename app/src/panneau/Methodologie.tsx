@@ -174,6 +174,7 @@ export function Methodologie({ catalogue, scrutin, onScrutin, onRetour }: Props)
           <li>Jusqu'en 2015, les données comptent ensemble les bulletins blancs et nuls ; le site ne les sépare pas.</li>
           <li>Municipales 2014 et 2020 : dans les communes de moins de 1 000 habitants, on vote pour des personnes (panachage) ; leurs voix, multiples, n'entrent pas dans les parts des blocs.</li>
           <li>Législatives : la circonscription vient des données de 2012 à 2022, et des fichiers officiels par circonscription en 2024.</li>
+          <li>Paris, Lyon et Marseille : résultats par arrondissement, calculés d'après le numéro des bureaux (voir les limites).</li>
         </ul>
       </Section>
 
@@ -259,7 +260,7 @@ export function Methodologie({ catalogue, scrutin, onScrutin, onRetour }: Props)
       <Section titre="Limites connues">
         <ul className="liste">
           <li>Les contours des bureaux sont indicatifs : reconstitués en 2022 à partir des adresses, ils peuvent s'écarter du découpage réel, et les bureaux créés depuis n'y figurent pas.</li>
-          <li>Paris, Lyon et Marseille : résultats à la commune, pas encore par arrondissement ou secteur. Jusqu'en 2020, les municipales s'y votaient par secteur : additionnés à la commune, ces scrutins n'ont pas de liste « en tête ».</li>
+          <li>Paris, Lyon et Marseille : les données ne descendent qu'à la ville ; les résultats par arrondissement sont calculés d'après le numéro des bureaux, qui commence par celui de l'arrondissement (règle vérifiée sur tous les scrutins, à un ou deux bureaux près, laissés à la ville). Jusqu'en 2020, les municipales s'y votaient par secteur : chaque arrondissement montre les listes du sien, et la ville n'a pas de liste « en tête ».</li>
           <li>Nouvelle-Calédonie, Polynésie française, Wallis-et-Futuna : pas de contours de bureaux, résultats à la commune.</li>
           <li>L'offre politique change d'un scrutin à l'autre : une évolution de bloc peut tenir à l'absence d'une candidature.</li>
           <li>Seule la présidentielle 2022 est, à ce jour, rapprochée des totaux officiels proclamés.</li>

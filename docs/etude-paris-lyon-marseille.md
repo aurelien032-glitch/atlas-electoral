@@ -2,7 +2,8 @@
 
 > **Statut : étude du 24 septembre 2026, demandée le même jour** (revue des exigences P0 avant la bêta :
 > « Municipales : résultats par liste et par commune ; secteurs de Paris, Lyon et Marseille »).
-> **Décision (Q15, 24/09) : arrondissements et secteurs traités avant l'ouverture de la bêta.**
+> **Décision (Q15, 24/09) : arrondissements et secteurs traités avant l'ouverture de la bêta. Réalisé le
+> 24/09 : points 1, 2 et 4 du § 3, et le point 3 sans le nom des secteurs de plusieurs arrondissements.**
 
 ## 1. Constats dans les données
 
@@ -10,8 +11,9 @@
   commune (`75056_1512`, `69123_0305`, `13055_0801`), jamais celui de l'arrondissement.
 - **Les numéros de bureau donnent l'arrondissement** : les deux premiers chiffres du numéro sont ceux de
   l'arrondissement. Vérifié sur les 56 tours publiés, à quelques bureaux près : à Lyon, un bureau numéroté
-  « 00… » depuis 2021 (deux en 2026) ; à Paris, un bureau « JU… » en 2019 et 2022. Ces bureaux restent à
-  rattacher. Aux législatives 2024 : Paris 01 à 20 (902 bureaux), Lyon 01 à 09 (305 bureaux, plus le
+  « 00… » depuis 2021 (deux en 2026) ; à Paris, un bureau « JU… » en 2019 et 2022, celui où le ministère
+  de la Justice dépouille les votes par correspondance des personnes détenues (13 673 inscrits en 2022) :
+  il n'appartient à aucun arrondissement. Ces bureaux restent à l'échelle de la ville. Aux législatives 2024 : Paris 01 à 20 (902 bureaux), Lyon 01 à 09 (305 bureaux, plus le
   bureau `0001`), Marseille 01 à 16 (497 bureaux).
 - **Municipales de 2008 à 2020 : un scrutin par secteur.** Chaque liste ne se présentait que dans son
   secteur : entre 164 et 182 listes à Paris selon l'année, de 48 à 81 à Lyon et Marseille. Additionnés à

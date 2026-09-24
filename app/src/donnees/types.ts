@@ -59,7 +59,7 @@ export interface BureauContour {
 }
 
 export interface Agregat extends Resultat {
-  niveau: 'commune' | 'circonscription' | 'departement' | 'france'
+  niveau: 'commune' | 'arrondissement' | 'circonscription' | 'departement' | 'france'
   code: string
   /**
    * Municipales jusqu'en 2020 : exprimés des seules communes votant par listes, base des parts des
@@ -81,7 +81,7 @@ export const exprimesPourParts = (r: Pick<Resultat, 'exprimes'> & { exprimes_lis
  */
 export type LigneSerie = {
   /** Absent des fichiers des communes. */
-  niveau?: 'france' | 'departement' | 'circonscription'
+  niveau?: 'france' | 'departement' | 'circonscription' | 'arrondissement'
   code: string
   scrutin: string
   inscrits: number
@@ -120,7 +120,8 @@ export interface VoixAgregat {
 
 /** Département ou commune du découpage 2026 : nom et emprise (geo/territoires.parquet). */
 export interface Territoire {
-  niveau: 'departement' | 'commune' | 'circonscription'
+  /** Arrondissement : Paris, Lyon et Marseille, dont les résultats viennent des numéros de bureau. */
+  niveau: 'departement' | 'commune' | 'arrondissement' | 'circonscription'
   code: string
   nom: string
   departement: string

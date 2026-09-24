@@ -11,7 +11,7 @@ communes, pèse 8,2 Mo.
 | Workflow | Déclenchement | Rôle |
 |---|---|---|
 | `Vérifications` (`.github/workflows/verifications.yml`) | chaque envoi sur `main`, chaque demande de fusion | Application : TypeScript, lint, tests, build. Pipeline : compilation, chargement des tests |
-| `Publier` (`.github/workflows/publier.yml`) | à la main (onglet **Actions**, « Run workflow ») | Reconstruit toutes les données depuis les sources officielles (contours, circonscriptions, 56 tours, séries : 15 à 25 min), lance les 575 contrôles, construit le site et le déploie. **Rien n'est déployé si un contrôle échoue.** Le rapport qualité (manifestes et résultat des contrôles) est joint à chaque exécution (artefact `rapport-qualite`) |
+| `Publier` (`.github/workflows/publier.yml`) | à la main (onglet **Actions**, « Run workflow ») | Reconstruit toutes les données depuis les sources officielles (contours, circonscriptions, 56 tours, séries : 15 à 25 min), lance les 636 contrôles, construit le site et le déploie. **Rien n'est déployé si un contrôle échoue.** Le rapport qualité (manifestes et résultat des contrôles) est joint à chaque exécution (artefact `rapport-qualite`) |
 
 Aucune donnée n'est versionnée : chaque publication repart des sources, ce qui la rend reproductible.
 

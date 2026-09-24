@@ -1,7 +1,7 @@
 import { BLOCS_COLORES, type BlocColore } from './carte/couleurs'
 import { MODES, type Mode } from './modes'
 
-export type NiveauSelection = 'bureau' | 'commune' | 'circonscription' | 'departement'
+export type NiveauSelection = 'bureau' | 'commune' | 'arrondissement' | 'circonscription' | 'departement'
 
 /** Territoire sélectionné (clic sur la carte ou fil d'Ariane). */
 export interface Selection {
@@ -23,7 +23,7 @@ export interface Vue {
   page: 'methodologie' | undefined
 }
 
-const NIVEAUX: readonly NiveauSelection[] = ['bureau', 'commune', 'circonscription', 'departement']
+const NIVEAUX: readonly NiveauSelection[] = ['bureau', 'commune', 'arrondissement', 'circonscription', 'departement']
 
 export function lireVue(parametres: URLSearchParams): Vue {
   const [niveau, code] = (parametres.get('sel') ?? '').split(':')

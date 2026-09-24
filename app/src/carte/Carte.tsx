@@ -8,6 +8,7 @@ import type { Feature } from 'geojson'
 import { Protocol } from 'pmtiles'
 import { useEffect, useRef, useState } from 'react'
 import { RACINE_DONNEES } from '../donnees/requetes'
+import { arrondissementDu, estArrondissement } from '../donnees/territoires'
 import type { BureauContour } from '../donnees/types'
 import type { Coloriage } from '../modes'
 import type { Selection } from '../vue'
@@ -91,7 +92,7 @@ const STYLE: StyleSpecification = {
 
 /** Territoire sous le pointeur, avec sa position à l'écran pour l'infobulle. */
 export interface Survol {
-  niveau: 'bureau' | 'commune' | 'circonscription'
+  niveau: 'bureau' | 'commune' | 'arrondissement' | 'circonscription'
   code: string
   x: number
   y: number
@@ -133,7 +134,9 @@ const FRANCE_METROPOLITAINE: [[number, number], [number, number]] = [[-5.2, 41.3
 // Territoire à surligner (les circonscriptions ont leur couche, chargée pour les législatives).
 function cible(selection: Selection): FeatureIdentifier | null {
   if (selection.niveau === 'bureau') return { source: 'bureaux', sourceLayer: COUCHE_BUREAUX, id: selection.code }
-  const source = { commune: 'communes', circonscription: 'circonscriptions', departement: 'departements' }[selection.niveau]
+  const source = {
+    commune: 'communes', arrondissement: 'communes', circonscription: 'circonscriptions', departement: 'departements',
+  }[selection.niveau]
   return { source, id: selection.code }
 }
 
@@ -207,6 +210,8 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
     carte.removeFeatureState({ source: 'circonscriptions' })
     carte.removeFeatureState({ source: 'bureaux', sourceLayer: COUCHE_BUREAUX })
     for (const [code, etat] of coloriage.communes) carte.setFeatureState({ source: 'communes', id: code }, { ...etat })
+    // Paris, Lyon et Marseille : leurs arrondissements, dessinés par-dessus la ville, ont leurs propres résultats.
+    for (const [code, etat] of coloriage.arrondissements ?? []) carte.setFeatureState({ source: 'communes', id: code }, { ...etat })
     // Aux législatives, la vue nationale montre les circonscriptions à la place des communes.
     const parCirconscription = (coloriage.circonscriptions?.size ?? 0) > 0
     for (const [code, etat] of coloriage.circonscriptions ?? []) carte.setFeatureState({ source: 'circonscriptions', id: code }, { ...etat })
@@ -217,7 +222,8 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
       for (const [code, etat] of coloriage.bureaux) bureau(code, { ...etat })
     } else {
       for (const { code_bv, code_commune } of contours) {
-        const etat = coloriage.communes.get(code_commune)
+        const arrondissement = arrondissementDu(code_bv)
+        const etat = (arrondissement && coloriage.arrondissements?.get(arrondissement)) || coloriage.communes.get(code_commune)
         if (etat) bureau(code_bv, { ...etat })
       }
     }
@@ -256,9 +262,14 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
       if (!p) return null
       const position = { x: e.point.x, y: e.point.y, largeur: carte.getContainer().clientWidth }
       const couche = e.features?.[0]?.layer.id
-      if (couche === 'communes') return { niveau: 'commune', code: p.code, ...position }
+      if (couche === 'communes') return { niveau: estArrondissement(p.code) ? 'arrondissement' : 'commune', code: p.code, ...position }
       if (couche === 'circonscriptions') return { niveau: 'circonscription', code: p.code, ...position }
-      return auBureau ? { niveau: 'bureau', code: p.codeBureauVote, ...position } : { niveau: 'commune', code: p.codeCommune, ...position }
+      if (auBureau) return { niveau: 'bureau', code: p.codeBureauVote, ...position }
+      // Carte à la commune : un bureau de Paris, Lyon ou Marseille désigne son arrondissement.
+      const arrondissement = arrondissementDu(p.codeBureauVote)
+      return arrondissement
+        ? { niveau: 'arrondissement', code: arrondissement, ...position }
+        : { niveau: 'commune', code: p.codeCommune, ...position }
     }
     const survol = (e: MapLayerMouseEvent) => onSurvol(territoire(e))
     const clic = (e: MapLayerMouseEvent) => {

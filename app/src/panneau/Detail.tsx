@@ -2,7 +2,9 @@ import { LIBELLE_BLOC, palier } from '../carte/couleurs'
 import type { Cible } from '../cibles'
 import { nomCandidature, nuanceCourte } from '../donnees/libelles'
 import { voteParSecteur } from '../donnees/scrutins'
-import { communeDu, departementDe, departementDeCirconscription, numeroDu, titreDe } from '../donnees/territoires'
+import {
+  arrondissementDu, communeDu, departementDe, departementDeCirconscription, numeroDu, titreDe, villeDe,
+} from '../donnees/territoires'
 import { exprimesPourParts, type Bloc, type Candidature, type Resultat } from '../donnees/types'
 import { formatNombre, formatPart, unitePoints } from '../format'
 import type { Selection } from '../vue'
@@ -37,20 +39,25 @@ interface Props {
 
 function FilAriane({ ctx, selection, actions }: Pick<Props, 'ctx' | 'selection' | 'actions'>) {
   const nom = (code: string) => ctx.index.noms.get(code) ?? code
-  const commune = selection.niveau === 'bureau' ? communeDu(selection.code, ctx.index.passage) : selection.code
+  const commune = selection.niveau === 'bureau' ? communeDu(selection.code, ctx.index.passage)
+    : selection.niveau === 'arrondissement' ? villeDe(selection.code) : selection.code
+  // Paris, Lyon et Marseille : l'arrondissement s'intercale entre la ville et le bureau.
+  const arrondissement = selection.niveau === 'arrondissement' ? selection.code
+    : selection.niveau === 'bureau' ? arrondissementDu(selection.code) : undefined
   const departement = selection.niveau === 'departement'
     ? selection.code
     : selection.niveau === 'circonscription'
       ? departementDeCirconscription(selection.code)
       : ctx.index.territoires.get(commune)?.departement ?? departementDe(commune)
-  const etapes: { libelle: string; selection: Selection | undefined }[] = [
-    { libelle: 'France', selection: undefined },
-    { libelle: nom(departement), selection: { niveau: 'departement', code: departement } },
-  ]
+  const etapes: { libelle: string; selection: Selection | undefined }[] = [{ libelle: 'France', selection: undefined }]
+  // Paris est à la fois un département et une commune : une seule étape « Paris ».
+  const commeLaCommune = selection.niveau !== 'departement' && selection.niveau !== 'circonscription' && nom(departement) === nom(commune)
+  if (!commeLaCommune) etapes.push({ libelle: nom(departement), selection: { niveau: 'departement', code: departement } })
   if (selection.niveau === 'circonscription') {
     etapes.push({ libelle: nom(selection.code).split(', ').pop() ?? selection.code, selection })
   } else if (selection.niveau !== 'departement') {
     etapes.push({ libelle: nom(commune), selection: { niveau: 'commune', code: commune } })
+    if (arrondissement) etapes.push({ libelle: nom(arrondissement), selection: { niveau: 'arrondissement', code: arrondissement } })
   }
   if (selection.niveau === 'bureau') etapes.push({ libelle: `Bureau ${numeroDu(selection.code)}`, selection })
   return (
@@ -180,7 +187,7 @@ export function Detail({ ctx, selection, resultat, lignes, parent, circonscripti
         <p className="note-bas">
           Jusqu'en 2020, les municipales de Paris, Lyon et Marseille se votaient par secteur : chaque liste ne se
           présentait que dans le sien. Les résultats de la commune additionnent ces scrutins distincts ; aucune
-          liste n'y est « en tête ».
+          liste n'y est « en tête ». Chaque arrondissement montre les listes de son secteur.
         </p>
       )}
       {!parBloc && !panachage && <TableNuances candidatures={presentes} />}

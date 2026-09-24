@@ -221,10 +221,34 @@ def test_encarts_aux_codes_des_resultats(con):
     encarts = json.loads(ENCARTS.read_text(encoding="utf-8"))["encarts"]
     assert [e["code"] for e in encarts] == ["IDF", "971", "972", "973", "974", "976"]
     communes = {c for (c,) in con.sql(f"""SELECT code FROM {fichier('2022_pres_t1', 'agregats.parquet')}
-                                          WHERE niveau = 'commune'""").fetchall()}
+                                          WHERE niveau IN ('commune', 'arrondissement')""").fetchall()}
     circonscriptions = {c for (c,) in con.sql(f"""SELECT code FROM {fichier('2024_legi_t1', 'agregats.parquet')}
                                                   WHERE niveau = 'circonscription'""").fetchall()}
     for e in encarts:
         assert set(e["communes"]) <= communes, e["code"]
         assert e["circonscriptions"] and set(e["circonscriptions"]) <= circonscriptions, e["code"]
         assert all(e["communes"].values()), e["code"]
+
+
+@pytest.mark.parametrize("scrutin", SCRUTINS)
+def test_arrondissements_de_paris_lyon_et_marseille(con, scrutin):
+    # Tirés des numéros de bureau : au plus 20, 9 et 16 arrondissements (moins aux cantonales, renouvelées
+    # par moitié). Avec les bureaux hors de la règle, laissés à la ville (dont, à Paris, le bureau du vote
+    # par correspondance des personnes détenues, depuis 2019), ils redonnent exactement la ville.
+    from atlas_pipeline.construire import ARRONDISSEMENT
+    agregats = fichier(scrutin, "agregats.parquet")
+    villes = dict(con.sql(f"""SELECT code, inscrits FROM {agregats}
+                              WHERE niveau = 'commune' AND code IN ('75056', '69123', '13055')""").fetchall())
+    arrondissements = con.sql(f"""
+        SELECT CASE WHEN code LIKE '751%' THEN '75056' WHEN code LIKE '6938%' THEN '69123' ELSE '13055' END,
+               count(*), sum(inscrits)
+        FROM {agregats} WHERE niveau = 'arrondissement' GROUP BY 1""").fetchall()
+    maximum = {"75056": 20, "69123": 9, "13055": 16}
+    assert {v for v, _, _ in arrondissements} == set(villes)
+    for ville, n, inscrits in arrondissements:
+        assert 1 <= n <= maximum[ville], ville
+        hors = con.sql(f"""SELECT coalesce(sum(inscrits), 0) FROM (
+                               SELECT *, left(code_bv, 5) AS commune FROM {fichier(scrutin, 'bureaux.parquet')})
+                           WHERE commune = '{ville}' AND ({ARRONDISSEMENT}) IS NULL""").fetchone()[0]
+        assert inscrits + hors == villes[ville], ville
+        assert hors <= 0.015 * villes[ville], ville

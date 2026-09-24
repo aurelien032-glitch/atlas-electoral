@@ -357,7 +357,8 @@ publication/v1/
 │   ├── bureaux.parquet        une ligne par bureau : participation, tête, avance (~650 Ko)
 │   ├── voix.parquet           voix par bureau et par candidature (~1,2 Mo)
 │   ├── candidats.parquet      candidatures : nuance, famille, bloc, cas limite
-│   ├── agregats.parquet       participation par commune (COG 2026), circonscription, département, France
+│   ├── agregats.parquet       participation par commune (COG 2026), arrondissement (Paris, Lyon, Marseille),
+│   │                          circonscription, département, France
 │   ├── agregats_voix.parquet  voix par candidature aux mêmes niveaux
 │   ├── circonscriptions.parquet  législatives : libellé et emprise de chaque circonscription
 │   ├── panachage/<dép>.parquet   municipales 2014 et 2020 : candidats des communes au panachage (à part)
@@ -692,7 +693,7 @@ il reste, pour ouvrir au public :
 |---|---|---|
 | 1. Scrutins et carte | **Fait** : 56 tours, modes Tête, Score, Participation (et Évolution), France → commune → bureau | Mesurer le recoloriage (moins d'une seconde) sur le site en ligne |
 | 1. Bureaux sans contour | Partiel : comptés dans leur commune et dans le panneau ; couverture écrite dans la légende des cartes à la commune | Donner aussi, sur les cartes au bureau, la part des inscrits sans contour |
-| 1. Paris, Lyon, Marseille | Étudié le 24/09 ([docs/etude-paris-lyon-marseille.md](etude-paris-lyon-marseille.md)) ; corrigé : arrondissements sans résultat retirés de la carte et de la recherche, plus de liste « en tête » aux municipales par secteur (2008-2020), note explicative | Niveau « arrondissement » calculé à partir des numéros de bureau, et secteurs des municipales jusqu'en 2020 : décision attendue (Q15) |
+| 1. Paris, Lyon, Marseille | **Fait le 24/09** ([étude](etude-paris-lyon-marseille.md), Q15) : niveau « arrondissement » des agrégats, tiré des numéros de bureau (règle vérifiée sur les 56 tours ; contrôle : 20, 9 et 16 arrondissements au plus, couvrant la ville à 0,5 % près) ; sur la carte, les arrondissements, dessinés par-dessus leur ville, portent leurs résultats (encart parisien compris) ; fiche, fil d'Ariane, historique, recherche (nom, code postal) ; aux municipales par secteur (2008-2020), chaque arrondissement montre les listes de son secteur et la ville n'a plus de liste « en tête » | Nommer les secteurs de plusieurs arrondissements (Marseille, Paris Centre) |
 | 2. Panneau territoire | **Fait le 24/09** : participation, barres triées ; sous chaque candidature, sa nuance officielle (ou « attribuée ») et son bloc ; tableau dépliable « Nuances, familles et blocs » avec les libellés | — |
 | 3. Recherche et permaliens | **Fait le 24/09** : nom, code INSEE et **code postal** (base officielle de La Poste, `geo/codes_postaux.parquet`, chargé à la première utilisation du champ) ; chaque vue a son lien | — |
 | 4. Exhaustivité | Partiel : **encarts** de Paris et la petite couronne et des cinq départements d'outre-mer sur la vue nationale (mêmes couleurs, infobulle et clic ; circonscriptions aux législatives) ; raccourcis vers toutes les collectivités d'outre-mer et les Français de l'étranger sous l'aperçu (24/09) ; total France égal au total officiel pour la présidentielle 2022 | Totaux officiels des autres tours (Q9) ; encarts absents sur mobile (raccourcis seulement) |
@@ -764,7 +765,7 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 | Q12 | Projection 2027 : garder le périmètre actuel (pas de projection) ou ajouter un simulateur de scénarios clairement étiqueté, après la bêta ? Voir l'étude | **Tranché le 24/09** : simulateur de scénarios après la bêta, avec les garde-fous de l'étude (espace séparé, hypothèses de l'utilisateur, résultat réel par défaut, ni sondages ni sièges, désactivé la veille et le jour du vote) ; prévisions et sondages restent hors périmètre | Phase 4 |
 | Q13 | Municipales 2014 et 2020, petites communes au panachage (≈ 400 000 candidatures individuelles, 12 à 13 Mo par tour) : tout garder, garder à part (chargé au détail d'une commune) ou ne garder que la participation ? | **Tranché le 24/09** : garder à part, chargé à l'ouverture de la fiche d'une commune | Budget des données |
 | Q14 | Vues chronologiques à construire en premier | **Tranché et réalisé le 24/09** (§ 9) : « Au fil des scrutins » dans la fiche d'un territoire et courbes nationales ; les petits multiples et la carte des bascules ensuite | — |
-| Q15 | Paris, Lyon et Marseille : niveau « arrondissement » (à partir des numéros de bureau) et secteurs des municipales jusqu'en 2020, avant ou juste après l'ouverture de la bêta ? Voir l'étude | **Tranché le 24/09** : avant la bêta | Bêta |
+| Q15 | Paris, Lyon et Marseille : niveau « arrondissement » (à partir des numéros de bureau) et secteurs des municipales jusqu'en 2020, avant ou juste après l'ouverture de la bêta ? Voir l'étude | **Tranché et réalisé le 24/09** : avant la bêta | — |
 | Q6 | Publication de nos données sur data.gouv | **Tranché** : plus tard | P2 |
 
 ## 16. Outillage Claude : skills, plugins, connecteurs

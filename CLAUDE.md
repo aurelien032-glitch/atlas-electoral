@@ -19,7 +19,7 @@ Le prototype v0 (FastAPI + DuckDB) est conservé sous le tag `prototype-v0` : ne
 ## Commandes
 
 ```bash
-cd pipeline && python -m atlas_pipeline.construire && python -m pytest   # données, séries + 575 tests
+cd pipeline && python -m atlas_pipeline.construire && python -m pytest   # données, séries + 636 tests
 cd pipeline && python -m atlas_pipeline.series                           # séries seules (≈ 15 s)
 cd pipeline && python -m atlas_pipeline.geo                              # contours Etalab + index des territoires
 cd pipeline && python -m atlas_pipeline.cog                              # passage des communes vers le COG 2026
@@ -57,6 +57,9 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   (`panachage/<dép>.parquet`, chargé à la demande) ; les parts des blocs se calculent sur `exprimes_listes`.
 - Séries (`series/`, « Au fil des scrutins ») : relues dans les fichiers publiés à la fin de chaque
   construction. Voix d'un bloc **vides** quand il n'avait pas de candidat : ne jamais les remplacer par 0.
+- Paris, Lyon et Marseille : niveau « arrondissement » des agrégats, tiré du numéro de bureau (« 75056_1512 »
+  → 75115, `construire.ARRONDISSEMENT`, `arrondissementDu` côté client). Sur la carte, les arrondissements
+  sont dessinés par-dessus leur ville dans la couche des communes.
 - Les agrégats par commune sont au **COG 2026** (`referentiels/passage_communes_2026.csv`) ; les bureaux gardent
   le code de commune de l'année du vote (le client passe par `communeDu(code, passage)`).
 

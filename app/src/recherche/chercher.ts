@@ -37,7 +37,7 @@ export function preparer(territoires: readonly Territoire[], poids: ReadonlyMap<
       territoire: t,
       forme,
       mots: forme.split(' '),
-      departement: t.niveau === 'commune' ? noms.get(t.departement) : undefined,
+      departement: t.niveau === 'commune' || t.niveau === 'arrondissement' ? noms.get(t.departement) : undefined,
       // Un département passe devant ses communes quand les noms se valent (« Paris », « Rhône »).
       poids: t.niveau === 'departement' ? Infinity : (poids.get(t.code) ?? 0),
     }
@@ -59,7 +59,10 @@ export function indexerCodesPostaux(
   lignes: readonly { code_postal: string; commune: string }[],
   entrees: readonly Entree[],
 ): Map<string, Entree[]> {
-  const parCode = new Map(entrees.filter((e) => e.territoire.niveau === 'commune').map((e) => [e.territoire.code, e]))
+  // Paris, Lyon et Marseille : La Poste donne l'arrondissement, qui a ses propres résultats.
+  const parCode = new Map(entrees
+    .filter((e) => e.territoire.niveau === 'commune' || e.territoire.niveau === 'arrondissement')
+    .map((e) => [e.territoire.code, e]))
   const index = new Map<string, Entree[]>()
   for (const l of lignes) {
     const entree = parCode.get(l.commune)

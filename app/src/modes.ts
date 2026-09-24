@@ -19,6 +19,8 @@ export interface Valeurs {
   bureaux: Map<string, Mesure> | null
   /** Législatives : valeurs par circonscription, pour la vue nationale. */
   circonscriptions?: Map<string, Mesure>
+  /** Paris, Lyon et Marseille : valeurs par arrondissement, dessinés par-dessus leur ville. */
+  arrondissements?: Map<string, Mesure>
 }
 
 /** États à appliquer sur la carte. Sans bureaux, chaque bureau prend l'état de sa commune. */
@@ -27,6 +29,7 @@ export interface Coloriage {
   bureaux: Map<string, Etat> | null
   /** Législatives : la vue nationale colore les circonscriptions plutôt que les communes. */
   circonscriptions?: Map<string, Etat>
+  arrondissements?: Map<string, Etat>
 }
 
 /** Part (0 à 1) des candidatures retenues dans chaque territoire d'un niveau d'agrégation. */
@@ -76,6 +79,7 @@ export function valeursScore(
     communes: enPoints(partsAuNiveau(agregats, agregatsVoix, 'commune', retenue)),
     bureaux: bureaux && enPoints(partsBureaux(bureaux.liste, bureaux.voix, retenue)),
     circonscriptions: enPoints(partsAuNiveau(agregats, agregatsVoix, 'circonscription', retenue)),
+    arrondissements: enPoints(partsAuNiveau(agregats, agregatsVoix, 'arrondissement', retenue)),
   }
 }
 
@@ -97,6 +101,7 @@ export function valeursParticipation(agregats: readonly Agregat[], bureaux: read
     communes: taux(agregats.filter((a) => a.niveau === 'commune'), (a) => a.code),
     bureaux: bureaux && taux(bureaux, (b) => b.code_bv),
     circonscriptions: taux(agregats.filter((a) => a.niveau === 'circonscription'), (a) => a.code),
+    arrondissements: taux(agregats.filter((a) => a.niveau === 'arrondissement'), (a) => a.code),
   }
 }
 
@@ -117,7 +122,11 @@ export function ecartsAuNiveau(avant: DonneesEvolution, apres: DonneesEvolution,
 
 // Les bureaux changent de numéro d'un scrutin à l'autre : l'évolution se lit à la commune.
 export function valeursEvolution(avant: DonneesEvolution, apres: DonneesEvolution): Valeurs {
-  return { communes: ecartsAuNiveau(avant, apres, 'commune'), bureaux: null }
+  return {
+    communes: ecartsAuNiveau(avant, apres, 'commune'),
+    bureaux: null,
+    arrondissements: ecartsAuNiveau(avant, apres, 'arrondissement'),
+  }
 }
 
 /** Seuils lisibles d'une carte en classes, pondérés par les électeurs de chaque territoire. */
@@ -145,6 +154,7 @@ export function coloriageClasses(valeurs: Valeurs, seuils: readonly number[], co
     communes: etats(valeurs.communes),
     bureaux: valeurs.bureaux && etats(valeurs.bureaux),
     circonscriptions: valeurs.circonscriptions && etats(valeurs.circonscriptions),
+    arrondissements: valeurs.arrondissements && etats(valeurs.arrondissements),
   }
 }
 
@@ -161,6 +171,7 @@ export function coloriageTete(agregats: readonly Agregat[], bureaux: readonly Bu
     communes: etats(agregats.filter((a) => a.niveau === 'commune'), (a) => a.code),
     bureaux: bureaux && etats(bureaux, (b) => b.code_bv),
     circonscriptions: etats(agregats.filter((a) => a.niveau === 'circonscription'), (a) => a.code),
+    arrondissements: etats(agregats.filter((a) => a.niveau === 'arrondissement'), (a) => a.code),
   }
 }
 

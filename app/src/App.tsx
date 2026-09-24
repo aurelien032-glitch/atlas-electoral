@@ -14,7 +14,7 @@ import {
   useAgregats, useAgregatsVoix, useBureaux, useCandidats, useCatalogue, useCirconscriptions, useContourCommune, useContours,
   useCodesPostaux, useEncarts, usePanachage, usePassage, useSeriesCommunes, useSeriesTerritoires, useTerritoires, useVoix,
 } from './donnees/requetes'
-import { communeDu, departementDe, emprise, indexer, titreDe } from './donnees/territoires'
+import { arrondissementDu, communeDu, departementDe, emprise, indexer, titreDe, villeDe } from './donnees/territoires'
 import { scrutinParDefaut, scrutinPrecedent, voteParSecteur } from './donnees/scrutins'
 import {
   exprimesPourParts, type Agregat, type BureauContour, type Candidature, type Encart, type Resultat, type Territoire,
@@ -147,8 +147,10 @@ export default function App() {
 
   // Au fil des scrutins : la France, un département ou une circonscription viennent d'un seul petit
   // fichier ; une commune (ou la commune d'un bureau), du fichier de son département.
-  const niveauSerie = !selection ? 'france' : selection.niveau === 'bureau' ? 'commune' : selection.niveau
-  const codeSerie = !selection ? 'FR' : communeChoisie ?? selection.code
+  const arrondissementDuBureau = selection?.niveau === 'bureau' ? arrondissementDu(selection.code) : undefined
+  const niveauSerie = !selection ? 'france'
+    : selection.niveau === 'bureau' ? (arrondissementDuBureau ? 'arrondissement' : 'commune') : selection.niveau
+  const codeSerie = !selection ? 'FR' : arrondissementDuBureau ?? communeChoisie ?? selection.code
   const seriesTerritoires = useSeriesTerritoires(niveauSerie !== 'commune')
   const seriesCommunes = useSeriesCommunes(niveauSerie === 'commune' ? departementDe(codeSerie) : undefined)
   const serie = niveauSerie === 'commune' ? seriesCommunes : seriesTerritoires
@@ -262,6 +264,7 @@ export default function App() {
     bureaux: new Map<string, Resultat>((bureaux.data ?? []).map((b) => [b.code_bv, b])),
     communes: new Map<string, Resultat>((agregats.data ?? []).filter((a) => a.niveau === 'commune').map((a) => [a.code, a])),
     circonscriptions: new Map<string, Resultat>((agregats.data ?? []).filter((a) => a.niveau === 'circonscription').map((a) => [a.code, a])),
+    arrondissements: new Map<string, Resultat>((agregats.data ?? []).filter((a) => a.niveau === 'arrondissement').map((a) => [a.code, a])),
   }), [bureaux.data, agregats.data])
 
   const contenuInfobulle = useCallback((survol: Survol) => {
@@ -272,7 +275,9 @@ export default function App() {
     } else if (survol.niveau === 'commune' && scrutin && voteParSecteur(scrutin, survol.code) && vue.mode === 'tete') {
       lignes.push('Vote par secteur : résultats additionnés, voir la fiche')
     } else if (vue.mode === 'tete') {
-      const r = resultats[({ bureau: 'bureaux', commune: 'communes', circonscription: 'circonscriptions' } as const)[survol.niveau]].get(survol.code)
+      const r = resultats[({
+        bureau: 'bureaux', commune: 'communes', arrondissement: 'arrondissements', circonscription: 'circonscriptions',
+      } as const)[survol.niveau]].get(survol.code)
       const tete = r?.tete != null ? parCand.get(r.tete) : undefined
       if (!r || r.exprimes === 0 || !tete) lignes.push('Aucun résultat rattaché')
       else if (r.egalite) lignes.push('Égalité en tête')
@@ -281,9 +286,10 @@ export default function App() {
         lignes.push(`En tête : ${nomCandidature(tete)}`, `${LIBELLE_BLOC[tete.bloc]} · avance ${palier(avance).libelle}, ${formatEcart(avance / 100).replace('+', '')} pts`)
       }
     } else if (etatCarte?.valeurs) {
-      const v = survol.niveau === 'bureau'
-        ? etatCarte.valeurs.bureaux?.get(survol.code)
-        : survol.niveau === 'circonscription' ? etatCarte.valeurs.circonscriptions?.get(survol.code) : etatCarte.valeurs.communes.get(survol.code)
+      const v = survol.niveau === 'bureau' ? etatCarte.valeurs.bureaux?.get(survol.code)
+        : survol.niveau === 'circonscription' ? etatCarte.valeurs.circonscriptions?.get(survol.code)
+          : survol.niveau === 'arrondissement' ? etatCarte.valeurs.arrondissements?.get(survol.code)
+            : etatCarte.valeurs.communes.get(survol.code)
       if (v === undefined) lignes.push('Aucun résultat rattaché')
       else if (v === null) lignes.push(vue.mode === 'evolution' ? 'Non comparable' : 'Aucune candidature du bloc')
       else lignes.push(vue.mode === 'evolution' ? `${formatEcart(v)} ${unitePoints(v)}` : formatPourcent(v))
@@ -368,6 +374,8 @@ export default function App() {
       const circos = circonscriptionsDe(lignes)
       const commune = communeDu(selection.code, index.passage)
       const agregatCommune = trouver('commune', commune)
+      // Paris, Lyon et Marseille : un bureau se compare à son arrondissement (même secteur aux municipales).
+      const arrondissement = arrondissementDu(selection.code)
       return {
         resultat: bureaux.data?.find((b) => b.code_bv === selection.code),
         lignes,
@@ -377,7 +385,7 @@ export default function App() {
           ? (circos.length === 1 ? parent('circonscription', circos[0], nom(circos[0])) : undefined)
           : panachees && agregatCommune
             ? { nom: nom(commune), exprimes: agregatCommune.exprimes, voix: new Map(voixDuPanachage(panachees).map((l) => [l.cand, l.voix])) }
-            : parent('commune', commune, nom(commune)),
+            : arrondissement ? parent('arrondissement', arrondissement, nom(arrondissement)) : parent('commune', commune, nom(commune)),
       }
     }
     if (selection.niveau === 'commune') {
@@ -388,6 +396,16 @@ export default function App() {
       if (portee === 'national') comparaison = parent('departement', departement, nom(departement))
       else if (portee === 'circonscription' && circos.length === 1) comparaison = parent('circonscription', circos[0], nom(circos[0]))
       return { resultat: trouver('commune', selection.code), lignes, circonscriptions: circos, supplementaires, parent: comparaison }
+    }
+    if (selection.niveau === 'arrondissement') {
+      const lignes = voixDe('arrondissement', selection.code)
+      const circos = circonscriptionsDe(lignes)
+      const ville = villeDe(selection.code)
+      // Comparaison avec la ville, sauf aux municipales par secteur (listes différentes d'un secteur à l'autre).
+      let comparaison: Parent | undefined
+      if (portee === 'circonscription') comparaison = circos.length === 1 ? parent('circonscription', circos[0], nom(circos[0])) : undefined
+      else if (!(scrutin && voteParSecteur(scrutin, ville))) comparaison = parent('commune', ville, nom(ville))
+      return { resultat: trouver('arrondissement', selection.code), lignes, circonscriptions: circos, parent: comparaison }
     }
     if (selection.niveau === 'circonscription') {
       return { resultat: trouver('circonscription', selection.code), lignes: voixDe('circonscription', selection.code), circonscriptions: [], parent: undefined }
@@ -409,11 +427,15 @@ export default function App() {
       return `${cible.libelle} : ${formatPart(retenues.reduce((s, l) => s + l.voix, 0) / exprimesPourParts(detail.resultat))} des suffrages exprimés.`
     }
     if (vue.mode === 'evolution' && evolution && scrutinDe) {
-      const niveau: Agregat['niveau'] = selection.niveau === 'bureau' ? 'commune' : selection.niveau
-      const code = selection.niveau === 'bureau' ? communeDu(selection.code, index.passage) : selection.code
+      // Les numéros de bureaux changent d'un scrutin à l'autre : un bureau se lit à sa commune, ou à son
+      // arrondissement à Paris, Lyon et Marseille.
+      const arrondissement = selection.niveau === 'bureau' ? arrondissementDu(selection.code) : undefined
+      const niveau: Agregat['niveau'] = selection.niveau === 'bureau' ? (arrondissement ? 'arrondissement' : 'commune') : selection.niveau
+      const code = selection.niveau === 'bureau' ? arrondissement ?? communeDu(selection.code, index.passage) : selection.code
       const avant = partDe(evolution.avant.agregats, evolution.avant.agregatsVoix, niveau, code, evolution.avant.retenue)
       const apres = partDe(evolution.apres.agregats, evolution.apres.agregatsVoix, niveau, code, evolution.apres.retenue)
-      const ou = selection.niveau === 'bureau' ? ` (à la commune, ${index.noms.get(code) ?? code})` : ''
+      const ou = selection.niveau === 'bureau'
+        ? ` (${arrondissement ? "à l'arrondissement" : 'à la commune'}, ${index.noms.get(code) ?? code})` : ''
       if (avant == null || apres == null) return `${LIBELLE_BLOC[bloc]}${ou} : non comparable entre les deux scrutins.`
       return `${LIBELLE_BLOC[bloc]}${ou} : ${formatPart(avant)} (${scrutinDe.libelle}), ${formatPart(apres)} (${scrutin?.libelle}), soit ${formatEcart(100 * (apres - avant))} ${unitePoints(100 * (apres - avant))}.`
     }
@@ -464,7 +486,7 @@ export default function App() {
           {vue.page !== 'methodologie' && ctx && (
             <Chronologie
               lignes={lignesSerie} erreur={serie.isError} scrutins={scrutins} courant={ctx.scrutin} niveau={niveauSerie}
-              precision={selection?.niveau === 'bureau' ? 'à la commune' : undefined}
+              precision={selection?.niveau === 'bureau' ? (arrondissementDuBureau ? "à l'arrondissement" : 'à la commune') : undefined}
               fusion={niveauSerie === 'commune' && index.fusionnees.has(codeSerie)}
             />
           )}

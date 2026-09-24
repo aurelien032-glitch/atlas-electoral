@@ -55,6 +55,29 @@ export function emprise(t: Territoire | undefined): [number, number, number, num
   return [t.ouest, t.sud, t.est, t.nord]
 }
 
+/** Arrondissement de Paris, Lyon ou Marseille (codes INSEE 75101-75120, 69381-69389, 13201-13216). */
+export const estArrondissement = (code: string) =>
+  (code >= '75101' && code <= '75120') || (code >= '69381' && code <= '69389') || (code >= '13201' && code <= '13216')
+
+/** Ville d'un arrondissement. */
+export const villeDe = (arrondissement: string) =>
+  arrondissement.startsWith('751') ? '75056' : arrondissement.startsWith('6938') ? '69123' : '13055'
+
+/**
+ * Arrondissement d'un bureau de Paris, Lyon ou Marseille, d'après son numéro : « 75056_1512 » est au 15e
+ * (75115). Même règle que le pipeline ; undefined ailleurs, ou pour un bureau hors de la règle.
+ */
+export function arrondissementDu(codeBureau: string): string | undefined {
+  const [commune, numero = ''] = codeBureau.split('_')
+  const deux = numero.slice(0, 2)
+  if (!/^\d\d$/.test(deux)) return undefined
+  const n = Number(deux)
+  if (commune === '75056' && n >= 1 && n <= 20) return `751${deux}`
+  if (commune === '69123' && n >= 1 && n <= 9) return `6938${n}`
+  if (commune === '13055' && n >= 1 && n <= 16) return `132${deux}`
+  return undefined
+}
+
 /** Nom affiché d'un territoire sélectionné : « Lyon, bureau 0816 », « Lyon », « Rhône, 2e circonscription ». */
 export function titreDe(selection: Selection, index: Pick<Index, 'noms' | 'passage'>): string {
   if (selection.niveau === 'bureau') {

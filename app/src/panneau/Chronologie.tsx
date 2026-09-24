@@ -13,7 +13,7 @@ interface Props {
   scrutins: readonly ScrutinCatalogue[]
   /** Scrutin affiché sur la carte : son type est proposé d'abord, et son année repérée. */
   courant: ScrutinCatalogue
-  niveau: 'france' | 'departement' | 'circonscription' | 'commune'
+  niveau: 'france' | 'departement' | 'circonscription' | 'commune' | 'arrondissement'
   /** Précision du titre quand la série n'est pas celle du territoire choisi (bureau → commune). */
   precision?: string
   /** Commune née d'une fusion : ses tours anciens additionnent les communes qui l'ont formée. */
@@ -67,10 +67,11 @@ export function Chronologie({ lignes, erreur, scrutins, courant, niveau, precisi
     "Blocs de la grille de 2026, appliquée à tous les scrutins : l'offre politique change d'un scrutin à l'autre.",
     'Divers et non classés : dans les données.',
   ]
-  if (type === 'muni' && niveau !== 'commune') {
+  const agrege = niveau === 'france' || niveau === 'departement' || niveau === 'circonscription'
+  if (type === 'muni' && agrege) {
     notes.push('Municipales : parts calculées sur les communes votant par listes, de 3 500 habitants et plus en 2008, de 1 000 et plus en 2014 et 2020, toutes en 2026.')
   }
-  if (type === 'cant' && niveau !== 'commune') notes.push("Cantonales : renouvellement par moitié, chaque scrutin ne couvre qu'une partie des cantons.")
+  if (type === 'cant' && agrege) notes.push("Cantonales : renouvellement par moitié, chaque scrutin ne couvre qu'une partie des cantons.")
   notes.push('Tiret ou courbe interrompue : pas de candidat du bloc.')
   if (points.some((p) => p.panachage)) {
     const annees = points.filter((p) => p.panachage).map((p) => p.scrutin.date.slice(0, 4)).join(' et ')

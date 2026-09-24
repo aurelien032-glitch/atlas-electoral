@@ -48,7 +48,16 @@ METROPOLE = r"regexp_matches(code_bv, '^([0-8][0-9]|9[0-5]|2A|2B)[0-9]{3}_')"
 
 # Niveaux d'agrégation. La commune est celle du COG 2026 (table de passage), pour correspondre aux
 # contours et aux noms ; les bureaux gardent leur code d'origine.
-NIVEAUX = {"commune": "commune", "departement": "departement", "france": "'FR'"}
+# Paris, Lyon et Marseille : les bureaux portent le code de la ville, mais leur numéro commence par celui de
+# l'arrondissement (« 75056_1512 » : 15e arrondissement, code INSEE 75115). Règle vérifiée sur les 56 tours ;
+# les rares bureaux qui y échappent restent à la seule échelle de la ville : « 00… » à Lyon, et à Paris le
+# bureau « JUS1 » où sont dépouillés les votes par correspondance des personnes détenues (depuis 2019).
+ARRONDISSEMENT = """CASE
+    WHEN commune = '75056' AND substr(code_bv, 7, 2) BETWEEN '01' AND '20' THEN '751' || substr(code_bv, 7, 2)
+    WHEN commune = '69123' AND substr(code_bv, 7, 2) BETWEEN '01' AND '09' THEN '6938' || substr(code_bv, 8, 1)
+    WHEN commune = '13055' AND substr(code_bv, 7, 2) BETWEEN '01' AND '16' THEN '132' || substr(code_bv, 7, 2)
+END"""
+NIVEAUX = {"commune": "commune", "arrondissement": ARRONDISSEMENT, "departement": "departement", "france": "'FR'"}
 
 # Département des fichiers officiels par circonscription (« 1 » pour l'Ain, « ZX » pour Saint-Barthélemy
 # et Saint-Martin, qui partagent une circonscription), et celui qu'on déduit du code commune.
@@ -298,10 +307,11 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
                sum(exprimes) FILTER (WHERE commune NOT IN (SELECT commune FROM communes_panachage))::INTEGER
                  AS exprimes_listes,
                bool_or(commune IN (SELECT commune FROM communes_panachage)) AS panachage
-        FROM g GROUP BY ALL""" for niveau, expr in niveaux.items())
+        FROM g WHERE {expr} IS NOT NULL GROUP BY ALL""" for niveau, expr in niveaux.items())
     voix = " UNION ALL ".join(f"""
         SELECT '{niveau}' AS niveau, {expr} AS code, c.cand, sum(b.voix)::INTEGER AS voix
-        FROM brut_cle b JOIN cand c USING (cle) WHERE NOT b.panachage GROUP BY ALL""" for niveau, expr in niveaux.items())
+        FROM brut_cle b JOIN cand c USING (cle) WHERE NOT b.panachage AND {expr} IS NOT NULL
+        GROUP BY ALL""" for niveau, expr in niveaux.items())
     con.sql(f"CREATE OR REPLACE TEMP TABLE agr_voix AS {voix}")
     con.sql("""
         CREATE OR REPLACE TEMP TABLE agr_classement AS
@@ -360,6 +370,9 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
             "SELECT count(DISTINCT cle) FROM brut_cle WHERE panachage").fetchone()[0]
     # Jusqu'en 2015, les données comptent les blancs avec les nuls (colonne blancs vide) : on garde
     # cette information telle quelle plutôt que d'inventer une répartition.
+    c["arrondissements"] = con.sql(f"SELECT count(DISTINCT {ARRONDISSEMENT}) FROM g").fetchone()[0]
+    c["bureaux_hors_arrondissement"] = con.sql(f"""SELECT count(*) FROM g
+        WHERE commune IN ('75056', '69123', '13055') AND {ARRONDISSEMENT} IS NULL""").fetchone()[0]
     c["participation_incoherente"] = con.sql(
         "SELECT count(*) FROM g WHERE votants <> coalesce(blancs, 0) + nuls + exprimes").fetchone()[0]
     c["blancs_distincts"] = con.sql("SELECT count(blancs) > 0 FROM g").fetchone()[0]
