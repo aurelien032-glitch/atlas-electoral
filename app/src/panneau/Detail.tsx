@@ -1,12 +1,13 @@
 import { LIBELLE_BLOC, palier } from '../carte/couleurs'
 import type { Cible } from '../cibles'
-import { nomCandidature } from '../donnees/libelles'
+import { nomCandidature, nuanceCourte } from '../donnees/libelles'
 import { communeDu, departementDe, departementDeCirconscription, numeroDu, titreDe } from '../donnees/territoires'
 import { exprimesPourParts, type Bloc, type Candidature, type Resultat } from '../donnees/types'
 import { formatNombre, formatPart, unitePoints } from '../format'
 import type { Selection } from '../vue'
 import { Barres, type LigneResultat } from './Barres'
 import { couleurDuBloc, type Actions, type Contexte } from './contexte'
+import { TableNuances } from './Nuances'
 
 export interface Parent {
   nom: string
@@ -142,6 +143,8 @@ export function Detail({ ctx, selection, resultat, lignes, parent, circonscripti
       return {
         cle: String(l.cand), nom: nom(l.cand), couleur: couleurDuBloc(c?.bloc ?? 'NC'), part: l.voix / resultat.exprimes,
         mention: c?.elu ? (c.sexe === 'F' ? 'élue' : 'élu') : undefined,
+        // Au panachage, des dizaines de candidats sans nuance : la ligne n'apprendrait rien.
+        detail: c && !panachage ? nuanceCourte(c) : undefined,
         partParent: parent && voixParent !== undefined ? voixParent / parent.exprimes : undefined,
         marquee: cible?.retenue(l.cand) ?? false,
       }
@@ -171,6 +174,7 @@ export function Detail({ ctx, selection, resultat, lignes, parent, circonscripti
       {lignes === undefined
         ? <p className="note">Chargement des voix…</p>
         : <Barres lignes={rangees} legende={`Résultats, ${titre}`} entete={parBloc ? 'Bloc' : 'Candidature'} parent={parent?.nom} />}
+      {!parBloc && !panachage && <TableNuances candidatures={presentes} />}
       {panachage && (
         <p className="note-bas">
           Petite commune : on y vote pour des personnes (panachage). Chaque électeur peut choisir plusieurs

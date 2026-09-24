@@ -209,7 +209,8 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
                coalesce(c.nuance_officielle, a.nuance, 'NC') AS nuance,
                CASE WHEN c.nuance_officielle IS NOT NULL THEN 'officielle'
                     WHEN a.nuance IS NOT NULL THEN 'attribuée' ELSE 'aucune' END AS origine_nuance,
-               n.famille, n.bloc, coalesce(n.cas_limite = 'oui' OR a.cas_limite = 'oui', false) AS cas_limite
+               n.libelle AS nuance_libelle, n.famille, n.bloc,
+               coalesce(n.cas_limite = 'oui' OR a.cas_limite = 'oui', false) AS cas_limite
         FROM cand c
         LEFT JOIN ref_candidats a ON '{scrutin.id}' LIKE a.election || '%'
               AND upper(coalesce(c.nom, c.liste_abregee, c.liste)) = upper(a.nom)
@@ -285,7 +286,7 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
     # 5. Candidatures et agrégats par niveau.
     ecrire(con, """
         SELECT cand, portee, panneau, nom, prenom, sexe, liste, liste_abregee, nuance_officielle,
-               nuance, origine_nuance, famille, bloc, cas_limite, circonscription, elu, voix_total
+               nuance, nuance_libelle, origine_nuance, famille, bloc, cas_limite, circonscription, elu, voix_total
         FROM candidats
         WHERE cle IN (SELECT cle FROM brut_cle WHERE NOT panachage)
         ORDER BY cand""", dossier / "candidats.parquet")
@@ -452,7 +453,9 @@ def main(argv=None) -> None:
         manifestes.append(m)
 
     (args.sortie / "referentiels").mkdir(exist_ok=True)
-    shutil.copy2(REFERENTIELS / "nuances.csv", args.sortie / "referentiels" / "nuances.csv")
+    # Grille des nuances et totaux officiels : publiés tels quels, la page Méthodologie les affiche.
+    for nom in ("nuances.csv", "totaux_officiels.csv"):
+        shutil.copy2(REFERENTIELS / nom, args.sortie / "referentiels" / nom)
 
     # Catalogue : on fusionne avec les scrutins déjà construits lors d'un passage précédent.
     chemin = args.sortie / "scrutins.json"

@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import type { Feature } from 'geojson'
+import { lireCsv } from './csv'
 import { lireParquet } from './parquet'
 import type {
-  Agregat, Bureau, BureauContour, Candidature, Catalogue, Circonscription, LigneSerie, Passage, Territoire, VoixAgregat,
-  VoixBureau, VoixPanachage,
+  Agregat, Bureau, BureauContour, Candidature, Catalogue, Circonscription, LigneSerie, Manifeste, Passage, Territoire,
+  VoixAgregat, VoixBureau, VoixPanachage,
 } from './types'
 
 /** Racine des fichiers publiés par le pipeline (servis sous /data en développement, cf. vite.config.ts). */
@@ -40,6 +41,32 @@ export function usePanachage(scrutin: string | undefined, departement: string | 
     queryKey: ['scrutin', scrutin, 'panachage', departement],
     enabled: scrutin !== undefined && departement !== undefined,
     queryFn: ({ signal }) => lireParquet<VoixPanachage>(`${RACINE_DONNEES}/${scrutin}/panachage/${departement}.parquet`, signal),
+  })
+}
+
+/** Manifeste d'un scrutin (contrôles, empreintes), pour le rapport qualité de la page Méthodologie. */
+export function useManifeste(scrutin: string | undefined) {
+  return useQuery({
+    queryKey: ['scrutin', scrutin, 'manifeste'],
+    enabled: scrutin !== undefined,
+    queryFn: async ({ signal }) => {
+      const reponse = await fetch(`${RACINE_DONNEES}/${scrutin}/scrutin.json`, { signal })
+      if (!reponse.ok) throw new Error(`manifeste indisponible (HTTP ${reponse.status})`)
+      return (await reponse.json()) as Manifeste
+    },
+  })
+}
+
+/** Référentiel publié en CSV (grille des nuances, totaux officiels), lu à la demande. */
+export function useReferentiel(fichier: 'nuances.csv' | 'totaux_officiels.csv', actif: boolean) {
+  return useQuery({
+    queryKey: ['referentiel', fichier],
+    enabled: actif,
+    queryFn: async ({ signal }) => {
+      const reponse = await fetch(`${RACINE_DONNEES}/referentiels/${fichier}`, { signal })
+      if (!reponse.ok) throw new Error(`référentiel indisponible (HTTP ${reponse.status})`)
+      return lireCsv(await reponse.text())
+    },
   })
 }
 

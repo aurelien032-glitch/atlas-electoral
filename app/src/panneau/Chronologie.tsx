@@ -108,7 +108,7 @@ export function Chronologie({ lignes, erreur, scrutins, courant, niveau, precisi
         actif={actif} onActif={setSurvol} courant={courantVisible}
         libelle={`Participation aux ${libelleType}, premiers tours de ${periode}`}
       />
-      <details className="donnees-courbes">
+      <details className="depliant">
         <summary>Voir les données</summary>
         <div className="defilement" role="region" aria-label="Tableau des données" tabIndex={0}>
           <table>

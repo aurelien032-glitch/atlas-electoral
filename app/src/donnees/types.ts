@@ -20,7 +20,17 @@ export interface ScrutinCatalogue {
 export interface Catalogue {
   version: number
   genere_le: string
+  /** Version de chaque source officielle lue au build (sources.lock.json). */
+  sources: Record<string, { url: string; etag: string | null; derniere_modification: string | null }>
   scrutins: ScrutinCatalogue[]
+}
+
+/** Manifeste d'un scrutin (scrutin.json) : compteurs des contrôles et empreintes des fichiers. */
+export interface Manifeste {
+  id: string
+  compteurs: Record<string, number | boolean>
+  fichiers: Record<string, { octets: number; sha256: string }>
+  duree_s: number
 }
 
 /** Résultat précalculé d'un territoire (bureau ou agrégat) : participation et candidature en tête. */
@@ -129,6 +139,8 @@ export interface Candidature {
   liste: string | null
   liste_abregee: string | null
   nuance: string
+  /** Libellé de la nuance dans la grille (« Rassemblement national »). */
+  nuance_libelle: string | null
   origine_nuance: 'officielle' | 'attribuée' | 'aucune'
   famille: string
   bloc: Bloc

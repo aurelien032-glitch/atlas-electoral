@@ -19,6 +19,8 @@ export interface Vue {
   bloc: BlocColore | undefined
   de: string | undefined
   selection: Selection | undefined
+  /** Page affichée dans le panneau à la place des résultats. */
+  page: 'methodologie' | undefined
 }
 
 const NIVEAUX: readonly NiveauSelection[] = ['bureau', 'commune', 'circonscription', 'departement']
@@ -32,6 +34,7 @@ export function lireVue(parametres: URLSearchParams): Vue {
     bloc: BLOCS_COLORES.find((b) => b === parametres.get('bloc')),
     de: parametres.get('de') ?? undefined,
     selection: code && NIVEAUX.includes(niveau as NiveauSelection) ? { niveau: niveau as NiveauSelection, code } : undefined,
+    page: parametres.get('page') === 'methodologie' ? 'methodologie' : undefined,
   }
 }
 

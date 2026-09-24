@@ -27,17 +27,17 @@ import { Apercu, type ApercuEvolution } from './panneau/Apercu'
 import { Chronologie } from './panneau/Chronologie'
 import type { Actions, Contexte } from './panneau/contexte'
 import { Detail, type Parent } from './panneau/Detail'
+import { Methodologie } from './panneau/Methodologie'
 import { preparer } from './recherche/chercher'
 import { Recherche } from './recherche/Recherche'
 import { useUrl } from './url'
 import { ecrireSelection, lireVue, type Selection } from './vue'
 
-const METHODOLOGIE = 'https://github.com/aurelien032-glitch/atlas-electoral/blob/main/docs/PLAN.md'
 
 /** Candidat d'une commune au panachage, sous la forme des candidatures publiées. */
 const candidatureDuPanachage = (l: VoixPanachage): Candidature => ({
   cand: l.cand, portee: 'commune', panneau: null, nom: l.nom, prenom: l.prenom, liste: null, liste_abregee: null,
-  nuance: l.nuance ?? 'NC', origine_nuance: l.nuance && l.nuance !== 'NC' ? 'officielle' : 'aucune', famille: '', bloc: l.bloc ?? 'NC',
+  nuance: l.nuance ?? 'NC', nuance_libelle: null, origine_nuance: l.nuance && l.nuance !== 'NC' ? 'officielle' : 'aucune', famille: '', bloc: l.bloc ?? 'NC',
   cas_limite: false, sexe: l.sexe, circonscription: null, elu: null, voix_total: 0,
 })
 
@@ -271,7 +271,7 @@ export default function App() {
     bloc: (valeur) => modifierUrl({ bloc: valeur }),
     de: (valeur) => modifierUrl({ de: valeur }),
     territoire: (s) => {
-      modifierUrl({ sel: ecrireSelection(s) })
+      modifierUrl({ sel: ecrireSelection(s), page: null })
       if (s?.niveau === 'bureau') return
       const zone = s ? emprise(index.territoires.get(s.code)) : FRANCE_METROPOLITAINE
       if (zone) setCadrage({ emprise: zone, jeton: Date.now() })
@@ -289,7 +289,7 @@ export default function App() {
   }, [selectionInitiale, index])
 
   const choisirSurCarte = useCallback((survol: Survol) => {
-    modifierUrl({ sel: ecrireSelection({ niveau: survol.niveau, code: survol.code }) })
+    modifierUrl({ sel: ecrireSelection({ niveau: survol.niveau, code: survol.code }), page: null })
     setDeplie(true)
   }, [modifierUrl])
 
@@ -297,6 +297,12 @@ export default function App() {
     actions.territoire({ niveau: t.niveau, code: t.code })
     setDeplie(true)
   }, [actions])
+
+  const lienMethodologie = useMemo(() => {
+    const p = new URLSearchParams(parametres)
+    p.set('page', 'methodologie')
+    return `?${p}`
+  }, [parametres])
 
   const changerMode = useCallback((mode: Mode) => modifierUrl({ mode: mode === 'tete' ? null : mode }), [modifierUrl])
 
@@ -398,25 +404,29 @@ export default function App() {
         </button>
         <header className="panneau-entete">
           <span className="marque">Atlas électoral</span>
-          <a href={METHODOLOGIE}>Méthodologie</a>
+          <a href={lienMethodologie} aria-current={vue.page === 'methodologie' ? 'page' : undefined}
+            onClick={(e) => { e.preventDefault(); modifierUrl({ page: 'methodologie' }); setDeplie(true) }}>Méthodologie</a>
         </header>
         <Recherche entrees={entreesRecherche} onChoisir={allerA} />
         <div id="panneau-corps" className="panneau-corps">
           {erreur && <p className="alerte">Données indisponibles : {erreur.message}</p>}
           {chargement && !erreur && <p className="note">Chargement…</p>}
-          {ctx && (selection
+          {vue.page === 'methodologie' && catalogue.data && scrutin && (
+            <Methodologie catalogue={catalogue.data} scrutin={scrutin} onScrutin={actions.scrutin} onRetour={() => modifierUrl({ page: null })} />
+          )}
+          {vue.page !== 'methodologie' && ctx && (selection
             ? <Detail ctx={ctx} selection={selection} resultat={detail?.resultat} lignes={detail?.lignes} parent={detail?.parent}
                 circonscriptions={detail?.circonscriptions ?? []} supplementaires={detail?.supplementaires} panachage={auPanachage}
                 cible={vue.mode === 'score' ? cible : undefined} complement={complement} actions={actions} />
             : <Apercu ctx={ctx} mode={vue.mode} cibles={cibles} cible={cible} bloc={bloc} evolution={apercuEvolution} actions={actions} />)}
-          {ctx && (
+          {vue.page !== 'methodologie' && ctx && (
             <Chronologie
               lignes={lignesSerie} erreur={serie.isError} scrutins={scrutins} courant={ctx.scrutin} niveau={niveauSerie}
               precision={selection?.niveau === 'bureau' ? 'à la commune' : undefined}
               fusion={niveauSerie === 'commune' && index.fusionnees.has(codeSerie)}
             />
           )}
-          {etatCarte && <Legende description={etatCarte.legende} className="legende-panneau" />}
+          {vue.page !== 'methodologie' && etatCarte && <Legende description={etatCarte.legende} className="legende-panneau" />}
           <p className="sources">
             Résultats : ministère de l'Intérieur, via data.gouv.fr. Contours des bureaux : data.gouv.fr (REU 2022,
             indicatifs). Limites administratives : IGN, simplifiées par Etalab (COG 2026). Blocs : circulaire du ministère

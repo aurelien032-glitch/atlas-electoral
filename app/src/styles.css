@@ -148,13 +148,18 @@ a:hover, .lien:hover { color: var(--encre-2); }
 .bulle-courbe li { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .bulle-courbe strong { min-width: 46px; text-align: right; font-variant-numeric: tabular-nums; }
 .bulle-courbe li > span:last-child { color: var(--encre-2); }
-.donnees-courbes summary { cursor: pointer; font-size: 14px; padding: 6px 0; }
+/* Tableaux dépliables : données des courbes, nuances des candidatures. */
+.depliant summary { cursor: pointer; font-size: 14px; padding: 6px 0; }
+.depliant .note-bas { margin-top: 6px; }
 .defilement { overflow-x: auto; }
-.donnees-courbes table { border-collapse: collapse; font-size: 13px; }
-.donnees-courbes th, .donnees-courbes td { padding: 3px 0 3px 12px; }
-.donnees-courbes th:first-child { padding-left: 0; font-weight: 400; text-align: left; white-space: nowrap; }
-.donnees-courbes thead th { font-weight: 400; color: var(--encre-2); }
-.donnees-courbes tr.separe > * { border-top: 1px solid var(--filet); }
+.depliant table { border-collapse: collapse; font-size: 13px; }
+.depliant th, .depliant td { padding: 3px 0 3px 12px; vertical-align: top; }
+.depliant th:first-child { padding-left: 0; font-weight: 400; text-align: left; white-space: nowrap; }
+.depliant thead th { font-weight: 400; color: var(--encre-2); text-align: left; }
+.depliant tr.separe > * { border-top: 1px solid var(--filet); }
+.depliant table.nuances th:first-child { white-space: normal; min-width: 120px; }
+.depliant table.nuances abbr { text-decoration: none; font-weight: 600; }
+.barres .sous-ligne { display: block; font-size: 12px; color: var(--encre-2); }
 
 .note { margin: 0; font-size: 14px; color: var(--encre-2); }
 .note-bas, .sources { margin: 0; font-size: 12px; line-height: 1.5; color: var(--encre-2); }
@@ -238,3 +243,18 @@ a:hover, .lien:hover { color: var(--encre-2); }
 @media (prefers-reduced-motion: reduce) {
   .panneau { transition: none; }
 }
+
+/* Page Méthodologie, dans le panneau : la carte reste visible. */
+.methodologie { display: flex; flex-direction: column; gap: 22px; }
+.methodologie .retour { align-self: flex-start; min-height: 32px; font-size: 14px; }
+.methodologie-section { display: flex; flex-direction: column; gap: 10px; padding-top: 16px; border-top: 1px solid var(--filet); }
+.methodologie-section h2 { margin: 0; font: 500 22px/1.2 var(--titre); }
+.methodologie .liste { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; line-height: 1.5; }
+.liste-sources { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 15px; line-height: 1.45; }
+.liste-sources li { display: flex; flex-direction: column; gap: 2px; }
+.liste-sources li > span:last-child { font-size: 14px; color: var(--encre-2); }
+.controles { width: 100%; border-collapse: collapse; font-size: 14px; }
+.controles th, .controles td { padding: 6px 0; text-align: left; vertical-align: top; border-bottom: 1px solid var(--piste); }
+.controles th { width: 44%; padding-right: 12px; font-weight: 400; color: var(--encre-2); }
+.depliant code { font-size: 12px; word-break: break-all; }
+.panneau-entete a[aria-current='page'] { text-decoration-thickness: 2px; }

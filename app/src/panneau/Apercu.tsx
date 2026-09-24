@@ -2,12 +2,13 @@ import { useState, type ReactNode } from 'react'
 import type { Mesure } from '../calculs/parts'
 import { BLOCS_COLORES, DU_BLOC, LIBELLE_BLOC, type BlocColore } from '../carte/couleurs'
 import type { Cible } from '../cibles'
-import { nomCandidature } from '../donnees/libelles'
+import { nomCandidature, nuanceCourte } from '../donnees/libelles'
 import { grouper } from '../donnees/scrutins'
 import { exprimesPourParts, type Bloc, type ScrutinCatalogue } from '../donnees/types'
 import { formatEcart, formatNombre, formatPart } from '../format'
 import { partsAuNiveau, type Mode } from '../modes'
 import { Barres, type LigneResultat } from './Barres'
+import { TableNuances } from './Nuances'
 import { couleurDuBloc, pluriel, type Actions, type Contexte } from './contexte'
 import { Extremes } from './Extremes'
 import { compterTetes, enumerer, extremes } from './resume'
@@ -85,6 +86,7 @@ function ApercuTete({ ctx, actions }: Props) {
       i === 0 ? `${nom(cand)} arrive en tête dans ${n} ${pluriel(n, 'département')}` : `${nom(cand)} dans ${n}`))}.`
     lignes = [...ctx.candidats].sort((a, b) => b.voix_total - a.voix_total).map((c) => ({
       cle: String(c.cand), nom: nomCandidature(c), couleur: couleurDuBloc(c.bloc), part: c.voix_total / france.exprimes,
+      detail: nuanceCourte(c),
     }))
   } else {
     const blocDe = (cand: number): Bloc => ctx.parCand.get(cand)?.bloc ?? 'NC'
@@ -127,6 +129,7 @@ function ApercuTete({ ctx, actions }: Props) {
             (panachage) : chaque électeur peut choisir plusieurs candidats, dont les voix ne s'additionnent pas.
           </p>
         )}
+        {national && <TableNuances candidatures={[...ctx.candidats].sort((a, b) => b.voix_total - a.voix_total)} />}
       </section>
     </>
   )
