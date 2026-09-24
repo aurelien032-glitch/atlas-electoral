@@ -4,7 +4,7 @@ import { BLOCS_COLORES, DU_BLOC, LIBELLE_BLOC, type BlocColore } from '../carte/
 import type { Cible } from '../cibles'
 import { nomCandidature } from '../donnees/libelles'
 import { grouper } from '../donnees/scrutins'
-import type { Bloc, ScrutinCatalogue } from '../donnees/types'
+import { exprimesPourParts, type Bloc, type ScrutinCatalogue } from '../donnees/types'
 import { formatEcart, formatNombre, formatPart } from '../format'
 import { partsAuNiveau, type Mode } from '../modes'
 import { Barres, type LigneResultat } from './Barres'
@@ -101,7 +101,7 @@ function ApercuTete({ ctx, actions }: Props) {
     const sommes = new Map<Bloc, number>()
     for (const c of ctx.candidats) sommes.set(c.bloc, (sommes.get(c.bloc) ?? 0) + c.voix_total)
     lignes = [...sommes].sort((a, b) => b[1] - a[1]).map(([b, voix]) => ({
-      cle: b, nom: LIBELLE_BLOC[b], couleur: couleurDuBloc(b), part: voix / france.exprimes,
+      cle: b, nom: LIBELLE_BLOC[b], couleur: couleurDuBloc(b), part: voix / exprimesPourParts(france),
     }))
   }
   const visibles = tout ? lignes : lignes.slice(0, 5)
@@ -120,6 +120,12 @@ function ApercuTete({ ctx, actions }: Props) {
           <button type="button" className="lien" aria-expanded={tout} onClick={() => setTout(!tout)}>
             {tout ? 'Réduire la liste' : `Voir les ${lignes.length} ${national ? 'candidatures' : 'blocs'}`}
           </button>
+        )}
+        {france.panachage && (
+          <p className="note-bas">
+            Parts calculées sur les communes votant par listes. Dans les petites communes, on vote pour des personnes
+            (panachage) : chaque électeur peut choisir plusieurs candidats, dont les voix ne s'additionnent pas.
+          </p>
         )}
       </section>
     </>

@@ -2,8 +2,8 @@ import { LIBELLE_BLOC, palier } from '../carte/couleurs'
 import type { Cible } from '../cibles'
 import { nomCandidature } from '../donnees/libelles'
 import { communeDu, departementDe, departementDeCirconscription, numeroDu, titreDe } from '../donnees/territoires'
-import type { Bloc, Candidature, Resultat } from '../donnees/types'
-import { formatNombre, formatPart } from '../format'
+import { exprimesPourParts, type Bloc, type Candidature, type Resultat } from '../donnees/types'
+import { formatNombre, formatPart, unitePoints } from '../format'
 import type { Selection } from '../vue'
 import { Barres, type LigneResultat } from './Barres'
 import { couleurDuBloc, type Actions, type Contexte } from './contexte'
@@ -23,6 +23,10 @@ interface Props {
   parent: Parent | undefined
   /** Législatives : circonscription(s) des candidatures du territoire. */
   circonscriptions: string[]
+  /** Candidats d'une commune au panachage, absents des candidatures publiées (chargés à la demande). */
+  supplementaires?: ReadonlyMap<number, Candidature>
+  /** Commune au panachage : chaque électeur vote pour plusieurs candidats. */
+  panachage?: boolean
   cible: Cible | undefined
   /** Valeur du territoire dans le mode courant (score, évolution…), déjà rédigée. */
   complement: string | undefined
@@ -62,7 +66,7 @@ function FilAriane({ ctx, selection, actions }: Pick<Props, 'ctx' | 'selection' 
   )
 }
 
-export function Detail({ ctx, selection, resultat, lignes, parent, circonscriptions, cible, complement, actions }: Props) {
+export function Detail({ ctx, selection, resultat, lignes, parent, circonscriptions, supplementaires, panachage, cible, complement, actions }: Props) {
   const titre = titreDe(selection, ctx.index)
   const entete = (
     <>
@@ -94,8 +98,9 @@ export function Detail({ ctx, selection, resultat, lignes, parent, circonscripti
   if (!resultat) return <>{entete}<p className="note">Aucun résultat rattaché à ce territoire pour ce scrutin.</p></>
   if (resultat.exprimes === 0) return <>{entete}<p className="note">Aucun suffrage exprimé.</p></>
 
+  const candidature = (cand: number) => ctx.parCand.get(cand) ?? supplementaires?.get(cand)
   const nom = (cand: number) => {
-    const c = ctx.parCand.get(cand)
+    const c = candidature(cand)
     return c ? nomCandidature(c) : `candidature ${cand}`
   }
   // Au département (et au-delà), les législatives et les municipales comptent des dizaines de
@@ -104,9 +109,11 @@ export function Detail({ ctx, selection, resultat, lignes, parent, circonscripti
   const tries = [...(lignes ?? [])].sort((a, b) => b.voix - a.voix)
   let phrase: string | undefined
   if (!parBloc && tries.length >= 2 && resultat.tete !== null) {
+    const tete = resultat.tete
+    const avance = (resultat.avance_x10000 ?? 0) / 100
     phrase = resultat.egalite
       ? `Égalité en tête entre ${nom(tries[0].cand)} et ${nom(tries[1].cand)}.`
-      : `${nom(resultat.tete)} arrive en tête, ${((resultat.avance_x10000 ?? 0) / 100).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} points devant ${nom(tries.find((l) => l.cand !== resultat.tete)?.cand ?? tries[1].cand)} : une avance ${palier(resultat.avance_x10000 ?? 0).libelle}.`
+      : `${nom(tete)} arrive en tête, ${avance.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${unitePoints(avance)} devant ${nom(tries.find((l) => l.cand !== tete)?.cand ?? tries[1].cand)} : une avance ${palier(resultat.avance_x10000 ?? 0).libelle}.`
   }
 
   let rangees: LigneResultat[]
@@ -123,13 +130,13 @@ export function Detail({ ctx, selection, resultat, lignes, parent, circonscripti
     const ici = somme(tries.map((l) => [l.cand, l.voix]))
     const ailleurs = parent ? somme(parent.voix) : undefined
     rangees = [...ici].sort((a, b) => b[1] - a[1]).map(([bloc, voix]) => ({
-      cle: bloc, nom: LIBELLE_BLOC[bloc], couleur: couleurDuBloc(bloc), part: voix / resultat.exprimes,
+      cle: bloc, nom: LIBELLE_BLOC[bloc], couleur: couleurDuBloc(bloc), part: voix / exprimesPourParts(resultat),
       partParent: ailleurs && parent ? (ailleurs.get(bloc) ?? 0) / parent.exprimes : undefined,
       marquee: cible?.bloc === bloc,
     }))
   } else {
     rangees = tries.map((l) => {
-      const c = ctx.parCand.get(l.cand)
+      const c = candidature(l.cand)
       if (c) presentes.push(c)
       const voixParent = parent?.voix.get(l.cand)
       return {
@@ -164,6 +171,18 @@ export function Detail({ ctx, selection, resultat, lignes, parent, circonscripti
       {lignes === undefined
         ? <p className="note">Chargement des voix…</p>
         : <Barres lignes={rangees} legende={`Résultats, ${titre}`} entete={parBloc ? 'Bloc' : 'Candidature'} parent={parent?.nom} />}
+      {panachage && (
+        <p className="note-bas">
+          Petite commune : on y vote pour des personnes (panachage). Chaque électeur peut choisir plusieurs
+          candidats : les pourcentages ne s'additionnent pas.
+        </p>
+      )}
+      {parBloc && 'panachage' in resultat && resultat.panachage === true && (
+        <p className="note-bas">
+          Parts calculées sur les communes votant par listes : dans les petites communes, on vote pour des
+          personnes (panachage).
+        </p>
+      )}
       <p className="note-bas">
         En % des suffrages exprimés.
         {selection.niveau === 'bureau' && ' Contours de bureaux indicatifs, reconstitués à partir du Répertoire électoral unique (2022).'}

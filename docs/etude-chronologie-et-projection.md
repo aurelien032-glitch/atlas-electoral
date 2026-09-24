@@ -1,9 +1,13 @@
 # Étude — Statistiques chronologiques et projection 2027
 
-> **Statut : étude, 24 septembre 2026.** Demandée le 24/09 : « étudier comment visualiser des statistiques
-> chronologiques, voire simuler une projection pour 2027 ». Rien n'est décidé ; les choix proposés sont en fin
-> de document. Rappel : le plan (§ 2.4) range aujourd'hui « sondages, projections, prédictions » hors du
-> périmètre, au nom de la mission de transparence. Une projection remettrait ce choix en cause.
+> **Statut : étude du 24 septembre 2026, décisions prises le même jour.** Demandée le 24/09 : « étudier comment
+> visualiser des statistiques chronologiques, voire simuler une projection pour 2027 ».
+>
+> **Décisions (plan, Q12 et Q14)** :
+> - vues chronologiques à construire d'abord : « Au fil des scrutins » dans la fiche d'un territoire, et les
+>   courbes nationales ;
+> - projection : un **simulateur de scénarios, après la bêta**, avec les garde-fous du § 3 (approche A) ;
+>   prévisions et sondages restent hors du périmètre (§ 2.4 du plan).
 
 ## 1. Ce que les données permettent
 

@@ -9,6 +9,8 @@ conservée. Pour chaque scrutin, écrit dans publication/v1/<scrutin>/ :
                          département et France
   agregats_voix.parquet  voix par candidature aux mêmes niveaux
   circonscriptions.parquet  législatives : libellé et emprise de chaque circonscription
+  panachage/<dép>.parquet   municipales jusqu'en 2020 : candidats des communes au panachage, chargés
+                         à l'ouverture de la fiche d'une commune (hors des fichiers principaux)
   scrutin.json           manifeste : compteurs, totaux, contrôles, empreintes SHA-256
 ainsi que publication/v1/scrutins.json (catalogue) et sources.lock.json (versions des sources).
 
@@ -35,8 +37,11 @@ EXPRESSION_PORTEE = {"national": "'FR'", "circonscription": "circonscription", "
 
 # Le champ code_departement mélange les codes du ministère (ZA…) et de l'INSEE (971…) selon les
 # scrutins : on le déduit du code commune INSEE, qui est homogène.
-DEPARTEMENT = ("CASE WHEN code_commune LIKE '97%' OR code_commune LIKE '98%' "
-               "THEN left(code_commune, 3) ELSE left(code_commune, 2) END")
+def departement_de(colonne: str) -> str:
+    return f"CASE WHEN {colonne} LIKE '97%' OR {colonne} LIKE '98%' THEN left({colonne}, 3) ELSE left({colonne}, 2) END"
+
+
+DEPARTEMENT = departement_de("code_commune")
 
 # Bureaux de métropole (départements 01 à 95, Corse comprise), pour le taux de jointure.
 METROPOLE = r"regexp_matches(code_bv, '^([0-8][0-9]|9[0-5]|2A|2B)[0-9]{3}_')"
@@ -218,10 +223,42 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
         raise SystemExit(f"{scrutin.id} : {sans_nuance} candidature(s) nationale(s) sans nuance : "
                          "compléter referentiels/candidats_nuances.csv")
 
-    # 3. Voix par bureau et par candidature.
+    # 2 bis. Panachage (municipales jusqu'en 2020) : dans les petites communes, chaque électeur vote
+    #        pour plusieurs candidats (la somme des voix y dépasse les exprimés). Leurs candidats, tous
+    #        sans nuance, partent dans des fichiers par département, chargés à la demande ; ils ne
+    #        comptent pas dans les agrégats de voix, où leurs voix multiples fausseraient les parts.
+    if scrutin.panachage:
+        con.sql("""
+            CREATE OR REPLACE TEMP TABLE communes_panachage AS
+            SELECT g.commune FROM g JOIN (SELECT code_bv, sum(voix) AS s FROM brut GROUP BY 1) v USING (code_bv)
+            GROUP BY g.commune HAVING bool_or(v.s > g.exprimes)""")
+    else:
+        con.sql("CREATE OR REPLACE TEMP TABLE communes_panachage (commune VARCHAR)")
+    con.sql("""
+        CREATE OR REPLACE TEMP TABLE brut_cle AS
+        SELECT *, commune IN (SELECT commune FROM communes_panachage) AS panachage FROM brut_cle""")
+    # Fichiers régénérés à chaque construction : ceux d'une construction précédente ne doivent pas survivre.
+    for ancien in (dossier / "panachage").glob("*.parquet"):
+        ancien.unlink()
+    # Un fichier par département de la commune au COG 2026 (celui que l'application déduit du code de la
+    # commune), même quand une commune fusionnée venait d'un autre département.
+    departements_panachage = [d for (d,) in con.sql(
+        f"SELECT DISTINCT {departement_de('commune')} FROM brut_cle WHERE panachage ORDER BY 1").fetchall()]
+    if departements_panachage:
+        (dossier / "panachage").mkdir(exist_ok=True)
+        for dep in departements_panachage:
+            ecrire(con, f"""
+                SELECT b.code_bv, b.commune, c.cand, c.nom, c.prenom, c.sexe, c.nuance_officielle AS nuance,
+                       c.bloc, b.voix::INTEGER AS voix
+                FROM brut_cle b JOIN candidats c USING (cle)
+                WHERE b.panachage AND {departement_de('b.commune')} = '{dep}'
+                ORDER BY b.code_bv, b.voix DESC""", dossier / "panachage" / f"{dep}.parquet")
+
+    # 3. Voix par bureau et par candidature (hors panachage).
     ecrire(con, """
         SELECT b.code_bv, c.cand, b.voix::INTEGER AS voix
         FROM brut_cle b JOIN cand c USING (cle)
+        WHERE NOT b.panachage
         ORDER BY b.code_bv, c.cand""", dossier / "voix.parquet")
 
     # 4. Bureaux : participation, candidature en tête et avance sur la deuxième (vue par défaut,
@@ -249,20 +286,29 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
     ecrire(con, """
         SELECT cand, portee, panneau, nom, prenom, sexe, liste, liste_abregee, nuance_officielle,
                nuance, origine_nuance, famille, bloc, cas_limite, circonscription, elu, voix_total
-        FROM candidats ORDER BY cand""", dossier / "candidats.parquet")
+        FROM candidats
+        WHERE cle IN (SELECT cle FROM brut_cle WHERE NOT panachage)
+        ORDER BY cand""", dossier / "candidats.parquet")
     participation = " UNION ALL ".join(f"""
         SELECT '{niveau}' AS niveau, {expr} AS code, sum(inscrits)::INTEGER AS inscrits,
                sum(votants)::INTEGER AS votants, sum(blancs)::INTEGER AS blancs,
-               sum(nuls)::INTEGER AS nuls, sum(exprimes)::INTEGER AS exprimes
+               sum(nuls)::INTEGER AS nuls, sum(exprimes)::INTEGER AS exprimes,
+               -- Exprimés des communes à listes : dénominateur des parts quand le panachage est exclu.
+               sum(exprimes) FILTER (WHERE commune NOT IN (SELECT commune FROM communes_panachage))::INTEGER
+                 AS exprimes_listes,
+               bool_or(commune IN (SELECT commune FROM communes_panachage)) AS panachage
         FROM g GROUP BY ALL""" for niveau, expr in niveaux.items())
     voix = " UNION ALL ".join(f"""
         SELECT '{niveau}' AS niveau, {expr} AS code, c.cand, sum(b.voix)::INTEGER AS voix
-        FROM brut_cle b JOIN cand c USING (cle) GROUP BY ALL""" for niveau, expr in niveaux.items())
+        FROM brut_cle b JOIN cand c USING (cle) WHERE NOT b.panachage GROUP BY ALL""" for niveau, expr in niveaux.items())
     con.sql(f"CREATE OR REPLACE TEMP TABLE agr_voix AS {voix}")
     con.sql("""
         CREATE OR REPLACE TEMP TABLE agr_classement AS
         SELECT *, row_number() OVER (PARTITION BY niveau, code ORDER BY voix DESC, cand) AS rang
-        FROM agr_voix""")
+        FROM (SELECT * FROM agr_voix
+              UNION ALL
+              SELECT 'commune' AS niveau, b.commune AS code, c.cand, sum(b.voix)::INTEGER AS voix
+              FROM brut_cle b JOIN cand c USING (cle) WHERE b.panachage GROUP BY ALL)""")
     # Comme pour les bureaux, la candidature en tête et son avance sont précalculées : la vue
     # nationale (communes) s'affiche sans décoder les voix de chaque candidature.
     ecrire(con, f"""
@@ -304,6 +350,13 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
     c["candidatures"] = con.sql("SELECT count(*) FROM cand").fetchone()[0]
     c["lignes_voix_source"] = con.sql("SELECT count(*) FROM brut").fetchone()[0]
     c["lignes_voix"] = con.sql(f"SELECT count(*) FROM {chemin_sql(dossier / 'voix.parquet')}").fetchone()[0]
+    if scrutin.panachage:
+        if departements_panachage:
+            c["lignes_voix"] += con.sql(
+                f"SELECT count(*) FROM {chemin_sql(dossier / 'panachage' / '*.parquet')}").fetchone()[0]
+        c["communes_panachage"] = con.sql("SELECT count(*) FROM communes_panachage").fetchone()[0]
+        c["candidatures_panachage"] = con.sql(
+            "SELECT count(DISTINCT cle) FROM brut_cle WHERE panachage").fetchone()[0]
     # Jusqu'en 2015, les données comptent les blancs avec les nuls (colonne blancs vide) : on garde
     # cette information telle quelle plutôt que d'inventer une répartition.
     c["participation_incoherente"] = con.sql(
@@ -358,8 +411,8 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
         "totaux": dict(zip(("inscrits", "votants", "blancs", "nuls", "exprimes"),
                            (None if v is None else int(v) for v in totaux))),
         "jointure_contours": jointure,
-        "fichiers": {f.name: {"octets": f.stat().st_size, "sha256": empreinte(f)}
-                     for f in sorted(dossier.glob("*.parquet"))},
+        "fichiers": {f.relative_to(dossier).as_posix(): {"octets": f.stat().st_size, "sha256": empreinte(f)}
+                     for f in sorted(dossier.glob("*.parquet")) + sorted(dossier.glob("panachage/*.parquet"))},
         "duree_s": round(time.time() - debut, 1),
     }
     (dossier / "scrutin.json").write_text(json.dumps(manifeste, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -389,9 +442,11 @@ def main(argv=None) -> None:
         m = construire_scrutin(con, scrutin, verrou["sources"]["general_results"]["url"],
                                verrou["sources"]["candidats_results"]["url"], args.sortie, contours)
         c, j = m["compteurs"], m["jointure_contours"] or {}
-        octets = sum(f["octets"] for f in m["fichiers"].values())
+        octets = sum(f["octets"] for nom, f in m["fichiers"].items() if "/" not in nom)
+        a_part = sum(f["octets"] for nom, f in m["fichiers"].items() if "/" in nom)
         print(f"{scrutin.id} : {c['bureaux']:,} bureaux, {c['candidatures']:,} candidatures, "
-              f"{c['lignes_voix']:,} lignes de voix, {octets / 1e6:.2f} Mo, "
+              f"{c['lignes_voix']:,} lignes de voix, {octets / 1e6:.2f} Mo"
+              f"{f' (+ {a_part / 1e6:.2f} Mo de panachage)' if a_part else ''}, "
               f"carte au niveau {j.get('niveau_carte', '?')} ({100 * j.get('taux_inscrits_metropole', 0):.1f} %), "
               f"{c['somme_voix_differente_des_exprimes']} anomalie(s), {m['duree_s']} s")
         manifestes.append(m)

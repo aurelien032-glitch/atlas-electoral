@@ -51,6 +51,29 @@ export interface BureauContour {
 export interface Agregat extends Resultat {
   niveau: 'commune' | 'circonscription' | 'departement' | 'france'
   code: string
+  /**
+   * Municipales jusqu'en 2020 : exprimés des seules communes votant par listes, base des parts des
+   * blocs (les voix multiples du panachage n'y sont pas comptées) ; absent pour les autres scrutins.
+   */
+  exprimes_listes?: number | null
+  /** Commune (ou territoire en contenant une) où l'on vote pour des personnes (panachage). */
+  panachage?: boolean | null
+}
+
+/** Base des parts des blocs : les exprimés des communes à listes quand le panachage est exclu. */
+export const exprimesPourParts = (r: Resultat & { exprimes_listes?: number | null }) => r.exprimes_listes ?? r.exprimes
+
+/** Voix d'un candidat d'une commune au panachage (fichier par département, chargé à la demande). */
+export interface VoixPanachage {
+  code_bv: string
+  commune: string
+  cand: number
+  nom: string | null
+  prenom: string | null
+  sexe: string | null
+  nuance: string | null
+  bloc: Bloc | null
+  voix: number
 }
 
 /** Voix d'une candidature dans un bureau (voix.parquet). */

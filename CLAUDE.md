@@ -46,6 +46,8 @@ cd app && npx tsc -b && npm run lint && npm test && npm run build          # ava
   circonscription doivent égaler les totaux officiels.
 - 56 tours (1999-2026), dans `config.SCRUTINS`. Avant 2022, carte à la commune (`carte_au_bureau`). Jusqu'en
   2015, blancs et nuls sont comptés ensemble (colonne `blancs` vide) : ne jamais inventer de répartition.
+- Municipales 2014 et 2020 : les communes au panachage (vote pour des personnes) sont publiées à part
+  (`panachage/<dép>.parquet`, chargé à la demande) ; les parts des blocs se calculent sur `exprimes_listes`.
 - Les agrégats par commune sont au **COG 2026** (`referentiels/passage_communes_2026.csv`) ; les bureaux gardent
   le code de commune de l'année du vote (le client passe par `communeDu(code, passage)`).
 

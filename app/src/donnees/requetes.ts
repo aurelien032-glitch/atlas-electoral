@@ -3,6 +3,7 @@ import type { Feature } from 'geojson'
 import { lireParquet } from './parquet'
 import type {
   Agregat, Bureau, BureauContour, Candidature, Catalogue, Circonscription, Passage, Territoire, VoixAgregat, VoixBureau,
+  VoixPanachage,
 } from './types'
 
 /** Racine des fichiers publiés par le pipeline (servis sous /data en développement, cf. vite.config.ts). */
@@ -33,6 +34,15 @@ export const useAgregats = (scrutin?: string) => useFichier<Agregat>(scrutin, 'a
 export const useCandidats = (scrutin?: string) => useFichier<Candidature>(scrutin, 'candidats.parquet')
 export const useVoix = (scrutin?: string) => useFichier<VoixBureau>(scrutin, 'voix.parquet')
 export const useAgregatsVoix = (scrutin?: string) => useFichier<VoixAgregat>(scrutin, 'agregats_voix.parquet')
+/** Municipales jusqu'en 2020 : candidats des communes au panachage d'un département, à la demande. */
+export function usePanachage(scrutin: string | undefined, departement: string | undefined) {
+  return useQuery({
+    queryKey: ['scrutin', scrutin, 'panachage', departement],
+    enabled: scrutin !== undefined && departement !== undefined,
+    queryFn: ({ signal }) => lireParquet<VoixPanachage>(`${RACINE_DONNEES}/${scrutin}/panachage/${departement}.parquet`, signal),
+  })
+}
+
 /** Législatives seulement : libellés et emprises des circonscriptions. */
 export const useCirconscriptions = (scrutin?: string) => useFichier<Circonscription>(scrutin, 'circonscriptions.parquet')
 

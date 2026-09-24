@@ -11,12 +11,14 @@ import { blocEnTete, optionsCibles, retenueDuBloc } from './cibles'
 import { nomCandidature } from './donnees/libelles'
 import {
   useAgregats, useAgregatsVoix, useBureaux, useCandidats, useCatalogue, useCirconscriptions, useContourCommune, useContours,
-  usePassage, useTerritoires, useVoix,
+  usePanachage, usePassage, useTerritoires, useVoix,
 } from './donnees/requetes'
-import { communeDu, emprise, indexer, titreDe } from './donnees/territoires'
+import { communeDu, departementDe, emprise, indexer, titreDe } from './donnees/territoires'
 import { scrutinParDefaut, scrutinPrecedent } from './donnees/scrutins'
-import type { Agregat, BureauContour, Resultat, Territoire } from './donnees/types'
-import { formatEcart, formatPart, formatPourcent } from './format'
+import {
+  exprimesPourParts, type Agregat, type BureauContour, type Candidature, type Resultat, type Territoire, type VoixPanachage,
+} from './donnees/types'
+import { formatEcart, formatPart, formatPourcent, unitePoints } from './format'
 import {
   LIBELLES_EVOLUTION, classesLegende, coloriageClasses, coloriageTete, couleursPour, ecartsAuNiveau, partDe,
   partsAuNiveau, seuilsDe, valeursEvolution, valeursParticipation, valeursScore, type Coloriage, type Mode, type Valeurs,
@@ -30,6 +32,20 @@ import { useUrl } from './url'
 import { ecrireSelection, lireVue, type Selection } from './vue'
 
 const METHODOLOGIE = 'https://github.com/aurelien032-glitch/atlas-electoral/blob/main/docs/PLAN.md'
+
+/** Candidat d'une commune au panachage, sous la forme des candidatures publiées. */
+const candidatureDuPanachage = (l: VoixPanachage): Candidature => ({
+  cand: l.cand, portee: 'commune', panneau: null, nom: l.nom, prenom: l.prenom, liste: null, liste_abregee: null,
+  nuance: l.nuance ?? 'NC', origine_nuance: l.nuance && l.nuance !== 'NC' ? 'officielle' : 'aucune', famille: '', bloc: l.bloc ?? 'NC',
+  cas_limite: false, sexe: l.sexe, circonscription: null, elu: null, voix_total: 0,
+})
+
+/** Voix par candidature des lignes retenues d'un fichier du panachage. */
+function voixDuPanachage(lignes: readonly VoixPanachage[]) {
+  const sommes = new Map<number, number>()
+  for (const l of lignes) sommes.set(l.cand, (sommes.get(l.cand) ?? 0) + l.voix)
+  return [...sommes].map(([cand, voix]) => ({ cand, voix }))
+}
 const FRANCE_METROPOLITAINE: [number, number, number, number] = [-5.2, 41.3, 9.6, 51.1]
 
 interface EtatCarte {
@@ -101,6 +117,16 @@ export default function App() {
     () => indexer(territoires.data ?? [], passage.data, circonscriptions.data),
     [territoires.data, passage.data, circonscriptions.data],
   )
+  // Municipales jusqu'en 2020 : dans les petites communes, on vote pour des personnes (panachage). Leurs
+  // candidats sont publiés à part, un fichier par département, chargé à l'ouverture de la fiche.
+  const communesPanachage = useMemo(
+    () => new Set((agregats.data ?? []).filter((a) => a.niveau === 'commune' && a.panachage).map((a) => a.code)),
+    [agregats.data],
+  )
+  const communeChoisie = selection?.niveau === 'commune' ? selection.code
+    : selection?.niveau === 'bureau' ? communeDu(selection.code, index.passage) : undefined
+  const auPanachage = communeChoisie !== undefined && communesPanachage.has(communeChoisie)
+  const panachage = usePanachage(auPanachage ? id : undefined, auPanachage ? departementDe(communeChoisie) : undefined)
   const cibles = useMemo(() => optionsCibles(scrutin, candidats.data), [scrutin, candidats.data])
   // Recherche : à pertinence égale, les communes qui comptent le plus d'inscrits passent devant.
   const entreesRecherche = useMemo(() => {
@@ -204,7 +230,9 @@ export default function App() {
   const contenuInfobulle = useCallback((survol: Survol) => {
     const titre = titreDe({ niveau: survol.niveau, code: survol.code }, index)
     const lignes: string[] = []
-    if (vue.mode === 'tete') {
+    if (survol.niveau === 'commune' && communesPanachage.has(survol.code) && vue.mode !== 'participation') {
+      lignes.push('Vote pour des personnes (panachage)')
+    } else if (vue.mode === 'tete') {
       const r = resultats[({ bureau: 'bureaux', commune: 'communes', circonscription: 'circonscriptions' } as const)[survol.niveau]].get(survol.code)
       const tete = r?.tete != null ? parCand.get(r.tete) : undefined
       if (!r || r.exprimes === 0 || !tete) lignes.push('Aucun résultat rattaché')
@@ -219,10 +247,10 @@ export default function App() {
         : survol.niveau === 'circonscription' ? etatCarte.valeurs.circonscriptions?.get(survol.code) : etatCarte.valeurs.communes.get(survol.code)
       if (v === undefined) lignes.push('Aucun résultat rattaché')
       else if (v === null) lignes.push(vue.mode === 'evolution' ? 'Non comparable' : 'Aucune candidature du bloc')
-      else lignes.push(vue.mode === 'evolution' ? `${formatEcart(v)} points` : formatPourcent(v))
+      else lignes.push(vue.mode === 'evolution' ? `${formatEcart(v)} ${unitePoints(v)}` : formatPourcent(v))
     }
     return { titre, lignes }
-  }, [vue.mode, resultats, parCand, etatCarte, index])
+  }, [vue.mode, resultats, parCand, etatCarte, index, communesPanachage])
 
   const actions: Actions = useMemo(() => ({
     scrutin: (valeur) => modifierUrl({ scrutin: valeur, cible: null }),
@@ -273,8 +301,11 @@ export default function App() {
     const parent = (niveau: Agregat['niveau'], code: string, nom: string): Parent | undefined => {
       const a = trouver(niveau, code)
       const v = voixDe(niveau, code)
-      return a && v ? { nom, exprimes: a.exprimes, voix: new Map(v.map((l) => [l.cand, l.voix])) } : undefined
+      return a && v ? { nom, exprimes: exprimesPourParts(a), voix: new Map(v.map((l) => [l.cand, l.voix])) } : undefined
     }
+    // Commune au panachage : ses candidats viennent du fichier du département (undefined au chargement).
+    const panachees = auPanachage ? panachage.data?.filter((l) => l.commune === communeChoisie) : undefined
+    const supplementaires = panachees && new Map(panachees.map((l) => [l.cand, candidatureDuPanachage(l)]))
     const nom = (code: string) => index.noms.get(code) ?? code
     const portee = scrutin?.portee
     // Circonscriptions des candidatures présentes : une pour un bureau, parfois plusieurs pour une grande ville.
@@ -284,26 +315,32 @@ export default function App() {
     // pour un bureau (la circonscription aux législatives), le département pour une commune à un
     // scrutin national, la France pour un département (par bloc hors scrutin national).
     if (selection.niveau === 'bureau') {
-      const lignes = voix.data?.filter((v) => v.code_bv === selection.code)
+      const lignes = panachees
+        ? voixDuPanachage(panachees.filter((l) => l.code_bv === selection.code))
+        : auPanachage ? undefined : voix.data?.filter((v) => v.code_bv === selection.code)
       const circos = circonscriptionsDe(lignes)
       const commune = communeDu(selection.code, index.passage)
+      const agregatCommune = trouver('commune', commune)
       return {
         resultat: bureaux.data?.find((b) => b.code_bv === selection.code),
         lignes,
         circonscriptions: circos,
+        supplementaires,
         parent: portee === 'circonscription'
           ? (circos.length === 1 ? parent('circonscription', circos[0], nom(circos[0])) : undefined)
-          : parent('commune', commune, nom(commune)),
+          : panachees && agregatCommune
+            ? { nom: nom(commune), exprimes: agregatCommune.exprimes, voix: new Map(voixDuPanachage(panachees).map((l) => [l.cand, l.voix])) }
+            : parent('commune', commune, nom(commune)),
       }
     }
     if (selection.niveau === 'commune') {
-      const lignes = voixDe('commune', selection.code)
+      const lignes = auPanachage ? panachees && voixDuPanachage(panachees) : voixDe('commune', selection.code)
       const circos = circonscriptionsDe(lignes)
       const departement = index.territoires.get(selection.code)?.departement ?? selection.code.slice(0, 2)
       let comparaison: Parent | undefined
       if (portee === 'national') comparaison = parent('departement', departement, nom(departement))
       else if (portee === 'circonscription' && circos.length === 1) comparaison = parent('circonscription', circos[0], nom(circos[0]))
-      return { resultat: trouver('commune', selection.code), lignes, circonscriptions: circos, parent: comparaison }
+      return { resultat: trouver('commune', selection.code), lignes, circonscriptions: circos, supplementaires, parent: comparaison }
     }
     if (selection.niveau === 'circonscription') {
       return { resultat: trouver('circonscription', selection.code), lignes: voixDe('circonscription', selection.code), circonscriptions: [], parent: undefined }
@@ -314,14 +351,15 @@ export default function App() {
       circonscriptions: [],
       parent: parent('france', 'FR', 'France'),
     }
-  }, [selection, scrutin, agregats.data, agregatsVoix.data, bureaux.data, voix.data, index, parCand])
+  }, [selection, scrutin, agregats.data, agregatsVoix.data, bureaux.data, voix.data, index, parCand, auPanachage, communeChoisie, panachage.data])
 
   const complement = useMemo(() => {
     if (!selection || !detail?.lignes || !detail.resultat || detail.resultat.exprimes === 0) return undefined
     if (vue.mode === 'score' && cible) {
+      if (auPanachage) return `${cible.libelle} : pas de part calculée, on vote ici pour des personnes.`
       const retenues = detail.lignes.filter((l) => cible.retenue(l.cand))
       if (retenues.length === 0) return `${cible.libelle} : aucune candidature ici.`
-      return `${cible.libelle} : ${formatPart(retenues.reduce((s, l) => s + l.voix, 0) / detail.resultat.exprimes)} des suffrages exprimés.`
+      return `${cible.libelle} : ${formatPart(retenues.reduce((s, l) => s + l.voix, 0) / exprimesPourParts(detail.resultat))} des suffrages exprimés.`
     }
     if (vue.mode === 'evolution' && evolution && scrutinDe) {
       const niveau: Agregat['niveau'] = selection.niveau === 'bureau' ? 'commune' : selection.niveau
@@ -330,13 +368,13 @@ export default function App() {
       const apres = partDe(evolution.apres.agregats, evolution.apres.agregatsVoix, niveau, code, evolution.apres.retenue)
       const ou = selection.niveau === 'bureau' ? ` (à la commune, ${index.noms.get(code) ?? code})` : ''
       if (avant == null || apres == null) return `${LIBELLE_BLOC[bloc]}${ou} : non comparable entre les deux scrutins.`
-      return `${LIBELLE_BLOC[bloc]}${ou} : ${formatPart(avant)} (${scrutinDe.libelle}), ${formatPart(apres)} (${scrutin?.libelle}), soit ${formatEcart(100 * (apres - avant))} points.`
+      return `${LIBELLE_BLOC[bloc]}${ou} : ${formatPart(avant)} (${scrutinDe.libelle}), ${formatPart(apres)} (${scrutin?.libelle}), soit ${formatEcart(100 * (apres - avant))} ${unitePoints(100 * (apres - avant))}.`
     }
     return undefined
-  }, [selection, detail, vue.mode, cible, evolution, scrutinDe, scrutin, bloc, index])
+  }, [selection, detail, vue.mode, cible, evolution, scrutinDe, scrutin, bloc, index, auPanachage])
 
   const chargement = catalogue.isPending || agregats.isPending || candidats.isPending || territoires.isPending
-  const erreur = catalogue.error ?? agregats.error ?? candidats.error ?? bureaux.error ?? agregatsVoix.error ?? voix.error
+  const erreur = catalogue.error ?? agregats.error ?? candidats.error ?? bureaux.error ?? agregatsVoix.error ?? voix.error ?? panachage.error
     ?? contours.error ?? territoires.error ?? agregatsDe.error ?? agregatsVoixDe.error ?? candidatsDe.error
 
   return (
@@ -355,7 +393,7 @@ export default function App() {
           {chargement && !erreur && <p className="note">Chargement…</p>}
           {ctx && (selection
             ? <Detail ctx={ctx} selection={selection} resultat={detail?.resultat} lignes={detail?.lignes} parent={detail?.parent}
-                circonscriptions={detail?.circonscriptions ?? []}
+                circonscriptions={detail?.circonscriptions ?? []} supplementaires={detail?.supplementaires} panachage={auPanachage}
                 cible={vue.mode === 'score' ? cible : undefined} complement={complement} actions={actions} />
             : <Apercu ctx={ctx} mode={vue.mode} cibles={cibles} cible={cible} bloc={bloc} evolution={apercuEvolution} actions={actions} />)}
           {etatCarte && <Legende description={etatCarte.legende} className="legende-panneau" />}

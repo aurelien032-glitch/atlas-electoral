@@ -42,7 +42,7 @@ export function Legende({ description, className }: { description: DescriptionLe
           <li><span className="pastilles"><Pastille couleur={GRIS.divers} /></span>Divers</li>
           <li>
             <span className="pastilles"><Pastille couleur={GRIS.nonClasse} /></span>
-            <span>Non classé <small>: listes sans nuance du ministère, dans les petites communes</small></span>
+            <span>Non classé <small>: candidatures sans nuance du ministère, dans les petites communes</small></span>
           </li>
           <li><span className="pastilles"><Pastille couleur={GRIS.egalite} /></span>Égalité en tête</li>
           <li><span className="pastilles"><SansResultat /></span>Aucun résultat rattaché</li>

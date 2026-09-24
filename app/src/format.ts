@@ -19,6 +19,9 @@ export function formatEcart(points: number, n = 1): string {
   return `${signe}${decimales(Math.abs(arrondi), n)}`
 }
 
+/** « point » ou « points » après un écart arrondi : le pluriel commence à 2 (1,5 point ; 2,0 points). */
+export const unitePoints = (points: number, n = 1) => (Math.abs(Number(points.toFixed(n))) >= 2 ? 'points' : 'point')
+
 /** Seuil de légende, sans zéros inutiles : 15 → « 15 », 0,5 → « 0,5 ». */
 export const formatSeuil = (s: number) => s.toLocaleString('fr-FR', { maximumFractionDigits: 2 })
 

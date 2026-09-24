@@ -1,7 +1,7 @@
 import { seuilsLisibles } from './calculs/classes'
 import { ecartsEnPoints, parts, voixParTerritoire, type Mesure } from './calculs/parts'
 import { etatClasse, etatTete, type Etat } from './carte/etats'
-import type { Agregat, Bloc, Bureau, Resultat, VoixAgregat, VoixBureau } from './donnees/types'
+import { exprimesPourParts, type Agregat, type Bloc, type Bureau, type Resultat, type VoixAgregat, type VoixBureau } from './donnees/types'
 import { avecPourcent, formatSeuil } from './format'
 
 export const MODES = ['tete', 'score', 'participation', 'evolution'] as const
@@ -36,7 +36,7 @@ export function partsAuNiveau(
   niveau: Agregat['niveau'],
   retenue: (cand: number) => boolean,
 ): Map<string, Mesure> {
-  const exprimes = new Map(agregats.filter((a) => a.niveau === niveau).map((a) => [a.code, a.exprimes]))
+  const exprimes = new Map(agregats.filter((a) => a.niveau === niveau).map((a) => [a.code, exprimesPourParts(a)]))
   return parts(voixParTerritoire(voix, (l) => (l.niveau === niveau ? l.code : undefined), retenue), exprimes)
 }
 
@@ -49,12 +49,12 @@ export function partDe(
   retenue: (cand: number) => boolean,
 ): Mesure | undefined {
   const agregat = agregats.find((a) => a.niveau === niveau && a.code === code)
-  if (!agregat || agregat.exprimes <= 0) return undefined
+  if (!agregat || exprimesPourParts(agregat) <= 0) return undefined
   let somme: number | undefined
   for (const v of voix) {
     if (v.niveau === niveau && v.code === code && retenue(v.cand)) somme = (somme ?? 0) + v.voix
   }
-  return somme === undefined ? null : somme / agregat.exprimes
+  return somme === undefined ? null : somme / exprimesPourParts(agregat)
 }
 
 /** Part (0 à 1) des candidatures retenues dans chaque bureau. */

@@ -86,7 +86,7 @@ Principe : **divulgation progressive**. La vue par défaut reste simple. Le mode
 ### 2.4 Hors périmètre de la v1
 
 - **Résultats en direct le soir de l'élection** : aucun flux ouvert n'existe. Le site du ministère bloque l'accès automatisé et data.gouv ne publie qu'après coup. Reporté en P2, à réétudier si une source ouverte apparaît.
-- **Sondages, projections, prédictions** : hors de la mission de transparence.
+- **Sondages, projections, prédictions** : hors de la mission de transparence. Seule exception décidée le 24/09 (Q12) : un simulateur de scénarios, après la bêta, où l'utilisateur pose ses propres hypothèses et où rien n'est présenté comme une prévision.
 - **Croisements socio-démographiques** (revenus, âge, catégories socioprofessionnelles) : intéressants, mais c'est un chantier en soi. P2.
 - **Comptes utilisateurs, commentaires** : inutiles pour un outil de consultation.
 - **Toute interprétation politique** : l'outil montre et cite ses sources, il ne commente pas.
@@ -359,6 +359,7 @@ publication/v1/
 │   ├── agregats.parquet       participation par commune (COG 2026), circonscription, département, France
 │   ├── agregats_voix.parquet  voix par candidature aux mêmes niveaux
 │   ├── circonscriptions.parquet  législatives : libellé et emprise de chaque circonscription
+│   ├── panachage/<dép>.parquet   municipales 2014 et 2020 : candidats des communes au panachage (à part)
 │   └── scrutin.json           manifeste : compteurs, contrôles, empreintes SHA-256
 ├── geo/                       communes, départements, régions (Etalab), territoires.parquet (noms, emprises),
 │                              passage_communes.parquet, bureaux_contours_2022.parquet
@@ -614,7 +615,7 @@ HTTP        COG
 - **Blancs et nuls** : jusqu'en 2015, les données les comptent ensemble ; la colonne des blancs reste vide plutôt que d'inventer une répartition, et l'interface l'écrit.
 - **Circonscriptions de 2012 à 2022** : code des données agrégées (département et numéro) ; en 2002 et 2007 (découpage de 1986), pas de circonscription : candidatures identifiées par département.
 - **Européennes 2004 à 2014** (huit grandes circonscriptions), cantonales, départementales, régionales : candidatures identifiées par département.
-- **Panachage** (municipales 2008 à 2020, petites communes) : chaque électeur vote pour plusieurs candidats ; la somme des voix y dépasse les exprimés, comptée à part (`bureaux_panachage`) et non comme anomalie. En 2014 et 2020, ces communes font environ 400 000 candidatures individuelles (12 à 13 Mo par tour, au-delà du budget de 3 Mo) : question Q13.
+- **Panachage** (municipales 2008 à 2020, petites communes) : chaque électeur vote pour plusieurs candidats ; la somme des voix y dépasse les exprimés, comptée à part (`bureaux_panachage`) et non comme anomalie. En 2014 et 2020, ces communes font environ 400 000 candidatures individuelles (12 à 13 Mo par tour, au-delà du budget de 3 Mo). **Décision Q13, gardées à part** : leurs candidats partent dans `panachage/<dép>.parquet` (un fichier par département de la commune au COG 2026, 5 Mo au total pour un 1ᵉʳ tour), chargé à l'ouverture de la fiche d'une commune ; les fichiers principaux retombent à 2,3 Mo. Ces voix ne comptent pas dans les agrégats : les parts des blocs se calculent sur les exprimés des communes à listes (`exprimes_listes`), et la carte colore ces communes en « non classé ». En 2008, les données ne couvrent que les communes de 3 500 habitants et plus : pas de panachage.
 - **Corrections de codes** (table de passage) : Saint-Barthélemy et Saint-Martin (collectivités depuis 2007), La Répara-Auriples (code erroné des données anciennes), codes postaux calédoniens des municipales 2008 (vérifiés dans la base officielle de La Poste).
 - **Contours des circonscriptions** (`python -m atlas_pipeline.circonscriptions`) : fusion des contours officiels des bureaux par circonscription, simplifiée à 60 m : 559 circonscriptions (hors Français de l'étranger et collectivités d'outre-mer sans contour), 6,1 Mo (1,8 Mo compressés). Aux législatives, la vue nationale colore les circonscriptions ; leurs limites restent tracées à tous les zooms.
 
@@ -729,8 +730,9 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 | Q9 | Totaux officiels des autres tours pour la réconciliation : sources à relever (Conseil constitutionnel, ministère) | Ouvert | Tests |
 | Q10 | Communes fusionnées depuis le scrutin : les contours sont au COG 2026, les résultats 2022 et 2024 au COG de leur année, d'où quelques communes blanches. Appliquer la table de passage du COG dans le pipeline ? | **Traité le 24/09** : table de passage vers le COG 2026 (INSEE) ; 0,02 % d'inscrits sans commune 2026 (§ 10) | — |
 | Q11 | Choix d'affichage proposés en codant la direction A : hachures pour « pas de candidat » et « non comparable » ; évolution lue à la commune ; participation en sarcelle ; colonne de comparaison seulement quand elle a un sens (scrutin national, ou bureau comparé à sa commune) ; noms de famille en casse d'usage (« LE PEN » → « Le Pen »), noms de listes inchangés | **Tranché le 24/09** : tous validés | — |
-| Q12 | Projection 2027 : garder le périmètre actuel (pas de projection) ou ajouter un simulateur de scénarios clairement étiqueté, après la bêta ? Voir l'étude | Ouvert | Phase 4 |
-| Q13 | Municipales 2014 et 2020, petites communes au panachage (≈ 400 000 candidatures individuelles, 12 à 13 Mo par tour) : tout garder, garder à part (chargé au détail d'une commune) ou ne garder que la participation ? | Ouvert | Budget des données |
+| Q12 | Projection 2027 : garder le périmètre actuel (pas de projection) ou ajouter un simulateur de scénarios clairement étiqueté, après la bêta ? Voir l'étude | **Tranché le 24/09** : simulateur de scénarios après la bêta, avec les garde-fous de l'étude (espace séparé, hypothèses de l'utilisateur, résultat réel par défaut, ni sondages ni sièges, désactivé la veille et le jour du vote) ; prévisions et sondages restent hors périmètre | Phase 4 |
+| Q13 | Municipales 2014 et 2020, petites communes au panachage (≈ 400 000 candidatures individuelles, 12 à 13 Mo par tour) : tout garder, garder à part (chargé au détail d'une commune) ou ne garder que la participation ? | **Tranché le 24/09** : garder à part, chargé à l'ouverture de la fiche d'une commune | Budget des données |
+| Q14 | Vues chronologiques à construire en premier | **Tranché le 24/09** : « Au fil des scrutins » dans la fiche d'un territoire et courbes nationales ; les petits multiples et la carte des bascules ensuite | — |
 | Q6 | Publication de nos données sur data.gouv | **Tranché** : plus tard | P2 |
 
 ## 16. Outillage Claude : skills, plugins, connecteurs
