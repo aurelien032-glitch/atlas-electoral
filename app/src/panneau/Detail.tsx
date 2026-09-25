@@ -37,6 +37,8 @@ interface Props {
   cible: Cible | undefined
   /** Valeur du territoire dans le mode courant (score, évolution…), déjà rédigée. */
   complement: string | undefined
+  /** Territoire choisi par une adresse : l'adresse et le lien qui les unit, déjà rédigés. */
+  adresse?: string
   actions: Actions
 }
 
@@ -149,7 +151,7 @@ function SansResultat({ ctx, selection, actions }: Pick<Props, 'ctx' | 'selectio
 
 /** Fiche d'un territoire, sous son en-tête (EnteteFiche) et les réglages. */
 export function Detail({
-  ctx, selection, resultat, enChargement, lignes, parent, circonscriptions, supplementaires, panachage, cible, complement, actions,
+  ctx, selection, resultat, enChargement, lignes, parent, circonscriptions, supplementaires, panachage, cible, complement, adresse, actions,
 }: Props) {
   const titre = titreDe(selection, ctx.index)
   const entete = (
@@ -157,6 +159,7 @@ export function Detail({
       <div className="titre">
         <h1>{titre}</h1>
         <p className="surtitre-bas">{ctx.scrutin.libelle}</p>
+        {adresse && <p className="adresse-recherchee">{adresse}</p>}
         {circonscriptions.length > 0 && (
           <p className="circonscriptions">
             {circonscriptions.length === 1 ? 'Circonscription : ' : 'Circonscriptions : '}

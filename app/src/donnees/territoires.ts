@@ -59,6 +59,10 @@ export function emprise(t: Territoire | undefined): [number, number, number, num
 export const estArrondissement = (code: string) =>
   (code >= '75101' && code <= '75120') || (code >= '69381' && code <= '69389') || (code >= '13201' && code <= '13216')
 
+/** Territoire d'un code INSEE de commune : l'arrondissement à Paris, Lyon et Marseille. */
+export const selectionDeCommune = (code: string): Selection =>
+  ({ niveau: estArrondissement(code) ? 'arrondissement' : 'commune', code })
+
 /** Ville d'un arrondissement. */
 export const villeDe = (arrondissement: string) =>
   arrondissement.startsWith('751') ? '75056' : arrondissement.startsWith('6938') ? '69123' : '13055'

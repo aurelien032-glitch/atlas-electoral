@@ -207,7 +207,19 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
           </li>
           <li>
             <a href="https://geoservices.ign.fr/planign" target="_blank" rel="noreferrer">Fond de plan au zoom des bureaux</a>
-            <span>Plan IGN de la Géoplateforme, affiché en gris clair sous les couleurs des bureaux (à 70 % d'opacité à ce zoom).</span>
+            <span>
+              Plan IGN de la Géoplateforme, affiché en gris clair sous les couleurs des bureaux (à 70 % d'opacité par
+              défaut, réglable avec le bouton sous le zoom ; le réglage reste dans votre navigateur).
+            </span>
+          </li>
+          <li>
+            <a href="https://geoservices.ign.fr/documentation/services/services-geoplateforme/geocodage" target="_blank" rel="noreferrer">Recherche d'adresse</a>
+            <span>
+              Géocodeur de la Géoplateforme (IGN), d'après la Base adresse nationale : le texte tapé lui est envoyé
+              quand il contient un chiffre ou un type de voie (rue, avenue, place…) ; un nom de commune ou un code
+              postal ne quitte pas votre navigateur. La fiche montre la commune, puis le bureau dont le contour de 2022
+              (indicatif) contient l'adresse ; quand la carte du scrutin s'arrête à la commune, la commune.
+            </span>
           </li>
         </ul>
         {releve && <p className="note-bas">Sources relevées le {releve}. Les jeux de données sont publiés sous Licence Ouverte (Etalab).</p>}

@@ -27,6 +27,7 @@
   --marge-panneau: 40px;   /* bords du panneau */
   --ecart-sections: 24px;  /* entre les blocs du panneau */
   --cadre-carte: 24px;     /* retrait de tout ce qui est posé sur la carte */
+  --haut-controles: var(--cadre-carte); /* haut de la colonne de droite : zoom, opacité, encarts */
   color: var(--encre);
   background: var(--papier);
   font: 400 var(--t-texte)/1.5 var(--texte);
@@ -82,19 +83,25 @@ a:hover, .lien:hover { color: var(--encre-2); }
   background: var(--surface); border: 1px solid var(--bord-champ); border-radius: 8px;
   box-shadow: 0 4px 16px rgba(27, 26, 23, 0.12);
 }
-.suggestions li {
+.suggestions [role='option'] {
   display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
   min-height: 44px; padding: 12px; border-radius: 4px; cursor: pointer; font-size: var(--t-texte);
 }
-.suggestions li .discret { font-size: var(--t-petit); text-align: right; }
-.suggestions li[aria-selected='true'], .suggestions li:hover { background: var(--piste); }
+.suggestions [role='option'] .discret { font-size: var(--t-petit); text-align: right; }
+.suggestions [aria-selected='true'], .suggestions [role='option']:hover { background: var(--piste); }
+/* Groupes de suggestions (territoires, adresses), séparés d'un filet ; l'intertitre prend le style .surtitre. */
+.suggestions ul { list-style: none; margin: 0; padding: 0; }
+.suggestions ul + ul { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--filet); }
+.suggestions .groupe { padding: 8px 12px 4px; }
+/* Attente et erreur du géocodeur : hors de la liste, ni choisissables ni surlignées. */
+.suggestions .etat { margin: 0; padding: 8px 12px; font-size: var(--t-petit); color: var(--encre-2); }
 
 .titre { display: flex; flex-direction: column; gap: 8px; }
 .titre h1 { margin: 0; font: 500 var(--t-titre)/1.15 var(--titre); }
 h1, h2, .legende-titre, .infobulle-titre { text-wrap: balance; }
 p, li { text-wrap: pretty; }
 .surtitre-bas { margin: 0; color: var(--encre-2); }
-.circonscriptions { margin: 0; font-size: var(--t-petit); color: var(--encre-2); }
+.circonscriptions, .adresse-recherchee { margin: 0; font-size: var(--t-petit); color: var(--encre-2); }
 .mention { margin-left: 8px; padding: 0 4px; border-radius: 3px; background: var(--piste); font-size: var(--t-note); font-weight: 600; color: var(--encre); }
 .chapo { margin: 0; font-size: var(--t-chapo); line-height: 1.45; }
 .complement { margin: 0; font-weight: 600; }
@@ -207,13 +214,33 @@ p, li { text-wrap: pretty; }
 }
 .onglets button[aria-pressed='true'] { background: var(--encre); color: var(--surface); }
 
-.zone-carte .maplibregl-ctrl-top-right { top: var(--cadre-carte); right: var(--cadre-carte); }
+.zone-carte .maplibregl-ctrl-top-right { top: var(--haut-controles); right: var(--cadre-carte); }
 .zone-carte .maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 0; }
 .zone-carte .maplibregl-ctrl-group { border-radius: 6px; box-shadow: none; border: 1px solid var(--bord-champ); background: var(--surface); }
 .zone-carte .maplibregl-ctrl-group button { width: 44px; height: 44px; }
 /* Mention des sources de la carte : dans la police du site, pas celle de MapLibre. */
 .zone-carte .maplibregl-ctrl-attrib { font: var(--t-note)/1.5 var(--texte); color: var(--encre-2); }
 .zone-carte .maplibregl-ctrl-attrib a { color: var(--encre-2); text-decoration: underline; }
+
+/* Opacité des couleurs sur le plan : bouton sous le zoom (deux boutons de 44 px et leurs bords : 90 px), réglage
+   ouvert à sa gauche. */
+.opacite { position: absolute; top: calc(var(--haut-controles) + 90px + 8px); right: var(--cadre-carte); z-index: 3; }
+.opacite-bouton {
+  width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer;
+  color: var(--encre); background: var(--surface); border: 1px solid var(--bord-champ); border-radius: 6px;
+}
+.opacite-bouton[aria-expanded='true'] { background: var(--piste); }
+.opacite-reglage {
+  position: absolute; top: 0; right: calc(100% + 8px); width: 240px;
+  display: flex; flex-direction: column; gap: 8px; padding: 12px 16px;
+  font-size: var(--t-petit); background: var(--surface); border: 1px solid var(--bord-champ); border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(27, 26, 23, 0.12);
+}
+.opacite-reglage label { display: flex; justify-content: space-between; gap: 8px; }
+.opacite-reglage strong { font-variant-numeric: tabular-nums; }
+.opacite-reglage input { width: 100%; margin: 0; min-height: 24px; accent-color: var(--encre); }
+.opacite-reglage input[aria-disabled='true'] { opacity: 0.4; cursor: not-allowed; }
+.opacite-reglage .lien { align-self: flex-start; font-size: var(--t-petit); }
 
 .legende {
   display: flex; flex-direction: column; gap: 8px;
@@ -244,12 +271,11 @@ p, li { text-wrap: pretty; }
 
 /* Mobile : la carte occupe l'écran, le panneau devient un volet en bas. */
 @media (max-width: 760px) {
-  :root { --marge-panneau: 24px; --ecart-sections: 16px; --cadre-carte: 12px; }
+  :root { --marge-panneau: 24px; --ecart-sections: 16px; --cadre-carte: 12px; --haut-controles: 72px; }
   .atlas { display: block; }
   .zone-carte { position: fixed; inset: 0; }
   .onglets { right: var(--cadre-carte); overflow-x: auto; }
   .onglets button { flex: none; padding: 0 12px; font-size: var(--t-petit); }
-  .zone-carte .maplibregl-ctrl-top-right { top: 72px; }
   .legende-carte { display: none; }
   .legende-panneau { display: flex; }
   .panneau {
@@ -289,9 +315,9 @@ p, li { text-wrap: pretty; }
 .depliant code { font-size: var(--t-note); word-break: break-all; }
 .panneau-entete a[aria-current='page'] { text-decoration-thickness: 2px; }
 
-/* Encarts de la vue nationale : petite couronne et outre-mer, sous les boutons de zoom. */
+/* Encarts de la vue nationale : petite couronne et outre-mer, sous les boutons de zoom et d'opacité. */
 .encarts {
-  position: absolute; top: calc(var(--cadre-carte) + 90px + 8px); right: var(--cadre-carte); z-index: 2;
+  position: absolute; top: calc(var(--haut-controles) + 90px + 8px + 44px + 8px); right: var(--cadre-carte); z-index: 2;
   display: grid; grid-template-columns: repeat(2, auto); gap: 8px; padding: 8px;
   background: var(--surface); border: 1px solid var(--filet); border-radius: 8px;
 }

@@ -30,7 +30,7 @@ flowchart TB
   subgraph panneau["Panneau"]
     direction TB
     entete["En-tête : Atlas électoral · Méthodologie"]
-    recherche["Recherche : commune, département,<br/>circonscription, code postal, code INSEE"]
+    recherche["Recherche : adresse, commune, département,<br/>circonscription, code postal, code INSEE"]
     reglages["Réglages partagés<br/>Scrutin · Candidature ou bloc (Score) · Bloc, De, À (Évolution)"]:::reglage
     subgraph apercu["Vue nationale"]
       direction TB
@@ -52,13 +52,16 @@ flowchart TB
     onglets["Onglets : En tête · Score · Participation · Évolution"]:::carte
     ensemble["Vue d'ensemble : communes (circonscriptions aux législatives)<br/>et encarts petite couronne, outre-mer"]:::carte
     bureaux["Zoom des bureaux : bureaux sur le Plan IGN"]:::carte
+    opacite["Bouton ◐ : opacité des couleurs sur le plan<br/>(actif au zoom des bureaux)"]:::carte
   end
 
   lien --> apercu
   lien -->|"sel=… : son cadrage (sinon celui du territoire), volet déplié"| fiche
   reglages -->|"garde le territoire et le mode"| apercu & fiche
   onglets -->|"garde le territoire et les réglages"| apercu & fiche
-  recherche -->|"cadrage"| niveaux
+  recherche -->|"territoire : cadrage"| niveaux
+  recherche -->|"adresse : vol jusqu'à la rue, repère,<br/>bureau qui la contient (commune avant 2022)"| niveaux
+  opacite -->|"préférence du navigateur"| bureaux
   synthese -->|"un département : cadrage"| niveaux
   raccourcis -->|"cadrage"| niveaux
   ensemble -->|"clic, sans déplacer la carte"| niveaux
@@ -80,6 +83,8 @@ flowchart TB
 | Choisir le bloc ou le départ | Réglages (Évolution) | `bloc`, `de` | Recoloriée |
 | Changer de mode | Onglets de la carte | `mode` | Recoloriée |
 | Choisir un résultat de recherche | Recherche | `sel` ; efface `page` | Cadrée sur le territoire |
+| Choisir une adresse | Recherche | `sel` : la commune (ou l'arrondissement) aussitôt, dans une nouvelle entrée ; puis, dans la même entrée, le bureau dont le contour contient l'adresse (sauf si la carte du scrutin s'arrête à la commune) ; efface `page` | Vol jusqu'à la rue, repère sur l'adresse |
+| Régler l'opacité des couleurs | Bouton sous le zoom | aucun : préférence gardée par le navigateur | Couleurs des bureaux de 10 à 100 % sur le plan (70 % par défaut) |
 | Cliquer un département extrême, un raccourci | Vue nationale | `sel` | Cadrée sur le territoire |
 | Cliquer un territoire | Carte | `sel` ; efface `page` | Immobile (le territoire est à l'écran) |
 | Cliquer un territoire dans un encart | Encarts | `sel` | Cadrée sur le territoire |
@@ -120,6 +125,14 @@ flowchart TB
    partagé.
 9. **Le titre de l'onglet nomme la vue** (« Lyon · Présidentielle 2022, 1er tour · Score · Atlas électoral »),
    pour l'historique, les favoris et les liens partagés.
+10. **Une adresse mène à son bureau de vote** : sa commune (l'arrondissement à Paris, Lyon et Marseille)
+    s'affiche aussitôt, dans une nouvelle entrée d'historique, puis le bureau dont le contour de 2022 (indicatif)
+    contient l'adresse la précise, dans la même entrée, sauf si la carte du scrutin s'arrête à la commune ou si
+    l'on est passé à autre chose entre-temps. Le repère et le rappel de l'adresse accompagnent ce territoire ; leur
+    texte suit le scrutin affiché. Le texte tapé ne part au géocodeur de l'IGN que s'il contient un chiffre ou un
+    type de voie (rue, avenue, place…).
+11. **Les préférences d'affichage ne sont pas dans l'URL** : l'opacité des couleurs est gardée par le navigateur,
+    et un lien partagé montre le réglage par défaut (70 %).
 
 ## Comportements assumés
 
@@ -141,6 +154,10 @@ flowchart TB
 | `?scrutin=2020_muni_t2&sel=bureau:01001_0001` | Commune sans second tour : pas de lien vers une fiche vide |
 | Vue nationale, raccourci Guadeloupe, puis Précédent et Suivant | La carte revient sur la métropole, puis sur la Guadeloupe, avec le panneau |
 | `?sel=commune:69123#12.5/45.764/4.836` | Carte au cadrage du lien (zoom 12,5), pas recadrée sur la commune |
+| Recherche « 12 rue de la paix paris », première adresse | Vol jusqu'à la rue, repère, fiche « Paris, bureau 0203 » avec l'adresse rappelée ; la croix recadre ensuite sur la France |
+| `?scrutin=2017_pres_t1`, recherche « place bellecour lyon » | Lyon 2e Arrondissement (carte à l'arrondissement pour ce scrutin), adresse rappelée |
+| Bouton ◐ au zoom des bureaux, curseur à 30 %, puis « Revenir à 70 % » | Plan lisible sous les couleurs ; réglage gardé d'une visite à l'autre, puis effacé |
+| Bouton ◐ en vue nationale | Curseur grisé : « zoomez pour l'utiliser » |
 | `?scrutin=2022_pres_t1&sel=bureau:75056_2099` | Aucun bureau n° 2099 ; lien vers Paris 20e |
 | `?scrutin=2017_pres_t1&mode=evolution&de=2022_pres_t1` | Départ ramené à 2012 ; aucun départ postérieur proposé |
 | `?scrutin=1999_euro_t1&mode=evolution` | Pas de « De », message, carte vide, pas de légende |

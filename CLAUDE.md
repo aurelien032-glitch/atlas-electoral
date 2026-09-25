@@ -92,8 +92,16 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   (ils sont dans l'index des territoires). Les tuiles vectorielles ADMIN EXPRESS de l'IGN sont trop lourdes
   (11,4 Mo par tuile au zoom 5) : ne pas les utiliser pour l'affichage.
 - Fond de plan au zoom des bureaux (≥ 9) : Plan IGN en images (Géoplateforme, WMTS, sans clé), rendu en gris par
-  MapLibre (`raster-saturation`) ; les bureaux y sont à 70 % d'opacité (les blocs restent distincts, ≥ 13,5).
-  Pas de Positron : CARTO exige désormais une clé. Hôte `data.geopf.fr` dans la CSP.
+  MapLibre (`raster-saturation`) ; les bureaux y sont à 70 % d'opacité par défaut (`OPACITE_SUR_PLAN`, les blocs
+  restent distincts, ≥ 13,5), réglable de 10 à 100 % par le bouton sous le zoom (`carte/Opacite.tsx`, actif au zoom
+  des bureaux, gardé par le navigateur : `carte/preferences.ts`, jamais dans l'URL). Pas de Positron : CARTO exige
+  désormais une clé. Hôte `data.geopf.fr` dans la CSP (tuiles et géocodeur).
+- Recherche d'adresse : géocodeur de la Géoplateforme (`recherche/adresses.ts`), interrogé après une pause de
+  frappe et seulement pour un texte qui ressemble à une adresse. Le bureau est celui que `queryRenderedFeatures`
+  trouve sous l'adresse une fois la carte arrivée (`idle`) ; la commune (ou l'arrondissement) quand la carte du
+  scrutin s'arrête à la commune. Jamais `padding` dans `flyTo` ou `easeTo` : MapLibre en fait la marge permanente de
+  la carte, qui s'ajoute à celle des `fitBounds` suivants (ils ne tiennent plus et échouent sans erreur) ; `offset`
+  à la place.
 - Scrutins dont moins de 98 % des inscrits de métropole joignent les contours (`niveau_carte = commune`) :
   chaque bureau prend la couleur de sa commune.
 - MapLibre 6 est en ESM seul : garder `optimizeDeps.exclude: ['maplibre-gl']`, `worker.format: 'es'` et
@@ -130,7 +138,9 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
 ## Couleurs et accessibilité
 
 - Toute palette passe le validateur du skill `dataviz` (`node scripts/validate_palette.js "<hex,…>" --pairs all`)
-  **à chaque niveau d'opacité utilisé**. Carte « En tête » en couleurs pleines (l'avance ne se lit que dans le
+  **à chaque niveau d'opacité utilisé par défaut**. Seule exception : le curseur d'opacité sur le plan (10 à 100 %,
+  décision Q19), réglé par l'utilisateur ; la valeur par défaut (70 %) est validée, et la couleur reste doublée par
+  l'infobulle et la fiche. Carte « En tête » en couleurs pleines (l'avance ne se lit que dans le
   texte : un palier de clarté confondrait les blocs). Évolution : seuils fixes ±2, ±5, ±10, ±20. Les dégradés
   (Score dans la teinte du bloc, Participation en sarcelle, bras de l'Évolution) passent `--ordinal`, sur le
   fond papier `#F6F4EF`. Palettes dans `app/src/carte/couleurs.ts`.

@@ -6,7 +6,7 @@ import {
 import urlWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 // Styles des contrôles de la carte : chargés avec elle, pas avant (ils ne bloquent plus le premier affichage).
 import 'maplibre-gl/dist/maplibre-gl.css'
-import type { Feature } from 'geojson'
+import type { Feature, FeatureCollection } from 'geojson'
 import { Protocol } from 'pmtiles'
 import { useEffect, useRef, useState } from 'react'
 import { RACINE_DONNEES } from '../donnees/requetes'
@@ -15,7 +15,7 @@ import type { BureauContour } from '../donnees/types'
 import type { Coloriage } from '../modes'
 import type { Etat } from './etats'
 import { ecrireCadre, lireCadre, type Selection } from '../vue'
-import { FOND_CARTE, TRAIT_HACHURES } from './couleurs'
+import { FOND_CARTE, OPACITE_SUR_PLAN, TRAIT_HACHURES } from './couleurs'
 
 // Contours des bureaux de vote : fichier officiel de data.gouv.fr (millésime 2022), lu directement.
 const TUILES_BUREAUX = 'https://data-pipeline-open.s3.sbg.io.cloud.ovh.net/reu/reu-france-entiere-2022-06-01-v2.pmtiles'
@@ -26,12 +26,14 @@ const ENCRE = '#1B1A17'
 
 // Fond de plan au zoom des bureaux (rues, bâtiments, noms de lieux) : le Plan IGN de la Géoplateforme, service
 // public sans clé, rendu en gris clair par MapLibre pour ne pas se mêler aux couleurs des blocs. Les bureaux y
-// sont à 70 % d'opacité : les cinq blocs restent distincts (écart ≥ 13,5 en CIEDE2000, daltonismes compris ;
-// 10,9 seulement à 60 %). Positron (CARTO) exige désormais une clé.
+// sont semi-transparents (OPACITE_SUR_PLAN, réglable par le curseur de la carte). Positron (CARTO) exige
+// désormais une clé.
 const PLAN_IGN = 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0'
   + '&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png'
   + '&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'
-const OPACITE_SUR_PLAN = 0.7
+// Adresse choisie dans la recherche : la carte s'approche jusqu'à la rue.
+const ZOOM_ADRESSE = 15
+const VIDE: FeatureCollection = { type: 'FeatureCollection', features: [] }
 
 // MapLibre 6 cherche son worker à côté de son propre module, ce que le pré-bundling de Vite casse :
 // Vite compile donc le worker (avec ses dépendances) et on lui en donne l'adresse.
@@ -43,10 +45,8 @@ const REMPLISSAGE = {
   'fill-opacity': ['coalesce', ['feature-state', 'opacite'], 0] as ExpressionSpecification,
 }
 // Au zoom des bureaux, le plan se lit à travers les couleurs.
-const REMPLISSAGE_SUR_PLAN = {
-  ...REMPLISSAGE,
-  'fill-opacity': ['*', OPACITE_SUR_PLAN, ['coalesce', ['feature-state', 'opacite'], 0]] as ExpressionSpecification,
-}
+const opaciteSurPlan = (opacite: number): ExpressionSpecification => ['*', opacite, ['coalesce', ['feature-state', 'opacite'], 0]]
+const REMPLISSAGE_SUR_PLAN = { ...REMPLISSAGE, 'fill-opacity': opaciteSurPlan(OPACITE_SUR_PLAN) }
 const HACHURES = {
   'fill-pattern': 'hachures',
   'fill-opacity': ['case', ['boolean', ['feature-state', 'hachure'], false], 1, 0] as ExpressionSpecification,
@@ -78,6 +78,7 @@ const STYLE: StyleSpecification = {
     contour: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
     // Chargée seulement pour les législatives (setData), par fusion des contours des bureaux.
     circonscriptions: { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, promoteId: 'code' },
+    repere: { type: 'geojson', data: VIDE },
     // Tuiles demandées à partir du zoom des bureaux seulement : sans ce plancher, MapLibre précharge les niveaux
     // parents (zooms 2 à 8), qu'on n'affiche pas.
     plan: { type: 'raster', tiles: [PLAN_IGN], tileSize: 256, minzoom: ZOOM_BUREAUX, maxzoom: 19, attribution: 'Fond de plan : IGN (Plan IGN)' },
@@ -111,6 +112,11 @@ const STYLE: StyleSpecification = {
     { id: 'circonscriptions-selection', type: 'line', source: 'circonscriptions', paint: siSelection(2.5) },
     { id: 'bureaux-selection', type: 'line', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: ZOOM_BUREAUX, paint: siSelection(3) },
     { id: 'contour-selection', type: 'line', source: 'contour', paint: { 'line-color': ENCRE, 'line-width': 2.5 } },
+    // Repère de l'adresse choisie : un point d'encre cerclé de blanc, lisible sur toutes les couleurs.
+    {
+      id: 'repere', type: 'circle', source: 'repere',
+      paint: { 'circle-radius': 7, 'circle-color': ENCRE, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 3 },
+    },
   ],
 }
 
@@ -127,6 +133,13 @@ export interface Survol {
 /** Emprise à cadrer ([ouest, sud, est, nord]) ; le jeton change à chaque demande. */
 export interface Cadrage {
   emprise: [number, number, number, number]
+  jeton: number
+}
+
+/** Adresse choisie dans la recherche : la carte s'y rend et y lit le bureau de vote. */
+export interface VisiteAdresse {
+  lon: number
+  lat: number
   jeton: number
 }
 
@@ -148,6 +161,15 @@ interface Props {
   onPrete: () => void
   /** Vue d'ensemble (la métropole entière, ou presque, à l'écran) : celle des encarts. */
   onEnsemble: (ensemble: boolean) => void
+  /** Zoom des bureaux atteint : le plan IGN est sous les couleurs (curseur d'opacité actif). */
+  onPlan: (plan: boolean) => void
+  /** Opacité des couleurs des bureaux sur le plan IGN, de 0,1 à 1. */
+  opacite: number
+  /** Repère de l'adresse choisie ([longitude, latitude]), tant que son territoire est affiché. */
+  repere: [number, number] | null
+  visite: VisiteAdresse | null
+  /** Bureau trouvé sous l'adresse (null : aucun contour ne la contient ; undefined : la carte n'y est plus). */
+  onBureauAdresse: (jeton: number, code: string | null | undefined) => void
 }
 
 // Marges de cadrage : la légende occupe le bas à gauche sur ordinateur, le volet le bas de l'écran sur mobile.
@@ -182,7 +204,10 @@ function motifHachures(pas = 8, ratio = 2) {
   return { width: n, height: n, data }
 }
 
-export function Carte({ coloriage, contours, auBureau, circonscriptions, selection, contour, cadrage, libelle, onSurvol, onClic, onPrete, onEnsemble }: Props) {
+export function Carte({
+  coloriage, contours, auBureau, circonscriptions, selection, contour, cadrage, libelle, onSurvol, onClic, onPrete, onEnsemble,
+  onPlan, opacite, repere, visite, onBureauAdresse,
+}: Props) {
   const conteneur = useRef<HTMLDivElement>(null)
   const refCarte = useRef<CarteMapLibre | null>(null)
   const refSelection = useRef<Selection | undefined>(undefined)
@@ -296,13 +321,60 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
     const signaler = () => {
       const france = carte.cameraForBounds(FRANCE_METROPOLITAINE, { padding: marges() })?.zoom
       onEnsemble(france === undefined || carte.getZoom() < france + 1)
+      onPlan(carte.getZoom() >= ZOOM_BUREAUX)
     }
     signaler()
     carte.on('zoomend', signaler)
     return () => {
       carte.off('zoomend', signaler)
     }
-  }, [prete, onEnsemble])
+  }, [prete, onEnsemble, onPlan])
+
+  // Opacité des couleurs sur le plan, réglée par le curseur sous le zoom (les hachures, une texture, restent).
+  useEffect(() => {
+    const carte = refCarte.current
+    if (!carte || !prete) return
+    carte.setPaintProperty('bureaux', 'fill-opacity', opaciteSurPlan(opacite))
+  }, [prete, opacite])
+
+  useEffect(() => {
+    const carte = refCarte.current
+    if (!carte || !prete) return
+    carte.getSource<GeoJSONSource>('repere')?.setData(repere
+      ? { type: 'Feature', geometry: { type: 'Point', coordinates: repere }, properties: {} }
+      : VIDE)
+  }, [prete, repere])
+
+  // Adresse choisie : la carte va jusqu'à la rue, puis, tuiles chargées (« idle »), lit le bureau dont le contour
+  // (2022, indicatif) contient l'adresse. Une seule fois par adresse, même si la carte se redessine entre-temps ;
+  // une nouvelle adresse annule l'attente de la précédente.
+  const refVisite = useRef(0)
+  const refAttente = useRef<(() => void) | null>(null)
+  useEffect(() => {
+    const carte = refCarte.current
+    if (!carte || !prete || !visite || refVisite.current === visite.jeton) return
+    refVisite.current = visite.jeton
+    refAttente.current?.()
+    // Décalage plutôt que `padding` : passée à flyTo, la marge resterait celle de la carte et s'ajouterait à
+    // celle de tous les cadrages suivants, qui ne tiendraient plus dans l'écran (MapLibre y renonce en silence).
+    const m = marges()
+    carte.flyTo({
+      center: [visite.lon, visite.lat], zoom: ZOOM_ADRESSE, offset: [(m.left - m.right) / 2, (m.top - m.bottom) / 2], duration: 900,
+    })
+    const lire = () => {
+      refAttente.current = null
+      // La carte a pu être déplacée pendant le vol : conclure seulement si l'adresse est à l'écran, au zoom des bureaux.
+      if (carte.getZoom() < ZOOM_BUREAUX || !carte.getBounds().contains([visite.lon, visite.lat])) {
+        onBureauAdresse(visite.jeton, undefined)
+        return
+      }
+      const [trouve] = carte.queryRenderedFeatures(carte.project([visite.lon, visite.lat]), { layers: ['bureaux'] })
+      const code = trouve?.properties?.codeBureauVote
+      onBureauAdresse(visite.jeton, typeof code === 'string' ? code : null)
+    }
+    carte.once('idle', lire)
+    refAttente.current = () => carte.off('idle', lire)
+  }, [prete, visite, onBureauAdresse])
 
   // Circonscriptions : la couche (6 Mo) n'est chargée qu'aux législatives.
   useEffect(() => {

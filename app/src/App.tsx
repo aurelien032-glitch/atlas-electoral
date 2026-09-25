@@ -1,13 +1,15 @@
 import type { Feature } from 'geojson'
-import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { Cadrage, Survol } from './carte/Carte'
+import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import type { Cadrage, Survol, VisiteAdresse } from './carte/Carte'
 import { Encarts } from './carte/Encarts'
 import {
   LIBELLE_BLOC, PALETTE_EVOLUTION, RAMPE_PARTICIPATION, RAMPE_SCORE, SEUILS_EVOLUTION, palier, type BlocColore,
 } from './carte/couleurs'
 import { Infobulle } from './carte/Infobulle'
 import { Legende, type DescriptionLegende } from './carte/Legende'
+import { ReglageOpacite } from './carte/Opacite'
 import { Onglets } from './carte/Onglets'
+import { garderOpacite, opaciteGardee } from './carte/preferences'
 import { blocEnTete, optionsCibles, retenueDuBloc } from './cibles'
 import { nomCandidature } from './donnees/libelles'
 import {
@@ -15,7 +17,9 @@ import {
   useCodesPostaux, useDepartements, useEncarts, usePanachage, usePassage, useSeriesCommunes, useSeriesTerritoires,
   useTerritoires, useVoix,
 } from './donnees/requetes'
-import { arrondissementDu, communeDu, departementDe, emprise, indexer, titreDe, villeDe } from './donnees/territoires'
+import {
+  arrondissementDu, communeDu, departementDe, emprise, indexer, selectionDeCommune, titreDe, villeDe,
+} from './donnees/territoires'
 import {
   plusieursElections, raisonPlusieursElections, scrutinParDefaut, scrutinPrecedent, scrutinsAnterieurs, voteParSecteur,
 } from './donnees/scrutins'
@@ -34,6 +38,7 @@ import { SANS_DEPART, type Actions, type Contexte } from './panneau/contexte'
 import { Detail, EnteteFiche, type Parent } from './panneau/Detail'
 import { Methodologie } from './panneau/Methodologie'
 import { Reglages } from './panneau/Reglages'
+import type { Adresse } from './recherche/adresses'
 import { indexerCodesPostaux, preparer } from './recherche/chercher'
 import { Recherche } from './recherche/Recherche'
 import { useUrl } from './url'
@@ -72,6 +77,18 @@ interface EtatCarte {
 // Carte vidée (aucun territoire peint) : référence stable, comme tout ce qui est passé à la carte.
 const COLORIAGE_VIDE: Coloriage = { communes: new Map(), bureaux: null }
 
+/** Adresse choisie dans la recherche, et ce qu'on a trouvé sous elle. */
+interface AdresseChoisie {
+  adresse: Adresse
+  jeton: number
+  /** Territoire montré pour l'adresse : sa commune (ou son arrondissement) d'abord, son bureau une fois trouvé. */
+  selection: Selection
+  /** Recherche du bureau sous l'adresse : en cours, faite, ou abandonnée (on est passé à autre chose). */
+  etat: 'recherche' | 'faite' | 'abandon'
+  /** Bureau dont le contour de 2022 contient l'adresse ; null : aucun. */
+  bureau?: string | null
+}
+
 /** Carte qui ne peut pas s'afficher (fragment non reçu, WebGL indisponible) : le panneau reste utilisable. */
 class GardeCarte extends Component<{ children: ReactNode; onEchec: () => void }, { echec: boolean }> {
   state = { echec: false }
@@ -107,6 +124,10 @@ interface PropsZone {
   onCadrer: (emprise: [number, number, number, number]) => void
   /** Carte prête, ou en échec : ce qui attendait la carte peut se télécharger. */
   onPrete: () => void
+  /** Adresse choisie : son repère, la visite de la carte et le bureau trouvé (voir Carte). */
+  repere: [number, number] | null
+  visite: VisiteAdresse | null
+  onBureauAdresse: (jeton: number, code: string | null | undefined) => void
 }
 
 // Le survol change à chaque mouvement de souris : son état vit ici, pour ne pas recalculer les panneaux.
@@ -115,13 +136,21 @@ function ZoneCarte({ lancee, contenu, encarts, onChoisirEncart, onCadrer, onPret
   // Encarts : seulement dans la vue d'ensemble. Une fois la carte zoomée sur une région, ils la masqueraient
   // sans rien lui apprendre.
   const [ensemble, setEnsemble] = useState(true)
+  // Opacité des couleurs sur le plan IGN : préférence gardée par le navigateur. Le curseur n'agit qu'au zoom des
+  // bureaux, là où le plan est dessous.
+  const [opacite, setOpacite] = useState(opaciteGardee)
+  const [plan, setPlan] = useState(false)
+  const changerOpacite = useCallback((valeur: number) => {
+    setOpacite(valeur)
+    garderOpacite(valeur)
+  }, [])
   const bulle = survol && contenu(survol)
   return (
     <div className="zone-carte-fond">
       {lancee && (
         <GardeCarte onEchec={onPrete}>
           <Suspense fallback={null}>
-            <Carte {...props} onSurvol={setSurvol} onPrete={onPrete} onEnsemble={setEnsemble} />
+            <Carte {...props} onSurvol={setSurvol} onPrete={onPrete} onEnsemble={setEnsemble} onPlan={setPlan} opacite={opacite} />
           </Suspense>
         </GardeCarte>
       )}
@@ -131,6 +160,7 @@ function ZoneCarte({ lancee, contenu, encarts, onChoisirEncart, onCadrer, onPret
           parCirconscription={props.circonscriptions && (props.coloriage?.circonscriptions?.size ?? 0) > 0}
         />
       )}
+      {lancee && <ReglageOpacite valeur={opacite} actif={plan} onChange={changerOpacite} />}
       {survol && bulle && <Infobulle x={survol.x} y={survol.y} largeur={survol.largeur} titre={bulle.titre} lignes={bulle.lignes} />}
     </div>
   )
@@ -413,6 +443,78 @@ export default function App() {
     setDeplie(true)
   }, [actions])
 
+  // Adresse choisie dans la recherche : sa commune (ou son arrondissement) s'affiche aussitôt, dans une nouvelle
+  // entrée d'historique, où la carte note ensuite le cadrage de la rue ; la fiche ne dépend donc pas de la carte.
+  // Une fois la carte arrivée, le bureau dont le contour contient l'adresse précise cette même entrée.
+  const [adresseChoisie, setAdresseChoisie] = useState<AdresseChoisie | null>(null)
+  // Copies lues au retour de la carte, qui arrive après la fin du vol (le scrutin a pu changer entre-temps).
+  const refAdresse = useRef<AdresseChoisie | null>(null)
+  const refAuBureau = useRef(auBureau)
+  useEffect(() => {
+    refAuBureau.current = auBureau
+  }, [auBureau])
+  const retenirAdresse = useCallback((a: AdresseChoisie) => {
+    refAdresse.current = a
+    setAdresseChoisie(a)
+  }, [])
+  const choisirAdresse = useCallback((adresse: Adresse) => {
+    const selection = selectionDeCommune(adresse.commune)
+    retenirAdresse({ adresse, jeton: Date.now(), selection, etat: 'recherche' })
+    modifierUrl({ sel: ecrireSelection(selection), page: null })
+    setDeplie(true)
+  }, [retenirAdresse, modifierUrl])
+  // Bureau lu sous l'adresse ; undefined : la carte n'était plus sur l'adresse.
+  const trouverBureau = useCallback((jeton: number, code: string | null | undefined) => {
+    const a = refAdresse.current
+    if (!a || a.jeton !== jeton || a.etat !== 'recherche') return
+    const actuelle = lireVue(new URLSearchParams(window.location.search)).selection
+    if (code === undefined || actuelle?.niveau !== a.selection.niveau || actuelle.code !== a.selection.code) {
+      retenirAdresse({ ...a, etat: 'abandon' }) // on est passé à autre chose : rien ne change sous ses yeux
+      return
+    }
+    // Carte à la commune (avant 2022) : les contours de 2022 ne désignent pas les bureaux de ce scrutin.
+    const selection: Selection = code && refAuBureau.current ? { niveau: 'bureau', code } : a.selection
+    retenirAdresse({ ...a, selection, etat: 'faite', bureau: code })
+    if (selection !== a.selection) modifierUrl({ sel: ecrireSelection(selection) }, true)
+  }, [retenirAdresse, modifierUrl])
+  // Secours : une carte qui ne répond pas (échec, onglet en arrière-plan) ne laisse pas la fiche en attente.
+  useEffect(() => {
+    if (adresseChoisie?.etat !== 'recherche') return
+    const { jeton } = adresseChoisie
+    const minuteur = setTimeout(() => {
+      const a = refAdresse.current
+      if (a?.jeton === jeton && a.etat === 'recherche') retenirAdresse({ ...a, etat: 'abandon' })
+    }, 20000)
+    return () => clearTimeout(minuteur)
+  }, [adresseChoisie, retenirAdresse])
+  const visite = useMemo((): VisiteAdresse | null => adresseChoisie && {
+    lon: adresseChoisie.adresse.lon, lat: adresseChoisie.adresse.lat, jeton: adresseChoisie.jeton,
+  }, [adresseChoisie])
+  // Le repère et le rappel de l'adresse accompagnent le territoire qu'elle a fait choisir ; un autre territoire
+  // les efface, Précédent les retrouve.
+  const selectionAdresse = adresseChoisie?.selection
+  const adresseAffichee = adresseChoisie && selection?.niveau === selectionAdresse?.niveau
+    && selection?.code === selectionAdresse?.code ? adresseChoisie : null
+  const repere = useMemo((): [number, number] | null =>
+    adresseAffichee && [adresseAffichee.adresse.lon, adresseAffichee.adresse.lat], [adresseAffichee])
+  // Le rappel dit ce qui relie l'adresse au territoire pour le scrutin affiché, qui a pu changer depuis.
+  const noteAdresse = useMemo(() => {
+    if (!adresseAffichee) return undefined
+    const { adresse, selection: s, etat, bureau } = adresseAffichee
+    const lieu = s.niveau === 'arrondissement' ? "l'arrondissement" : 'la commune'
+    let suite = ''
+    if (!scrutin) suite = ''
+    else if (s.niveau === 'bureau') {
+      suite = !auBureau
+        ? "Bureau trouvé d'après les contours de 2022 : pour ce scrutin, ce numéro a pu désigner un autre bureau."
+        : `Bureau dont le contour de 2022 (indicatif) la contient.${adresse.type === 'housenumber' ? ''
+          : " Sans numéro, le repère marque un point de la voie : le bureau peut changer d'un numéro à l'autre."}`
+    } else if (!auBureau) suite = `Pour ce scrutin, la carte s'arrête à ${lieu}.`
+    else if (etat === 'recherche') suite = 'Recherche de son bureau de vote…'
+    else if (etat === 'faite' && bureau === null) suite = `Aucun contour de bureau (2022) ne la contient : résultats de ${lieu}.`
+    return `Adresse recherchée : ${adresse.libelle}.${suite && ` ${suite}`}`
+  }, [adresseAffichee, scrutin, auBureau])
+
   const lienMethodologie = useMemo(() => {
     const p = new URLSearchParams(parametres)
     p.set('page', 'methodologie')
@@ -560,7 +662,7 @@ export default function App() {
           <a href={lienMethodologie} aria-current={vue.page === 'methodologie' ? 'page' : undefined}
             onClick={(e) => { e.preventDefault(); modifierUrl({ page: 'methodologie' }); setDeplie(true) }}>Méthodologie</a>
         </header>
-        <Recherche entrees={entreesRecherche} postaux={postaux} onActiver={activerRecherche} onChoisir={allerA} />
+        <Recherche entrees={entreesRecherche} postaux={postaux} onActiver={activerRecherche} onChoisir={allerA} onChoisirAdresse={choisirAdresse} />
         <div id="panneau-corps" className="panneau-corps">
           {erreur && (
             <div className="alerte" role="alert">
@@ -588,7 +690,7 @@ export default function App() {
             ? <Detail ctx={ctx} selection={selection} resultat={detail?.resultat} enChargement={detail !== null && 'enChargement' in detail && detail.enChargement}
                 lignes={detail?.lignes} parent={detail?.parent}
                 circonscriptions={detail?.circonscriptions ?? []} supplementaires={detail?.supplementaires} panachage={auPanachage}
-                cible={vue.mode === 'score' ? cible : undefined} complement={complement} actions={actions} />
+                cible={vue.mode === 'score' ? cible : undefined} complement={complement} adresse={noteAdresse} actions={actions} />
             : <Apercu ctx={ctx} mode={vue.mode} cible={cible} bloc={bloc} evolution={apercuEvolution} actions={actions} />)}
           {vue.page !== 'methodologie' && ctx && !selection && (
             <nav className="raccourcis" aria-label="Outre-mer et Français de l'étranger">
@@ -637,6 +739,9 @@ export default function App() {
           encarts={encarts.data}
           onChoisirEncart={actions.territoire}
           onCadrer={cadrer}
+          repere={repere}
+          visite={visite}
+          onBureauAdresse={trouverBureau}
         />
         <Onglets mode={vue.mode} onMode={changerMode} />
         {etatCarte?.legende && <Legende description={etatCarte.legende} className="legende-carte" />}

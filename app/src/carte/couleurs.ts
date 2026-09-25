@@ -59,6 +59,12 @@ export const GRIS = {
 /** Trait des hachures « pas de candidat » et « non comparable » : une texture, lisible sans la couleur. */
 export const TRAIT_HACHURES = '#8F8F89'
 
+// Au zoom des bureaux, les couleurs sont posées sur le Plan IGN, à 70 % d'opacité par défaut : les cinq blocs
+// restent distincts (écart ≥ 13,5 en CIEDE2000, daltonismes compris ; 10,9 seulement à 60 %). Le curseur de la
+// carte descend jusqu'à 10 % : en dessous de 70 %, l'utilisateur privilégie le plan, la couleur restant doublée
+// par l'infobulle et la fiche.
+export const OPACITE_SUR_PLAN = 0.7
+
 // Paliers de l'avance de la tête, pour le texte (infobulle, fiche). La carte ne les montre plus (décision du
 // 25/09) : en opacité, deux paliers voisins ne différaient que de 3 à 6 (CIEDE2000), et aucun palier de clarté
 // n'est possible, la palette distinguant déjà l'extrême gauche de la gauche et la droite de l'extrême droite

@@ -579,6 +579,22 @@ Corrigé à cette occasion :
 - le titre de l'onglet était toujours « Atlas électoral » ;
 - sur mobile, un lien partagé vers un territoire ouvrait le volet replié.
 
+**Recherche d'adresse (décidée le 25/09, Q20)** : le champ de recherche propose aussi des adresses, demandées au
+géocodeur de la Géoplateforme (IGN, Base adresse nationale ; sans clé, `data.geopf.fr` déjà dans la CSP) après
+300 ms sans frappe, quand le texte contient un chiffre ou un type de voie (rue, avenue, place…) : un nom de
+commune ou un code postal ne quitte pas le navigateur. Choisir une adresse ouvre aussitôt la fiche de sa commune
+(l'arrondissement à Paris, Lyon et Marseille, d'après le code INSEE du géocodeur), dans une nouvelle entrée
+d'historique ; la carte vole jusqu'à la rue (zoom 15) et y pose un repère ; une fois ses tuiles chargées, le bureau
+dont le contour de 2022 (indicatif) contient l'adresse remplace la commune dans la même entrée, sauf si la carte
+du scrutin s'arrête à la commune (avant 2022) ou si l'utilisateur est passé à autre chose. La fiche rappelle
+l'adresse et ce qui la relie au territoire, pour le scrutin affiché. La Méthodologie dit quand le texte tapé part
+au géocodeur.
+
+**Opacité des couleurs (décidée le 25/09, Q19)** : un bouton sous le zoom ouvre un curseur de 10 à 100 % (70 %
+par défaut, validé), actif au zoom des bureaux, là où le plan IGN est sous les couleurs ; grisé en vue
+nationale. Réglage gardé par le navigateur (`localStorage`), hors de l'URL : une préférence d'affichage, pas un
+état de la vue.
+
 **Au fil des scrutins (réalisé le 24/09, décision Q14)** : sous l'aperçu (France entière) et sous la fiche
 d'un département, d'une circonscription ou d'une commune (celle du bureau choisi), les premiers tours d'un
 type d'élection à la fois : une courbe par bloc coloré, la participation dans un second graphique (un seul
@@ -809,6 +825,8 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 | Q16 | Communes et arrondissements qui réunissent plusieurs élections distinctes (plusieurs circonscriptions ou cantons, secteurs de Paris, Lyon et Marseille jusqu'en 2020, communes fusionnées depuis) : 127 communes aux législatives 2024, 217 aux départementales 2015. Leur « candidature en tête » compare des gens qui ne s'affrontaient pas. Le texte le dit désormais (pas de phrase « en tête », note dans la fiche, infobulle) ; sur la carte, quelle couleur : celle de la candidature la plus votée, le bloc qui totalise le plus de voix, ou des hachures « plusieurs élections » ? | **Tranché le 25/09** : le bloc qui totalise le plus de voix, intensité selon son avance sur le deuxième (`bloc_en_tete`, `avance_bloc_x10000` des agrégats) ; même lecture dans l'infobulle, la fiche et le décompte national | — |
 | Q17 | Sources incomplètes avant 2010 (départements absents ou partiels, inscrits aberrants) : les compléter par une autre source officielle (fichiers par département du ministère) ? | **Tranché le 25/09** : non, signaler seulement (aperçu, fiche, rapport qualité) ; une seule source par scrutin | — |
 | Q18 | Précédent et Suivant du navigateur ramènent le panneau à la vue d'avant, pas la carte (sa position n'est pas dans l'URL). Ajouter le zoom et le centre à l'URL (`#zoom/lat/lon`), pour que l'historique et les liens partagés restituent aussi le cadrage ? | **Tranché et réalisé le 25/09** : oui. Fragment `#zoom/lat/lon`, noté à chaque fin de mouvement sans entrée d'historique (`replaceState`) ; Précédent, Suivant et les liens partagés le restituent ; un lien sans fragment cadre sur le territoire choisi | — |
+| Q19 | Transparence de la carte : où agit le réglage, où le placer ? | **Tranché le 25/09** : au zoom des bureaux seulement (pas de plan dessous en vue nationale, rien de plus à télécharger) ; bouton sous le zoom, même geste sur ordinateur et téléphone ; réglage gardé par le navigateur (§ 9) | — |
+| Q20 | Recherche d'adresse : que montrer, quand interroger le géocodeur ? | **Tranché le 25/09** : le bureau de vote dont le contour contient l'adresse (la commune quand la carte s'y arrête) ; suggestions pendant la frappe, pour un texte qui ressemble à une adresse (§ 9) | — |
 | Q6 | Publication de nos données sur data.gouv | **Tranché** : plus tard | P2 |
 
 ## 16. Outillage Claude : skills, plugins, connecteurs

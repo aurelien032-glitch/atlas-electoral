@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { arrondissementDu, estArrondissement, titreDe, villeDe } from './territoires'
+import { arrondissementDu, estArrondissement, selectionDeCommune, titreDe, villeDe } from './territoires'
+
+describe('territoire d’une adresse', () => {
+  it('choisit l’arrondissement à Paris, Lyon et Marseille, la commune ailleurs', () => {
+    expect(selectionDeCommune('75102')).toEqual({ niveau: 'arrondissement', code: '75102' })
+    expect(selectionDeCommune('69382')).toEqual({ niveau: 'arrondissement', code: '69382' })
+    expect(selectionDeCommune('80021')).toEqual({ niveau: 'commune', code: '80021' })
+  })
+})
 
 describe('titre d’un territoire choisi', () => {
   const index = { noms: new Map([['69', 'Rhône'], ['69123', 'Lyon'], ['69-02', 'Rhône, 2e circonscription']]), passage: new Map() }
