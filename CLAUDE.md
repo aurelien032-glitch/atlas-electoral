@@ -126,6 +126,10 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   codes visuels de l'État (DSFR, Marianne).
 - Direction visuelle « A · Éditorial » : Newsreader (titres) et Source Sans 3 (texte), **auto-hébergées** par
   `@fontsource-variable` (pas de Google Fonts : aucune requête vers un tiers).
+- Typographie (25/09) : **une seule échelle de 6 tailles**, variables `--t-*` de `styles.css` (12, 14, 16, 18,
+  24, 32 px) ; aucune taille en dur. Newsreader seulement pour le titre de la page et les grands chiffres ;
+  Source Sans 3 en 400 et 600 pour tout le reste ; deux encres (`--encre`, `--encre-2`) ; un seul style de
+  capitales espacées (`.marque`, `.surtitre`). Noms de personnes à trait d'union insécable (`nomCandidature`).
 
 ## Style de code
 

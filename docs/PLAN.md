@@ -676,6 +676,8 @@ Budgets : moins de 450 Ko de JavaScript initial compressé (MapLibre compris) et
 - vérifications : TypeScript, oxlint, 5 tests Vitest, build de production testé dans le navigateur ;
 - JavaScript : 457 Ko compressés, juste au-dessus du budget, plus le worker de MapLibre (510 Ko, chargé à part) : découpage à prévoir.
 
+**Typographie harmonisée le 25/09** (retour : « trop de styles d'écriture différents ») : 37 combinaisons de styles de texte → 20, 12 tailles → 6 (échelle 12, 14, 16, 18, 24, 32 en variables CSS), Newsreader réservé au titre de la page et aux grands chiffres (il servait aussi au chapô, à la légende, à l'infobulle et aux intertitres), un seul style de capitales espacées au lieu de deux, deux encres au lieu de trois, mention de la carte dans la police du site. Au passage : titres équilibrés (`text-wrap: balance`), noms composés insécables, colonnes de chiffres du tableau alignées et séparées.
+
 **Direction A codée le 24/09** (`app/`) :
 - panneau éditorial à gauche (volet en bas sur mobile), onglets de mode et légende posés sur la carte, infobulle au survol ;
 - modes **Tête**, **Score** (candidature ou bloc), **Participation** et **Évolution** (bloc, scrutin de départ, scrutin d'arrivée) ; l'état complet est dans l'URL (`?scrutin=…&mode=…&cible=…&bloc=…&de=…&sel=…`) ;

@@ -23,7 +23,8 @@ export function nomPropre(nom: string): string {
  * sont désignées par leur nuance.
  */
 export function nomCandidature(c: Candidature): string {
-  const personne = [c.prenom && nomPropre(c.prenom), c.nom && nomPropre(c.nom)].filter(Boolean).join(' ')
+  // Trait d'union insécable : « Jean-Luc » ne se coupe pas en fin de ligne.
+  const personne = [c.prenom && nomPropre(c.prenom), c.nom && nomPropre(c.nom)].filter(Boolean).join(' ').replaceAll('-', '‑')
   return c.liste_abregee ?? c.liste ?? (personne || `Liste ${c.nuance}${c.panneau ? ` (panneau ${c.panneau})` : ''}`)
 }
 
