@@ -92,9 +92,17 @@ function ApercuTete({ ctx, actions }: Props) {
     const blocDe = (cand: number): Bloc => ctx.parCand.get(cand)?.bloc ?? 'NC'
     const parCirconscription = ctx.scrutin.portee === 'circonscription'
     // Communes qui réunissent plusieurs élections (circonscriptions, cantons, secteurs de Paris, Lyon et
-    // Marseille, communes fusionnées depuis) : aucune candidature n'y est « en tête ».
-    const agregats = ctx.agregats.filter((a) => a.niveau !== 'commune' || !plusieursElections(ctx.scrutin, a.niveau, a.code, a))
-    const tetes = compterTetes(agregats, parCirconscription ? 'circonscription' : 'commune', blocDe)
+    // Marseille, communes fusionnées depuis) : comptées pour le bloc qui y totalise le plus de voix, comme
+    // sur la carte.
+    const niveau = parCirconscription ? 'circonscription' : 'commune'
+    const comptes = new Map<Bloc, number>()
+    for (const a of ctx.agregats) {
+      if (a.niveau !== niveau) continue
+      const plusieurs = plusieursElections(ctx.scrutin, a.niveau, a.code, a)
+      const bloc = plusieurs ? (a.egalite_bloc ? null : a.bloc_en_tete ?? null) : (a.tete === null || a.egalite ? null : blocDe(a.tete))
+      if (bloc) comptes.set(bloc, (comptes.get(bloc) ?? 0) + 1)
+    }
+    const tetes = [...comptes].sort((a, b) => b[1] - a[1])
     phrase = `Bloc en tête, par ${parCirconscription ? 'circonscription' : 'commune'} : ${enumerer(tetes.map(([b, n]) => `${LIBELLE_BLOC[b].toLowerCase()} dans ${formatNombre(n)}`))}.`
     const elus = ctx.candidats.filter((c) => c.elu)
     if (elus.length > 0) {

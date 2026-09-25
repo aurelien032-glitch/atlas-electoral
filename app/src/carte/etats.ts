@@ -21,11 +21,24 @@ const HACHURE: Etat = { couleur: FOND_CARTE, opacite: 1, hachure: false }
  * intense selon son avance. Les égalités et les gris ne sont pas nuancés. Renvoie null quand il n'y a
  * aucun suffrage exprimé : le territoire reste alors « sans résultat ».
  */
-export function etatTete(resultat: Resultat, blocDe: (cand: number) => Bloc): Etat | null {
-  if (resultat.tete === null || resultat.exprimes === 0) return null
+export function etatTete(
+  resultat: Resultat & { bloc_en_tete?: Bloc | null; egalite_bloc?: boolean | null; avance_bloc_x10000?: number | null },
+  blocDe: (cand: number) => Bloc,
+): Etat | null {
+  if (resultat.exprimes === 0) return null
+  // Territoire qui réunit plusieurs élections (cantons, circonscriptions…) : le bloc qui totalise le plus de
+  // voix, ses candidatures ne s'affrontant pas toutes (décision Q16).
+  if (resultat.bloc_en_tete) {
+    if (resultat.egalite_bloc) return { couleur: GRIS.egalite, opacite: 1, hachure: false }
+    return etatDuBloc(resultat.bloc_en_tete, resultat.avance_bloc_x10000 ?? 0)
+  }
+  if (resultat.tete === null) return null
   if (resultat.egalite) return { couleur: GRIS.egalite, opacite: 1, hachure: false }
-  const bloc = blocDe(resultat.tete)
-  if (estColore(bloc)) return { couleur: COULEUR_BLOC[bloc], opacite: palier(resultat.avance_x10000 ?? 0).opacite, hachure: false }
+  return etatDuBloc(blocDe(resultat.tete), resultat.avance_x10000 ?? 0)
+}
+
+function etatDuBloc(bloc: Bloc, avance: number): Etat {
+  if (estColore(bloc)) return { couleur: COULEUR_BLOC[bloc], opacite: palier(avance).opacite, hachure: false }
   return { couleur: bloc === 'DIV' ? GRIS.divers : GRIS.nonClasse, opacite: 1, hachure: false }
 }
 

@@ -48,7 +48,7 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   manifeste : somme des voix ≠ exprimés, votants > inscrits.
 - Couverture de la source (catalogue, calculée à chaque construction) : territoires absents, départements
   incomplets (moins de 80 % des inscrits du scrutin complet le plus proche), bureaux aux inscrits aberrants
-  (plus de 4 000 et plus de dix fois les votants). **Signalés, jamais corrigés** ; nos totaux se rapprochent
+  (plus de 4 000 et plus de dix fois les votants). **Signalés, jamais corrigés** (Q17) ; nos totaux se rapprochent
   des totaux officiels (`referentiels/totaux_officiels.csv`, test de réconciliation).
 - Les codes de département se déduisent du code commune INSEE (le champ source mélange `ZA` et `971`).
 - Les législatives n'ont plus de code de circonscription depuis 2024 : on le reprend des fichiers officiels
@@ -63,7 +63,8 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   construction. Voix d'un bloc **vides** quand il n'avait pas de candidat : ne jamais les remplacer par 0.
 - `plusieurs_elections` (agrégats, communes et arrondissements) : aucun bureau n'a toutes les candidatures du
   territoire, qui réunit donc plusieurs élections (circonscriptions, cantons, secteurs, communes fusionnées
-  depuis). Pas de phrase « en tête » ni de comparaison ; la couleur de la carte reste à trancher (Q16).
+  depuis). Pas de phrase « en tête » ni de comparaison ; carte, infobulle et décompte national prennent le bloc
+  qui totalise le plus de voix (`bloc_en_tete`, `avance_bloc_x10000`, décision Q16).
 - Paris, Lyon et Marseille : niveau « arrondissement » des agrégats, tiré du numéro de bureau (« 75056_1512 »
   → 75115, `construire.ARRONDISSEMENT`, `arrondissementDu` côté client). Sur la carte, les arrondissements
   sont dessinés par-dessus leur ville dans la couche des communes ; la ville n'est alors pas peinte (un

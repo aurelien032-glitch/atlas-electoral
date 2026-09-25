@@ -1,4 +1,4 @@
-import { LIBELLE_BLOC, palier } from '../carte/couleurs'
+import { LE_BLOC, LIBELLE_BLOC, palier } from '../carte/couleurs'
 import type { Cible } from '../cibles'
 import { nomCandidature, nuanceCourte } from '../donnees/libelles'
 import { plusieursElections, raisonPlusieursElections, voteParSecteur } from '../donnees/scrutins'
@@ -124,7 +124,22 @@ export function Detail({ ctx, selection, resultat, enChargement, lignes, parent,
   const plusieurs = !parBloc && plusieursElections(ctx.scrutin, selection.niveau, selection.code, resultat)
   const tries = [...(lignes ?? [])].sort((a, b) => b.voix - a.voix)
   let phrase: string | undefined
-  if (!parBloc && !plusieurs && tries.length >= 2 && resultat.tete !== null) {
+  if (plusieurs && !secteurs && !panachage && tries.length >= 2) {
+    // Même lecture que la carte : le bloc qui totalise le plus de voix, et son avance sur le deuxième (voix
+    // des listes : celles du panachage, plusieurs par électeur, ne s'additionnent pas).
+    const parBlocIci = new Map<Bloc, number>()
+    for (const l of tries) {
+      const bloc = candidature(l.cand)?.bloc ?? 'NC'
+      parBlocIci.set(bloc, (parBlocIci.get(bloc) ?? 0) + l.voix)
+    }
+    const [premier, second] = [...parBlocIci].sort((a, b) => b[1] - a[1])
+    if (premier && second) {
+      const avance = Math.round(10000 * (premier[1] - second[1]) / resultat.exprimes) / 100
+      phrase = premier[1] === second[1]
+        ? `Égalité entre ${LE_BLOC[premier[0]]} et ${LE_BLOC[second[0]]}.`
+        : `Bloc le plus voté : ${LE_BLOC[premier[0]]}, ${avance.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${unitePoints(avance)} devant ${LE_BLOC[second[0]]} : une avance ${palier(avance * 100).libelle}.`
+    }
+  } else if (!parBloc && !plusieurs && tries.length >= 2 && resultat.tete !== null) {
     const tete = resultat.tete
     const avance = (resultat.avance_x10000 ?? 0) / 100
     phrase = resultat.egalite
@@ -200,7 +215,8 @@ export function Detail({ ctx, selection, resultat, enChargement, lignes, parent,
       {plusieurs && !secteurs && (
         <p className="note-bas">
           Ce territoire réunit {raisonPlusieursElections(ctx.scrutin)} : chaque candidature ne se présentait que dans
-          la sienne. Les pourcentages portent sur l'ensemble ; aucune candidature n'y est « en tête ».
+          la sienne. Les pourcentages portent sur l'ensemble ; aucune candidature n'y est « en tête », la carte
+          montre le bloc qui totalise le plus de voix.
         </p>
       )}
       {!parBloc && !panachage && <TableNuances candidatures={presentes} />}

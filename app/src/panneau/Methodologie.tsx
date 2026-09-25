@@ -218,6 +218,7 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
           <li>Municipales 2014 et 2020 : dans les communes de moins de 1 000 habitants, on vote pour des personnes (panachage) ; leurs voix, multiples, n'entrent pas dans les parts des blocs.</li>
           <li>Législatives : la circonscription vient des données de 2012 à 2022, et des fichiers officiels par circonscription en 2024.</li>
           <li>Paris, Lyon et Marseille : résultats par arrondissement, calculés d'après le numéro des bureaux (voir les limites).</li>
+          <li>Une commune qui réunit plusieurs élections (plusieurs cantons ou circonscriptions, communes fusionnées depuis, secteurs de Paris, Lyon et Marseille) n'a pas de candidature « en tête » : la carte y montre le bloc qui totalise le plus de voix.</li>
         </ul>
       </Section>
 

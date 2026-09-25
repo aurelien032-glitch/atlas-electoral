@@ -187,6 +187,11 @@ def test_plusieurs_elections(con):
             assert codes(s) <= a_cheval, s
     assert {"75056", "69123", "13055"} <= codes("2020_muni_t1")
     assert {"31555", "75056"} <= codes("2024_legi_t1")
+    # Ces territoires, et eux seuls, ont leur bloc le plus voté précalculé (couleur de la carte, Q16).
+    for s in ("2015_dpmt_t1", "2024_legi_t1"):
+        incoherents = con.sql(f"""SELECT count(*) FROM {fichier(s, 'agregats.parquet')}
+                                  WHERE (plusieurs_elections AND exprimes > 0) <> (bloc_en_tete IS NOT NULL)""").fetchone()[0]
+        assert incoherents == 0, s
 
 
 def test_passage_publie_limite_aux_codes_rencontres(con):

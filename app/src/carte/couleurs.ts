@@ -38,6 +38,17 @@ export const DU_BLOC: Record<BlocColore, string> = {
   EXD: "de l'extrême droite",
 }
 
+/** Le bloc avec son article, dans une phrase (« 5 points devant la droite »). */
+export const LE_BLOC: Record<Bloc, string> = {
+  EXG: "l'extrême gauche",
+  GAU: 'la gauche',
+  CENT: 'le centre',
+  DTE: 'la droite',
+  EXD: "l'extrême droite",
+  DIV: 'les divers',
+  NC: 'les non classés',
+}
+
 /** Gris séparés par la clarté, pour tout ce qui n'est pas un bloc coloré. */
 export const GRIS = {
   divers: '#8F8F89',

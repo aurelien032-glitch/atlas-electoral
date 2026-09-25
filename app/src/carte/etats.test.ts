@@ -29,6 +29,12 @@ describe('etatTete', () => {
     expect(etatTete({ ...resultat, avance_x10000: 100 }, () => 'DIV')).toEqual({ couleur: GRIS.divers, opacite: 1, hachure: false })
   })
 
+  it('colore un territoire à plusieurs élections selon le bloc le plus voté et son avance', () => {
+    const plusieurs = { ...resultat, bloc_en_tete: 'DTE' as const, egalite_bloc: false, avance_bloc_x10000: 2000 }
+    expect(etatTete(plusieurs, () => 'GAU')).toEqual({ couleur: COULEUR_BLOC.DTE, opacite: 1, hachure: false })
+    expect(etatTete({ ...plusieurs, egalite_bloc: true }, () => 'GAU')).toEqual({ couleur: GRIS.egalite, opacite: 1, hachure: false })
+  })
+
   it('laisse sans résultat un territoire sans suffrage exprimé', () => {
     expect(etatTete({ ...resultat, exprimes: 0 }, () => 'CENT')).toBeNull()
     expect(etatTete({ ...resultat, tete: null }, () => 'CENT')).toBeNull()

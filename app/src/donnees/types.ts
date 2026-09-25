@@ -82,6 +82,11 @@ export interface Agregat extends Resultat {
    * communes fusionnées depuis) : sa « candidature en tête » compare des gens qui ne s'affrontaient pas.
    */
   plusieurs_elections?: boolean | null
+  /** Territoire à plusieurs élections : bloc qui totalise le plus de voix (couleur de la carte, décision Q16). */
+  bloc_en_tete?: Bloc | null
+  egalite_bloc?: boolean | null
+  /** Avance de ce bloc sur le deuxième, en dix-millièmes des exprimés. */
+  avance_bloc_x10000?: number | null
 }
 
 /** Base des parts des blocs : les exprimés des communes à listes quand le panachage est exclu. */

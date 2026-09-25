@@ -318,6 +318,12 @@ export default function App() {
     arrondissements: new Map<string, Resultat>((agregats.data ?? []).filter((a) => a.niveau === 'arrondissement').map((a) => [a.code, a])),
   }), [bureaux.data, agregats.data])
 
+  // Agrégat d'une commune ou d'un arrondissement, pour l'infobulle (bloc le plus voté des territoires à
+  // plusieurs élections).
+  const agregatsParCode = useMemo(() => new Map((agregats.data ?? [])
+    .filter((a) => a.niveau === 'commune' || a.niveau === 'arrondissement').map((a) => [`${a.niveau}:${a.code}`, a])), [agregats.data])
+  const agregatDe = useCallback((niveau: string, code: string) => agregatsParCode.get(`${niveau}:${code}`), [agregatsParCode])
+
   const contenuInfobulle = useCallback((survol: Survol) => {
     // Les noms des communes arrivent avec l'index complet, juste après la carte : pas de code INSEE en attendant.
     const nomAttendu = !communesNommees && survol.niveau !== 'circonscription'
@@ -331,6 +337,12 @@ export default function App() {
       lignes.push('Vote par secteur : résultats additionnés, voir la fiche')
     } else if (vue.mode === 'tete' && scrutin && (survol.niveau === 'commune' || survol.niveau === 'arrondissement')
       && plusieursElections(scrutin, survol.niveau, survol.code, resultats[survol.niveau === 'commune' ? 'communes' : 'arrondissements'].get(survol.code))) {
+      const a = agregatDe(survol.niveau, survol.code)
+      if (a?.bloc_en_tete && a.egalite_bloc) lignes.push('Égalité entre les deux premiers blocs')
+      else if (a?.bloc_en_tete) {
+        const avance = a.avance_bloc_x10000 ?? 0
+        lignes.push(`Bloc le plus voté : ${LIBELLE_BLOC[a.bloc_en_tete]}`, `Avance ${palier(avance).libelle}, ${formatEcart(avance / 100).replace('+', '')} pts`)
+      }
       lignes.push(`${raisonPlusieursElections(scrutin).replace(/^./, (c) => c.toUpperCase())} : voir la fiche`)
     } else if (vue.mode === 'tete') {
       const r = resultats[({
@@ -353,7 +365,7 @@ export default function App() {
       else lignes.push(vue.mode === 'evolution' ? `${formatEcart(v)} ${unitePoints(v)}` : formatPourcent(v))
     }
     return { titre, lignes }
-  }, [vue.mode, resultats, parCand, etatCarte, index, communesNommees, communesPanachage, scrutin, bureaux.data, bureaux.error])
+  }, [vue.mode, resultats, parCand, etatCarte, index, communesNommees, communesPanachage, scrutin, bureaux.data, bureaux.error, agregatDe])
 
   const actions: Actions = useMemo(() => ({
     scrutin: (valeur) => modifierUrl({ scrutin: valeur, cible: null }),

@@ -344,6 +344,17 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
                             SELECT 'arrondissement', {ARRONDISSEMENT}, max(n) FROM parb
                             WHERE {ARRONDISSEMENT} IS NOT NULL GROUP BY ALL)
         SELECT niveau, code FROM territoire t JOIN bureau_max m USING (niveau, code) WHERE t.n > m.n""")
+    # Sur la carte, ces territoires prennent la couleur du bloc qui totalise le plus de voix (décision Q16) :
+    # bloc en tête et avance sur le deuxième bloc, précalculés comme ceux des candidatures. Voix des listes
+    # seulement, comme les parts des blocs : celles du panachage, plusieurs par électeur, ne s'additionnent pas.
+    con.sql("""
+        CREATE OR REPLACE TEMP TABLE blocs_classement AS
+        SELECT *, row_number() OVER (PARTITION BY niveau, code ORDER BY voix DESC, bloc) AS rang
+        FROM (SELECT c.niveau, c.code, k.bloc, sum(c.voix) AS voix
+              FROM agr_voix c
+              JOIN candidats k USING (cand)
+              JOIN plusieurs_elections m ON m.niveau = c.niveau AND m.code = c.code
+              GROUP BY ALL)""")
     # Comme pour les bureaux, la candidature en tête et son avance sont précalculées : la vue
     # nationale (communes) s'affiche sans décoder les voix de chaque candidature.
     ecrire(con, f"""
@@ -353,11 +364,19 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
                CASE WHEN a.exprimes > 0
                     THEN round(10000.0 * (p.voix - coalesce(s.voix, 0)) / a.exprimes)::SMALLINT
                END AS avance_x10000,
-               m.code IS NOT NULL AS plusieurs_elections
+               m.code IS NOT NULL AS plusieurs_elections,
+               CASE WHEN coalesce(a.exprimes_listes, a.exprimes) > 0 THEN b1.bloc END AS bloc_en_tete,
+               CASE WHEN coalesce(a.exprimes_listes, a.exprimes) > 0 AND b1.bloc IS NOT NULL
+                    THEN coalesce(b1.voix = b2.voix, false) END AS egalite_bloc,
+               CASE WHEN coalesce(a.exprimes_listes, a.exprimes) > 0 AND b1.bloc IS NOT NULL
+                    THEN round(10000.0 * (b1.voix - coalesce(b2.voix, 0)) / coalesce(a.exprimes_listes, a.exprimes))::SMALLINT
+               END AS avance_bloc_x10000
         FROM ({participation}) a
         LEFT JOIN agr_classement p ON p.niveau = a.niveau AND p.code = a.code AND p.rang = 1
         LEFT JOIN agr_classement s ON s.niveau = a.niveau AND s.code = a.code AND s.rang = 2
         LEFT JOIN plusieurs_elections m ON m.niveau = a.niveau AND m.code = a.code
+        LEFT JOIN blocs_classement b1 ON b1.niveau = a.niveau AND b1.code = a.code AND b1.rang = 1
+        LEFT JOIN blocs_classement b2 ON b2.niveau = a.niveau AND b2.code = a.code AND b2.rang = 2
         ORDER BY a.niveau, a.code""", dossier / "agregats.parquet")
     ecrire(con, "SELECT niveau, code, cand, voix FROM agr_voix ORDER BY niveau, code, cand",
            dossier / "agregats_voix.parquet")
