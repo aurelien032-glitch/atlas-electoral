@@ -16,10 +16,9 @@ from .config import CONTOURS_CODES, LIEN_PERENNE, RESSOURCES
 
 
 def extraire(source: str) -> int:
-    if source.startswith("http"):
-        source = f"/vsicurl/{source}"
     con = duckdb.connect()
-    con.sql("INSTALL spatial; LOAD spatial;")
+    # Fichier distant lu par le module HTTP de DuckDB (le GDAL de l'extension spatiale n'a pas /vsicurl/).
+    con.sql("INSTALL spatial; LOAD spatial; INSTALL httpfs; LOAD httpfs;")
     con.sql(f"""
         COPY (SELECT DISTINCT codeBureauVote AS code_bv, codeCommune AS code_commune,
                      codeCirconscription AS code_circonscription

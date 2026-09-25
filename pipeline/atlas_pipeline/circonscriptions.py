@@ -33,12 +33,12 @@ DEPARTEMENTS_DU_MINISTERE = {"ZA": "971", "ZB": "972", "ZC": "973", "ZD": "974",
 
 
 def fusionner(source: str) -> int:
-    if source.startswith("http"):
-        source = f"/vsicurl/{source}"
     sortie = PUBLICATION / "geo" / "circonscriptions.geojson"
     sortie.parent.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect()
-    con.sql("INSTALL spatial; LOAD spatial;")
+    # Fichier distant lu par le module HTTP de DuckDB : le GDAL de l'extension spatiale n'a pas /vsicurl/
+    # (« Could not open GDAL dataset », même sur l'adresse directe du fichier).
+    con.sql("INSTALL spatial; LOAD spatial; INSTALL httpfs; LOAD httpfs;")
     # Code du fichier (« 6902 », « 2A01 », « ZA01 ») → code des résultats (« 69-02 », « 2A-01 », « 971-01 »).
     departement = "left(codeCirconscription, length(codeCirconscription) - 2)"
     selon_insee = " ".join(f"WHEN '{m}' THEN '{i}'" for m, i in DEPARTEMENTS_DU_MINISTERE.items())

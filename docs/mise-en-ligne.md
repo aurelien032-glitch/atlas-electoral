@@ -15,30 +15,37 @@ communes, pèse 8,2 Mo.
 
 Aucune donnée n'est versionnée : chaque publication repart des sources, ce qui la rend reproductible.
 
-## Réglages à faire une fois (par vous)
+## Réglages faits une fois (le 25/09/2026)
 
-Ces étapes demandent vos identifiants : elles ne peuvent pas être faites à votre place.
+Création de compte et copie du jeton demandent vos identifiants : elles ne peuvent pas être faites à votre
+place.
 
-1. **Compte Cloudflare** : créer un compte gratuit sur <https://dash.cloudflare.com/sign-up>.
-2. **Identifiant du compte** : dans le tableau de bord, section *Workers & Pages*, copier l'*Account ID*
-   (colonne de droite).
-3. **Jeton d'API** : *My Profile* → *API Tokens* → *Create Token* → *Create Custom Token*, avec une seule
-   permission : *Account* → *Cloudflare Pages* → *Edit*, limitée à votre compte. Copier le jeton (il ne
-   s'affiche qu'une fois).
-4. **Secrets GitHub** : dans le dépôt, *Settings* → *Secrets and variables* → *Actions* →
-   *New repository secret*, deux fois :
+1. **Compte Cloudflare dédié** : « Atlas électoral », créé depuis le sélecteur de compte (*+ Créer un compte*),
+   à part du compte qui héberge un autre projet (« thermae »). Un jeton Pages vaut pour tout un compte, sans
+   limite par projet : sur un compte partagé, il pourrait écraser l'autre site. **Ne jamais publier l'Atlas
+   depuis un autre compte.**
+2. **Identifiant du compte** : *Workers et Pages*, colonne de droite, *Account ID*.
+3. **Jeton de compte** (recommandé par Cloudflare pour l'automatisation, car il n'est lié à aucune
+   personne) : *Gérer le compte* → *Jetons d'API du compte* → *Créer un jeton* → *Commencer à zéro*, une
+   seule permission : *Developer Platform* → *Pages* → *Edit*. Nom « atlas-electoral · Publier (GitHub
+   Actions) », **valable jusqu'au 26/09/2027** : le renouveler avant (*Renouveler le jeton*), puis mettre à
+   jour le secret, sinon « Publier » échouera au déploiement. Le jeton ne s'affiche qu'une fois : le copier
+   directement dans GitHub, jamais ailleurs (conversation, fichier, message).
+4. **Secrets GitHub** : *Settings* → *Secrets and variables* → *Actions* :
    - `CLOUDFLARE_API_TOKEN` : le jeton de l'étape 3 ;
    - `CLOUDFLARE_ACCOUNT_ID` : l'identifiant de l'étape 2.
-5. **Première publication** : onglet *Actions* → *Publier* → *Run workflow*. La première exécution crée le
-   projet Pages `atlas-electoral` ; le site est alors servi à l'adresse `https://atlas-electoral.pages.dev`
-   (Cloudflare ajoute un suffixe si le nom est déjà pris : l'adresse exacte s'affiche à la fin du journal).
+5. **Publication** : onglet *Actions* → *Publier* → *Run workflow* (ou `gh workflow run publier.yml`). La
+   première exécution crée le projet Pages `atlas-electoral` ; le site est servi à l'adresse
+   `https://atlas-electoral.pages.dev` (Cloudflare ajoute un suffixe si le nom est déjà pris : l'adresse
+   exacte s'affiche à la fin du journal).
 
 ## En-têtes HTTP et sécurité
 
 Les en-têtes sont dans `app/public/_headers`, copié tel quel dans le site :
 - **politique de sécurité (CSP)** : scripts, styles et polices du site seulement ; connexions permises vers
-  le site, le PMTiles officiel des bureaux (stockage OVH de data.gouv) et `geo.api.gouv.fr`. Tout nouveau
-  service appelé par le navigateur doit y être ajouté, sinon il sera bloqué ;
+  le site, le PMTiles officiel des bureaux (stockage OVH de data.gouv), `geo.api.gouv.fr` (contour d'une
+  commune) et `data.geopf.fr` (Plan IGN et géocodeur des adresses). Tout nouveau service appelé par le
+  navigateur doit y être ajouté, sinon il sera bloqué ;
 - `frame-ancestors 'none'` : le site ne peut pas être intégré dans une page tierce (à rouvrir si l'on
   propose des cartes à intégrer) ;
 - cache : un an pour `/assets/*` (noms tirés du contenu), revalidation à chaque visite pour `/data/*`.
