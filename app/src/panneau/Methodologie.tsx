@@ -205,6 +205,10 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
             <a href="https://geo.api.gouv.fr/decoupage-administratif" target="_blank" rel="noreferrer">Contour détaillé d'une commune</a>
             <span>API Découpage administratif (geo.api.gouv.fr), interrogée quand une commune est choisie.</span>
           </li>
+          <li>
+            <a href="https://geoservices.ign.fr/planign" target="_blank" rel="noreferrer">Fond de plan au zoom des bureaux</a>
+            <span>Plan IGN de la Géoplateforme, affiché en gris clair sous les couleurs des bureaux (à 70 % d'opacité à ce zoom).</span>
+          </li>
         </ul>
         {releve && <p className="note-bas">Sources relevées le {releve}. Les jeux de données sont publiés sous Licence Ouverte (Etalab).</p>}
       </Section>

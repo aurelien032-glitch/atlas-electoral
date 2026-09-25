@@ -88,6 +88,9 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   tracé à 100 m (`departements-detail.geojson`) à l'approche du zoom des bureaux. Contours publiés sans les noms
   (ils sont dans l'index des territoires). Les tuiles vectorielles ADMIN EXPRESS de l'IGN sont trop lourdes
   (11,4 Mo par tuile au zoom 5) : ne pas les utiliser pour l'affichage.
+- Fond de plan au zoom des bureaux (≥ 9) : Plan IGN en images (Géoplateforme, WMTS, sans clé), rendu en gris par
+  MapLibre (`raster-saturation`) ; les bureaux y sont à 70 % d'opacité (les blocs restent distincts, ≥ 13,5).
+  Pas de Positron : CARTO exige désormais une clé. Hôte `data.geopf.fr` dans la CSP.
 - Scrutins dont moins de 98 % des inscrits de métropole joignent les contours (`niveau_carte = commune`) :
   chaque bureau prend la couleur de sa commune.
 - MapLibre 6 est en ESM seul : garder `optimizeDeps.exclude: ['maplibre-gl']`, `worker.format: 'es'` et

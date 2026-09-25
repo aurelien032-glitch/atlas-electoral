@@ -24,6 +24,15 @@ const COUCHE_BUREAUX = 'repertoire-unique-electoral-polygons'
 const ZOOM_BUREAUX = 9
 const ENCRE = '#1B1A17'
 
+// Fond de plan au zoom des bureaux (rues, bâtiments, noms de lieux) : le Plan IGN de la Géoplateforme, service
+// public sans clé, rendu en gris clair par MapLibre pour ne pas se mêler aux couleurs des blocs. Les bureaux y
+// sont à 70 % d'opacité : les cinq blocs restent distincts (écart ≥ 13,5 en CIEDE2000, daltonismes compris ;
+// 10,9 seulement à 60 %). Positron (CARTO) exige désormais une clé.
+const PLAN_IGN = 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0'
+  + '&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png'
+  + '&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'
+const OPACITE_SUR_PLAN = 0.7
+
 // MapLibre 6 cherche son worker à côté de son propre module, ce que le pré-bundling de Vite casse :
 // Vite compile donc le worker (avec ses dépendances) et on lui en donne l'adresse.
 setWorkerUrl(urlWorker)
@@ -32,6 +41,11 @@ setWorkerUrl(urlWorker)
 const REMPLISSAGE = {
   'fill-color': ['to-color', ['coalesce', ['feature-state', 'couleur'], FOND_CARTE]] as ExpressionSpecification,
   'fill-opacity': ['coalesce', ['feature-state', 'opacite'], 0] as ExpressionSpecification,
+}
+// Au zoom des bureaux, le plan se lit à travers les couleurs.
+const REMPLISSAGE_SUR_PLAN = {
+  ...REMPLISSAGE,
+  'fill-opacity': ['*', OPACITE_SUR_PLAN, ['coalesce', ['feature-state', 'opacite'], 0]] as ExpressionSpecification,
 }
 const HACHURES = {
   'fill-pattern': 'hachures',
@@ -64,14 +78,21 @@ const STYLE: StyleSpecification = {
     contour: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
     // Chargée seulement pour les législatives (setData), par fusion des contours des bureaux.
     circonscriptions: { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, promoteId: 'code' },
+    // Tuiles demandées à partir du zoom des bureaux seulement : sans ce plancher, MapLibre précharge les niveaux
+    // parents (zooms 2 à 8), qu'on n'affiche pas.
+    plan: { type: 'raster', tiles: [PLAN_IGN], tileSize: 256, minzoom: ZOOM_BUREAUX, maxzoom: 19, attribution: 'Fond de plan : IGN (Plan IGN)' },
   },
   layers: [
     { id: 'fond', type: 'background', paint: { 'background-color': FOND_CARTE } },
+    {
+      id: 'plan', type: 'raster', source: 'plan', minzoom: ZOOM_BUREAUX,
+      paint: { 'raster-saturation': -1, 'raster-brightness-min': 0.3, 'raster-contrast': -0.1, 'raster-fade-duration': 0 },
+    },
     { id: 'communes', type: 'fill', source: 'communes', maxzoom: ZOOM_BUREAUX, paint: REMPLISSAGE },
     { id: 'communes-hachures', type: 'fill', source: 'communes', maxzoom: ZOOM_BUREAUX, paint: HACHURES },
     { id: 'circonscriptions', type: 'fill', source: 'circonscriptions', maxzoom: ZOOM_BUREAUX, paint: REMPLISSAGE, layout: { visibility: 'none' } },
     { id: 'circonscriptions-hachures', type: 'fill', source: 'circonscriptions', maxzoom: ZOOM_BUREAUX, paint: HACHURES, layout: { visibility: 'none' } },
-    { id: 'bureaux', type: 'fill', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: ZOOM_BUREAUX, paint: REMPLISSAGE },
+    { id: 'bureaux', type: 'fill', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: ZOOM_BUREAUX, paint: REMPLISSAGE_SUR_PLAN },
     { id: 'bureaux-hachures', type: 'fill', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: ZOOM_BUREAUX, paint: HACHURES },
     {
       id: 'bureaux-contours', type: 'line', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: 10,
