@@ -19,7 +19,7 @@ export const typeDe = (id: string) => id.split('_')[1] ?? ''
  */
 export const voteParSecteur = (scrutin: ScrutinCatalogue, commune: string) =>
   typeDe(scrutin.id) === 'muni' && scrutin.date < '2026' && ['75056', '69123', '13055'].includes(commune)
-const tourDe = (id: string) => id.split('_')[2] ?? ''
+export const tourDe = (id: string) => id.split('_')[2] ?? ''
 
 /** Territoire qui réunit plusieurs élections distinctes : pas de « candidature en tête » qui ait un sens. */
 export const plusieursElections = (scrutin: ScrutinCatalogue, niveau: string, code: string, r?: object) =>
@@ -52,12 +52,19 @@ export function scrutinParDefaut(scrutins: readonly ScrutinCatalogue[]): Scrutin
 }
 
 /**
+ * Scrutins de départ possibles du mode Évolution : ceux qui précèdent le scrutin d'arrivée, ou tombent le
+ * même jour (régionales et départementales de 2021). Un départ postérieur inverserait hausses et baisses.
+ */
+export const scrutinsAnterieurs = (scrutins: readonly ScrutinCatalogue[], courant: ScrutinCatalogue) =>
+  scrutins.filter((s) => s.id !== courant.id && s.date <= courant.date)
+
+/**
  * Scrutin de départ par défaut du mode Évolution : le précédent du même type et du même tour
- * (présidentielle 2017 pour 2022), sinon le précédent dans le temps, sinon le suivant.
+ * (présidentielle 2017 pour 2022), sinon le précédent dans le temps. Aucun pour le premier scrutin de l'atlas.
  */
 export function scrutinPrecedent(scrutins: readonly ScrutinCatalogue[], courant: ScrutinCatalogue): ScrutinCatalogue | undefined {
-  const avant = scrutins.filter((s) => s.date < courant.date).sort((a, b) => b.date.localeCompare(a.date))
-  return avant.find((s) => typeDe(s.id) === typeDe(courant.id) && tourDe(s.id) === tourDe(courant.id))
+  const avant = scrutinsAnterieurs(scrutins, courant).sort((a, b) => b.date.localeCompare(a.date))
+  return avant.find((s) => s.date < courant.date && typeDe(s.id) === typeDe(courant.id) && tourDe(s.id) === tourDe(courant.id))
+    ?? avant.find((s) => s.date < courant.date)
     ?? avant[0]
-    ?? scrutins.find((s) => s.id !== courant.id)
 }

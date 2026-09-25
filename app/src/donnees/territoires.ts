@@ -84,7 +84,14 @@ export function titreDe(selection: Selection, index: Pick<Index, 'noms' | 'passa
     const commune = communeDu(selection.code, index.passage)
     return `${index.noms.get(commune) ?? commune}, bureau ${numeroDu(selection.code)}`
   }
-  return index.noms.get(selection.code) ?? selection.code
+  const nom = index.noms.get(selection.code)
+  // Hors des législatives de 2012 et après, l'index ne contient pas les circonscriptions : leur nom se déduit du code.
+  if (nom === undefined && selection.niveau === 'circonscription') {
+    const departement = departementDeCirconscription(selection.code)
+    const numero = Number(selection.code.split('-')[1])
+    return `${index.noms.get(departement) ?? departement}, ${numero}${numero === 1 ? 're' : 'e'} circonscription`
+  }
+  return nom ?? selection.code
 }
 
 /** Département d'une circonscription (« 69-02 » → « 69 » ; « ZX-01 » : Saint-Barthélemy et Saint-Martin). */

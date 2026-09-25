@@ -30,3 +30,6 @@ export function couleurDuBloc(bloc: Bloc): string {
 }
 
 export const pluriel = (n: number, mot: string) => `${mot}${n > 1 ? 's' : ''}`
+
+/** Évolution vers le premier scrutin de l'atlas : rien à comparer. */
+export const SANS_DEPART = "Aucun scrutin de l'atlas ne précède celui-ci : choisissez un scrutin d'arrivée plus récent."

@@ -146,6 +146,8 @@ interface Props {
   onClic: (survol: Survol) => void
   /** Style chargé : les téléchargements qui attendaient la carte peuvent partir. */
   onPrete: () => void
+  /** Vue d'ensemble (la métropole entière, ou presque, à l'écran) : celle des encarts. */
+  onEnsemble: (ensemble: boolean) => void
 }
 
 // Marges de cadrage : la légende occupe le bas à gauche sur ordinateur, le volet le bas de l'écran sur mobile.
@@ -180,7 +182,7 @@ function motifHachures(pas = 8, ratio = 2) {
   return { width: n, height: n, data }
 }
 
-export function Carte({ coloriage, contours, auBureau, circonscriptions, selection, contour, cadrage, libelle, onSurvol, onClic, onPrete }: Props) {
+export function Carte({ coloriage, contours, auBureau, circonscriptions, selection, contour, cadrage, libelle, onSurvol, onClic, onPrete, onEnsemble }: Props) {
   const conteneur = useRef<HTMLDivElement>(null)
   const refCarte = useRef<CarteMapLibre | null>(null)
   const refSelection = useRef<Selection | undefined>(undefined)
@@ -261,6 +263,22 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
       setPrete(false)
     }
   }, [])
+
+  // Vue d'ensemble : pas plus d'un niveau de zoom au-delà de la métropole entière, dont le zoom dépend de la
+  // taille de l'écran.
+  useEffect(() => {
+    const carte = refCarte.current
+    if (!carte || !prete) return
+    const signaler = () => {
+      const france = carte.cameraForBounds(FRANCE_METROPOLITAINE, { padding: marges() })?.zoom
+      onEnsemble(france === undefined || carte.getZoom() < france + 1)
+    }
+    signaler()
+    carte.on('zoomend', signaler)
+    return () => {
+      carte.off('zoomend', signaler)
+    }
+  }, [prete, onEnsemble])
 
   // Circonscriptions : la couche (6 Mo) n'est chargée qu'aux législatives.
   useEffect(() => {

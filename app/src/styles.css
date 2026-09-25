@@ -67,6 +67,8 @@ a:hover, .lien:hover { color: var(--encre-2); }
   padding: var(--ecart-sections) var(--marge-panneau) 32px;
 }
 
+/* Réglages (scrutin, cible, bloc) : groupés, au même endroit dans l'aperçu et dans la fiche. */
+.reglages { display: flex; flex-direction: column; gap: 12px; }
 .champ { display: flex; flex-direction: column; gap: 8px; font-size: var(--t-petit); color: var(--encre-2); }
 .champ select, .champ input {
   font: inherit; font-size: var(--t-texte); color: var(--encre); min-height: 44px; padding: 8px 12px;

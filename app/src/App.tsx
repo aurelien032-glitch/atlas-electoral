@@ -1,5 +1,5 @@
 import type { Feature } from 'geojson'
-import { Component, Suspense, lazy, useCallback, useMemo, useState, type ReactNode } from 'react'
+import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Cadrage, Survol } from './carte/Carte'
 import { Encarts } from './carte/Encarts'
 import {
@@ -16,21 +16,24 @@ import {
   useTerritoires, useVoix,
 } from './donnees/requetes'
 import { arrondissementDu, communeDu, departementDe, emprise, indexer, titreDe, villeDe } from './donnees/territoires'
-import { plusieursElections, raisonPlusieursElections, scrutinParDefaut, scrutinPrecedent, voteParSecteur } from './donnees/scrutins'
+import {
+  plusieursElections, raisonPlusieursElections, scrutinParDefaut, scrutinPrecedent, scrutinsAnterieurs, voteParSecteur,
+} from './donnees/scrutins'
 import {
   exprimesPourParts, type Agregat, type BureauContour, type Candidature, type Encart, type Resultat, type Territoire,
   type VoixPanachage,
 } from './donnees/types'
 import { formatEcart, formatPart, formatPourcent, unitePoints } from './format'
 import {
-  LIBELLES_EVOLUTION, classesLegende, coloriageClasses, coloriageTete, couleursPour, ecartsAuNiveau, partDe,
+  LIBELLES_EVOLUTION, LIBELLE_MODE, classesLegende, coloriageClasses, coloriageTete, couleursPour, ecartsAuNiveau, partDe,
   partsAuNiveau, seuilsDe, valeursEvolution, valeursParticipation, valeursScore, type Coloriage, type Mode, type Valeurs,
 } from './modes'
 import { Apercu, type ApercuEvolution } from './panneau/Apercu'
 import { Chronologie } from './panneau/Chronologie'
-import type { Actions, Contexte } from './panneau/contexte'
-import { Detail, type Parent } from './panneau/Detail'
+import { SANS_DEPART, type Actions, type Contexte } from './panneau/contexte'
+import { Detail, EnteteFiche, type Parent } from './panneau/Detail'
 import { Methodologie } from './panneau/Methodologie'
+import { Reglages } from './panneau/Reglages'
 import { indexerCodesPostaux, preparer } from './recherche/chercher'
 import { Recherche } from './recherche/Recherche'
 import { useUrl } from './url'
@@ -63,9 +66,11 @@ const HORS_METROPOLE = ['971', '972', '973', '974', '976', '975', '977', '978', 
 
 interface EtatCarte {
   coloriage: Coloriage
-  legende: DescriptionLegende
+  legende: DescriptionLegende | null
   valeurs: Valeurs | null
 }
+// Carte vidée (aucun territoire peint) : référence stable, comme tout ce qui est passé à la carte.
+const COLORIAGE_VIDE: Coloriage = { communes: new Map(), bureaux: null }
 
 /** Carte qui ne peut pas s'afficher (fragment non reçu, WebGL indisponible) : le panneau reste utilisable. */
 class GardeCarte extends Component<{ children: ReactNode; onEchec: () => void }, { echec: boolean }> {
@@ -107,17 +112,20 @@ interface PropsZone {
 // Le survol change à chaque mouvement de souris : son état vit ici, pour ne pas recalculer les panneaux.
 function ZoneCarte({ lancee, contenu, encarts, onChoisirEncart, onCadrer, onPrete, ...props }: PropsZone) {
   const [survol, setSurvol] = useState<Survol | null>(null)
+  // Encarts : seulement dans la vue d'ensemble. Une fois la carte zoomée sur une région, ils la masqueraient
+  // sans rien lui apprendre.
+  const [ensemble, setEnsemble] = useState(true)
   const bulle = survol && contenu(survol)
   return (
     <div className="zone-carte-fond">
       {lancee && (
         <GardeCarte onEchec={onPrete}>
           <Suspense fallback={null}>
-            <Carte {...props} onSurvol={setSurvol} onPrete={onPrete} />
+            <Carte {...props} onSurvol={setSurvol} onPrete={onPrete} onEnsemble={setEnsemble} />
           </Suspense>
         </GardeCarte>
       )}
-      {encarts && !props.selection && (
+      {encarts && ensemble && (
         <Encarts
           encarts={encarts} coloriage={props.coloriage} onSurvol={setSurvol} onChoisir={onChoisirEncart} onCadrer={onCadrer}
           parCirconscription={props.circonscriptions && (props.coloriage?.circonscriptions?.size ?? 0) > 0}
@@ -132,7 +140,9 @@ export default function App() {
   const [parametres, modifierUrl] = useUrl()
   const vue = useMemo(() => lireVue(parametres), [parametres])
   const [cadrage, setCadrage] = useState<Cadrage | null>(null)
-  const [deplie, setDeplie] = useState(false)
+  const [selectionInitiale] = useState(() => lireVue(new URLSearchParams(window.location.search)).selection)
+  // Volet déplié (mobile) dès qu'un territoire est choisi : par la carte, la recherche ou un lien partagé.
+  const [deplie, setDeplie] = useState(selectionInitiale !== undefined)
 
   const catalogue = useCatalogue()
   const scrutins = useMemo(() => catalogue.data?.scrutins ?? [], [catalogue.data])
@@ -173,7 +183,7 @@ export default function App() {
   const contourCommune = useContourCommune(selection?.niveau === 'commune' ? selection.code : undefined)
 
   const scrutinDe = vue.mode === 'evolution' && scrutin
-    ? scrutins.find((s) => s.id === vue.de && s.id !== scrutin.id) ?? scrutinPrecedent(scrutins, scrutin)
+    ? scrutinsAnterieurs(scrutins, scrutin).find((s) => s.id === vue.de) ?? scrutinPrecedent(scrutins, scrutin)
     : undefined
   const agregatsDe = useAgregats(scrutinDe?.id)
   const candidatsDe = useCandidats(scrutinDe?.id)
@@ -281,6 +291,8 @@ export default function App() {
         }
       }
       case 'evolution': {
+        // Premier scrutin de l'atlas : rien à comparer, la carte reste vide (le panneau dit pourquoi).
+        if (!scrutinDe) return { coloriage: COLORIAGE_VIDE, valeurs: null, legende: null }
         if (!evolution) return null
         const valeurs = valeursEvolution(evolution.avant, evolution.apres) // communes seulement
         return {
@@ -294,7 +306,7 @@ export default function App() {
         }
       }
     }
-  }, [scrutin, agregats.data, candidats.data, bureaux.data, agregatsVoix.data, voix.data, carteAuBureau, auBureau, vue.mode, cible, evolution, bloc, parCand])
+  }, [scrutin, agregats.data, candidats.data, bureaux.data, agregatsVoix.data, voix.data, carteAuBureau, auBureau, vue.mode, cible, evolution, scrutinDe, bloc, parCand])
 
   const apercuEvolution = useMemo((): ApercuEvolution | undefined => {
     if (vue.mode !== 'evolution' || !evolution || !scrutinDe || !etatCarte?.valeurs) return undefined
@@ -382,7 +394,6 @@ export default function App() {
 
   // Un lien partagé qui sélectionne un territoire cadre la carte dessus, au chargement seulement : ensuite,
   // seul le panneau recadre (un clic sur la carte montre un territoire déjà à l'écran).
-  const [selectionInitiale] = useState(() => lireVue(new URLSearchParams(window.location.search)).selection)
   const cadrageInitial = useMemo((): Cadrage | null => {
     if (!selectionInitiale) return null
     const s = selectionInitiale
@@ -409,6 +420,14 @@ export default function App() {
   const cadrer = useCallback((emprise: [number, number, number, number]) => setCadrage({ emprise, jeton: Date.now() }), [])
 
   const changerMode = useCallback((mode: Mode) => modifierUrl({ mode: mode === 'tete' ? null : mode }), [modifierUrl])
+
+  // Titre de l'onglet : ce que montre la page, pour l'historique du navigateur, les favoris et les liens partagés.
+  useEffect(() => {
+    const morceaux = vue.page === 'methodologie'
+      ? ['Méthodologie']
+      : [selection && titreDe(selection, index), scrutin?.libelle, vue.mode === 'tete' ? undefined : LIBELLE_MODE[vue.mode]]
+    document.title = [...morceaux, 'Atlas électoral'].filter(Boolean).join(' · ')
+  }, [vue.page, vue.mode, selection, scrutin, index])
 
   const ctx: Contexte | null = scrutin && agregats.data && candidats.data
     ? { scrutin, scrutins, agregats: agregats.data, candidats: candidats.data, parCand, agregatsVoix: agregatsVoix.data, index }
@@ -506,6 +525,7 @@ export default function App() {
       if (retenues.length === 0) return `${cible.libelle} : aucune candidature ici.`
       return `${cible.libelle} : ${formatPart(retenues.reduce((s, l) => s + l.voix, 0) / exprimesPourParts(detail.resultat))} des suffrages exprimés.`
     }
+    if (vue.mode === 'evolution' && !scrutinDe) return SANS_DEPART
     if (vue.mode === 'evolution' && evolution && scrutinDe) {
       // Les numéros de bureaux changent d'un scrutin à l'autre : un bureau se lit à sa commune, ou à son
       // arrondissement à Paris, Lyon et Marseille.
@@ -550,6 +570,11 @@ export default function App() {
               <p className="detail-erreur">Détail : {erreur.message}</p>
             </div>
           )}
+          {/* Fil d'Ariane et réglages hors du chargement des résultats : changer de scrutin ne les démonte pas. */}
+          {vue.page !== 'methodologie' && selection && <EnteteFiche index={index} selection={selection} actions={actions} />}
+          {vue.page !== 'methodologie' && scrutin && (
+            <Reglages scrutin={scrutin} scrutins={scrutins} mode={vue.mode} cibles={cibles} cible={cible} bloc={bloc} de={scrutinDe} actions={actions} />
+          )}
           {chargement && !erreur && <p className="note">Chargement des résultats…</p>}
           {vue.page === 'methodologie' && catalogue.data && scrutin && (
             <Methodologie
@@ -562,7 +587,7 @@ export default function App() {
                 lignes={detail?.lignes} parent={detail?.parent}
                 circonscriptions={detail?.circonscriptions ?? []} supplementaires={detail?.supplementaires} panachage={auPanachage}
                 cible={vue.mode === 'score' ? cible : undefined} complement={complement} actions={actions} />
-            : <Apercu ctx={ctx} mode={vue.mode} cibles={cibles} cible={cible} bloc={bloc} evolution={apercuEvolution} actions={actions} />)}
+            : <Apercu ctx={ctx} mode={vue.mode} cible={cible} bloc={bloc} evolution={apercuEvolution} actions={actions} />)}
           {vue.page !== 'methodologie' && ctx && !selection && (
             <nav className="raccourcis" aria-label="Outre-mer et Français de l'étranger">
               <h2 className="surtitre">Outre-mer et Français de l'étranger</h2>
@@ -584,7 +609,7 @@ export default function App() {
               fusion={niveauSerie === 'commune' && index.fusionnees.has(codeSerie)}
             />
           )}
-          {vue.page !== 'methodologie' && etatCarte && <Legende description={etatCarte.legende} className="legende-panneau" />}
+          {vue.page !== 'methodologie' && etatCarte?.legende && <Legende description={etatCarte.legende} className="legende-panneau" />}
           {!chargement && <p className="sources">
             Résultats : ministère de l'Intérieur, via data.gouv.fr. Contours des bureaux : data.gouv.fr (répertoire
             électoral de 2022, indicatifs). Limites administratives : IGN, simplifiées par Etalab (communes au 1er janvier
@@ -603,7 +628,8 @@ export default function App() {
           selection={selection}
           contour={contourCommune.data}
           cadrage={cadrage ?? cadrageInitial}
-          libelle={`Carte : ${etatCarte?.legende.type === 'classes' ? etatCarte.legende.titre : 'bloc en tête'}, ${scrutin?.libelle ?? ''}`}
+          libelle={`Carte : ${etatCarte?.legende?.type === 'classes' ? etatCarte.legende.titre
+            : vue.mode === 'tete' ? 'bloc en tête' : LIBELLE_MODE[vue.mode]}, ${scrutin?.libelle ?? ''}`}
           contenu={contenuInfobulle}
           onClic={choisirSurCarte}
           encarts={encarts.data}
@@ -611,7 +637,7 @@ export default function App() {
           onCadrer={cadrer}
         />
         <Onglets mode={vue.mode} onMode={changerMode} />
-        {etatCarte && <Legende description={etatCarte.legende} className="legende-carte" />}
+        {etatCarte?.legende && <Legende description={etatCarte.legende} className="legende-carte" />}
       </main>
     </div>
   )

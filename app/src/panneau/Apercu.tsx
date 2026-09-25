@@ -1,15 +1,15 @@
 import { useState, type ReactNode } from 'react'
 import type { Mesure } from '../calculs/parts'
-import { BLOCS_COLORES, DU_BLOC, LIBELLE_BLOC, type BlocColore } from '../carte/couleurs'
+import { DU_BLOC, LIBELLE_BLOC, type BlocColore } from '../carte/couleurs'
 import type { Cible } from '../cibles'
 import { nomCandidature, nuanceCourte } from '../donnees/libelles'
-import { grouper, plusieursElections } from '../donnees/scrutins'
+import { plusieursElections, scrutinsAnterieurs } from '../donnees/scrutins'
 import { exprimesPourParts, type Bloc, type ScrutinCatalogue } from '../donnees/types'
 import { formatEcart, formatNombre, formatPart } from '../format'
 import { partsAuNiveau, type Mode } from '../modes'
 import { Barres, type LigneResultat } from './Barres'
 import { TableNuances } from './Nuances'
-import { couleurDuBloc, pluriel, type Actions, type Contexte } from './contexte'
+import { SANS_DEPART, couleurDuBloc, pluriel, type Actions, type Contexte } from './contexte'
 import { Extremes } from './Extremes'
 import { CouvertureNationale } from './Signalements'
 import { compterTetes, enumerer, extremes } from './resume'
@@ -25,7 +25,6 @@ export interface ApercuEvolution {
 interface Props {
   ctx: Contexte
   mode: Mode
-  cibles: Cible[]
   cible: Cible | undefined
   bloc: BlocColore
   evolution: ApercuEvolution | undefined
@@ -33,21 +32,6 @@ interface Props {
 }
 
 const compact = new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 })
-
-function ChoixScrutin({ ctx, actions, libelle = 'Scrutin' }: { ctx: Contexte; actions: Actions; libelle?: string }) {
-  return (
-    <label className="champ">
-      <span>{libelle}</span>
-      <select value={ctx.scrutin.id} onChange={(e) => actions.scrutin(e.target.value)}>
-        {grouper(ctx.scrutins).map((g) => (
-          <optgroup key={g.code} label={g.libelle}>
-            {g.scrutins.map((s) => <option key={s.id} value={s.id}>{s.libelle}</option>)}
-          </optgroup>
-        ))}
-      </select>
-    </label>
-  )
-}
 
 function Titre({ surtitre, titre, children }: { surtitre?: string; titre: string; children?: ReactNode }) {
   return (
@@ -69,7 +53,7 @@ export function Apercu(props: Props) {
   return <><Contenu {...props} /><CouvertureNationale ctx={props.ctx} /></>
 }
 
-function ApercuTete({ ctx, actions }: Props) {
+function ApercuTete({ ctx }: Props) {
   const [tout, setTout] = useState(false)
   const france = ctx.agregats.find((a) => a.niveau === 'france')
   if (!france) return null
@@ -120,7 +104,6 @@ function ApercuTete({ ctx, actions }: Props) {
   const visibles = tout ? lignes : lignes.slice(0, 5)
   return (
     <>
-      <ChoixScrutin ctx={ctx} actions={actions} />
       <Titre titre={ctx.scrutin.libelle}>{phrase}</Titre>
       <div className="chiffres">
         <div><strong>{formatPart(france.votants / france.inscrits)}</strong><span>de participation</span></div>
@@ -146,34 +129,13 @@ function ApercuTete({ ctx, actions }: Props) {
   )
 }
 
-function ApercuScore({ ctx, cibles, cible, actions }: Props) {
-  const candidatures = cibles.filter((c) => c.candidature)
-  const blocs = cibles.filter((c) => c.bloc)
-  const selecteur = (
-    <label className="champ">
-      <span>{ctx.scrutin.portee === 'national' ? 'Candidature ou bloc' : 'Bloc'}</span>
-      <select value={cible?.valeur ?? ''} onChange={(e) => actions.cible(e.target.value)}>
-        {candidatures.length > 0 && (
-          <optgroup label="Candidatures">
-            {candidatures.map((c) => <option key={c.valeur} value={c.valeur}>{c.libelle}</option>)}
-          </optgroup>
-        )}
-        <optgroup label="Blocs">
-          {blocs.map((c) => <option key={c.valeur} value={c.valeur}>{c.libelle}</option>)}
-        </optgroup>
-      </select>
-    </label>
-  )
-  if (!cible || !ctx.agregatsVoix) {
-    return <><ChoixScrutin ctx={ctx} actions={actions} />{selecteur}<p className="note">Chargement des résultats…</p></>
-  }
+function ApercuScore({ ctx, cible, actions }: Props) {
+  if (!cible || !ctx.agregatsVoix) return <p className="note">Chargement des résultats…</p>
   const france = partsAuNiveau(ctx.agregats, ctx.agregatsVoix, 'france', cible.retenue).get('FR')
   const { hauts, bas } = extremes(partsAuNiveau(ctx.agregats, ctx.agregatsVoix, 'departement', cible.retenue), ctx.index.departements)
   const nom = (code: string) => ctx.index.noms.get(code) ?? code
   return (
     <>
-      <ChoixScrutin ctx={ctx} actions={actions} />
-      {selecteur}
       <Titre surtitre={`Score · ${ctx.scrutin.libelle}`} titre={cible.libelle}>
         {france != null && `${formatPart(france)} des suffrages exprimés en France. `}
         {hauts.length > 0 && `Par département, de ${formatPart(bas[0][1])} (${nom(bas[0][0])}) à ${formatPart(hauts[0][1])} (${nom(hauts[0][0])}).`}
@@ -196,7 +158,6 @@ function ApercuParticipation({ ctx, actions }: Props) {
   const nom = (code: string) => ctx.index.noms.get(code) ?? code
   return (
     <>
-      <ChoixScrutin ctx={ctx} actions={actions} />
       <Titre surtitre={ctx.scrutin.libelle} titre="Participation">
         {france && `${formatPart(france.votants / france.inscrits)} des inscrits ont voté en France. `}
         {hauts.length > 0 && `Par département, de ${formatPart(bas[0][1])} (${nom(bas[0][0])}) à ${formatPart(hauts[0][1])} (${nom(hauts[0][0])}).`}
@@ -208,34 +169,15 @@ function ApercuParticipation({ ctx, actions }: Props) {
 }
 
 function ApercuEvolutionBloc({ ctx, bloc, evolution, actions }: Props) {
-  const choix = (
-    <>
-      <label className="champ">
-        <span>Bloc</span>
-        <select value={bloc} onChange={(e) => actions.bloc(e.target.value as BlocColore)}>
-          {BLOCS_COLORES.map((b) => <option key={b} value={b}>{LIBELLE_BLOC[b]}</option>)}
-        </select>
-      </label>
-      <label className="champ">
-        <span>De</span>
-        <select value={evolution?.de.id ?? ''} onChange={(e) => actions.de(e.target.value)}>
-          {grouper(ctx.scrutins.filter((s) => s.id !== ctx.scrutin.id)).map((g) => (
-            <optgroup key={g.code} label={g.libelle}>
-              {g.scrutins.map((s) => <option key={s.id} value={s.id}>{s.libelle}</option>)}
-            </optgroup>
-          ))}
-        </select>
-      </label>
-      <ChoixScrutin ctx={ctx} actions={actions} libelle="À" />
-    </>
-  )
-  if (!evolution) return <>{choix}<p className="note">Chargement des résultats…</p></>
+  if (scrutinsAnterieurs(ctx.scrutins, ctx.scrutin).length === 0) {
+    return <p className="note">{SANS_DEPART}</p>
+  }
+  if (!evolution) return <p className="note">Chargement des résultats…</p>
   const [avant, apres] = evolution.france
   const { hauts, bas } = extremes(evolution.departements, ctx.index.departements)
   const baisses = bas.filter(([, v]) => v < 0)
   return (
     <>
-      {choix}
       <Titre surtitre="Évolution" titre={`Évolution ${DU_BLOC[bloc]}`}>
         {avant != null && apres != null
           ? `${formatPart(avant)} des suffrages exprimés (${evolution.de.libelle}), ${formatPart(apres)} (${ctx.scrutin.libelle}).`

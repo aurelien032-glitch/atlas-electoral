@@ -563,6 +563,21 @@ Tous les classements hérités sont signalés comme cas limites quand l'analogie
 
 **État partageable** : chaque vue a son URL, par exemple `/2022_pres_t1/commune/75056?mode=score&cible=…`.
 
+**Cohérence du parcours (revue du 25/09)** : graphe des vues, commandes et règles dans
+[parcours-utilisateur.md](parcours-utilisateur.md), à tenir à jour à chaque nouvel écran, lien ou sélecteur.
+Corrigé à cette occasion :
+- les réglages (scrutin, cible, bloc, départ) étaient absents de la fiche d'un territoire : il fallait la fermer
+  pour changer de scrutin. Ils sont désormais au même endroit dans les deux vues ;
+- une circonscription gardée hors des législatives de 2012 et après, ou un bureau absent d'un autre scrutin,
+  affichaient « il n'y votait pas » : la fiche dit la raison (pas de circonscription dans les données, bureaux
+  renumérotés, élection décidée dès le premier tour) et mène au département, à la commune ou à l'arrondissement
+  quand ils ont voté ;
+- changer de scrutin démontait les sélecteurs pendant le chargement : le focus clavier se perdait ;
+- l'Évolution proposait un départ postérieur à l'arrivée (hausses et baisses inversées) ;
+- les encarts restaient affichés une fois la carte zoomée sur une ville ;
+- le titre de l'onglet était toujours « Atlas électoral » ;
+- sur mobile, un lien partagé vers un territoire ouvrait le volet replié.
+
 **Au fil des scrutins (réalisé le 24/09, décision Q14)** : sous l'aperçu (France entière) et sous la fiche
 d'un département, d'une circonscription ou d'une commune (celle du bureau choisi), les premiers tours d'un
 type d'élection à la fois : une courbe par bloc coloré, la participation dans un second graphique (un seul
@@ -792,6 +807,7 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 | Q15 | Paris, Lyon et Marseille : niveau « arrondissement » (à partir des numéros de bureau) et secteurs des municipales jusqu'en 2020, avant ou juste après l'ouverture de la bêta ? Voir l'étude | **Tranché et réalisé le 24/09** : avant la bêta | — |
 | Q16 | Communes et arrondissements qui réunissent plusieurs élections distinctes (plusieurs circonscriptions ou cantons, secteurs de Paris, Lyon et Marseille jusqu'en 2020, communes fusionnées depuis) : 127 communes aux législatives 2024, 217 aux départementales 2015. Leur « candidature en tête » compare des gens qui ne s'affrontaient pas. Le texte le dit désormais (pas de phrase « en tête », note dans la fiche, infobulle) ; sur la carte, quelle couleur : celle de la candidature la plus votée, le bloc qui totalise le plus de voix, ou des hachures « plusieurs élections » ? | **Tranché le 25/09** : le bloc qui totalise le plus de voix, intensité selon son avance sur le deuxième (`bloc_en_tete`, `avance_bloc_x10000` des agrégats) ; même lecture dans l'infobulle, la fiche et le décompte national | — |
 | Q17 | Sources incomplètes avant 2010 (départements absents ou partiels, inscrits aberrants) : les compléter par une autre source officielle (fichiers par département du ministère) ? | **Tranché le 25/09** : non, signaler seulement (aperçu, fiche, rapport qualité) ; une seule source par scrutin | — |
+| Q18 | Précédent et Suivant du navigateur ramènent le panneau à la vue d'avant, pas la carte (sa position n'est pas dans l'URL). Ajouter le zoom et le centre à l'URL (`#zoom/lat/lon`), pour que l'historique et les liens partagés restituent aussi le cadrage ? | Ouverte (revue du parcours, 25/09) | Parcours |
 | Q6 | Publication de nos données sur data.gouv | **Tranché** : plus tard | P2 |
 
 ## 16. Outillage Claude : skills, plugins, connecteurs

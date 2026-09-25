@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { grouper, plusieursElections, raisonPlusieursElections, scrutinParDefaut, scrutinPrecedent } from './scrutins'
+import {
+  grouper, plusieursElections, raisonPlusieursElections, scrutinParDefaut, scrutinPrecedent, scrutinsAnterieurs,
+} from './scrutins'
 import type { ScrutinCatalogue } from './types'
 
 const s = (id: string, date: string) => ({ id, date, libelle: id, portee: 'national' }) as ScrutinCatalogue
@@ -16,7 +18,18 @@ describe('scrutins', () => {
   it('compare par défaut au scrutin précédent du même type et du même tour', () => {
     expect(scrutinPrecedent(catalogue, catalogue[3])?.id).toBe('2017_pres_t1')
     expect(scrutinPrecedent(catalogue, catalogue[5])?.id).toBe('2019_euro_t1')
-    expect(scrutinPrecedent(catalogue, catalogue[0])?.id).toBe('2017_legi_t1')
+    expect(scrutinPrecedent(catalogue, catalogue[1])?.id).toBe('2017_pres_t1')
+  })
+
+  it('ne propose jamais un départ postérieur à l’arrivée', () => {
+    expect(scrutinPrecedent(catalogue, catalogue[0])).toBeUndefined()
+    expect(scrutinsAnterieurs(catalogue, catalogue[0])).toEqual([])
+    expect(scrutinsAnterieurs(catalogue, catalogue[3]).map((x) => x.id)).toEqual(['2017_pres_t1', '2017_legi_t1', '2019_euro_t1'])
+    // Deux scrutins le même jour (régionales et départementales de 2021) se comparent.
+    const regi = s('2021_regi_t1', '2021-06-20')
+    const dpmt = s('2021_dpmt_t1', '2021-06-20')
+    expect(scrutinsAnterieurs([regi, dpmt], regi).map((x) => x.id)).toEqual(['2021_dpmt_t1'])
+    expect(scrutinPrecedent([regi, dpmt], regi)?.id).toBe('2021_dpmt_t1')
   })
 
   it('groupe par type, du plus récent au plus ancien', () => {

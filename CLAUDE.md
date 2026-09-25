@@ -2,7 +2,10 @@
 
 Dataviz publique et open source (AGPL-3.0) des résultats électoraux français, jusqu'au bureau de vote.
 Les décisions et leurs raisons sont dans [docs/PLAN.md](docs/PLAN.md) : il fait foi. Tout nouveau choix
-structurant y est consigné (section concernée et tableau des questions ouvertes).
+structurant y est consigné (section concernée et tableau des questions ouvertes). Le parcours (vues, commandes,
+règles de cohérence) est dans [docs/parcours-utilisateur.md](docs/parcours-utilisateur.md) : le mettre à jour à
+chaque nouvel écran, lien ou sélecteur. Les réglages (scrutin, cible, bloc, départ) vivent dans
+`panneau/Reglages.tsx`, au même endroit dans l'aperçu et dans la fiche ; aucun ne fait quitter le territoire choisi.
 
 ## Structure
 
@@ -113,7 +116,8 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   comparable). `removeFeatureState` efface aussi la sélection : la remettre après chaque coloriage.
 - Le mode Évolution se lit à la commune : les numéros de bureaux changent d'un scrutin à l'autre.
 - Encarts de la vue nationale (petite couronne, départements d'outre-mer) : chemins SVG précalculés
-  (`geo/encarts.json`), colorés avec les mêmes états que la carte. Les contours des circonscriptions d'outre-mer
+  (`geo/encarts.json`), colorés avec les mêmes états que la carte, affichés dans la vue d'ensemble seulement (au
+  plus un niveau de zoom au-delà de la métropole entière, signalé par `onEnsemble`). Les contours des circonscriptions d'outre-mer
   portent le code INSEE des résultats (« 971-01 »), pas celui du ministère (« ZA-01 ») : un test le vérifie.
 - Commune sélectionnée : contour détaillé demandé à `geo.api.gouv.fr` (API officielle, CORS ouvert), contour
   simplifié en secours. Dans le panneau intégré, MapLibre attend une image (`requestAnimationFrame`) pour

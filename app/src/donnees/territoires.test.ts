@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { arrondissementDu, estArrondissement, villeDe } from './territoires'
+import { arrondissementDu, estArrondissement, titreDe, villeDe } from './territoires'
+
+describe('titre d’un territoire choisi', () => {
+  const index = { noms: new Map([['69', 'Rhône'], ['69123', 'Lyon'], ['69-02', 'Rhône, 2e circonscription']]), passage: new Map() }
+
+  it('nomme communes, bureaux et circonscriptions', () => {
+    expect(titreDe({ niveau: 'commune', code: '69123' }, index)).toBe('Lyon')
+    expect(titreDe({ niveau: 'bureau', code: '69123_0816' }, index)).toBe('Lyon, bureau 0816')
+    expect(titreDe({ niveau: 'circonscription', code: '69-02' }, index)).toBe('Rhône, 2e circonscription')
+  })
+
+  it('nomme une circonscription absente de l’index (scrutin qui n’est pas une législative)', () => {
+    expect(titreDe({ niveau: 'circonscription', code: '69-01' }, index)).toBe('Rhône, 1re circonscription')
+    expect(titreDe({ niveau: 'circonscription', code: '69-14' }, index)).toBe('Rhône, 14e circonscription')
+  })
+})
 
 describe('arrondissements de Paris, Lyon et Marseille', () => {
   it("lit l'arrondissement dans le numéro de bureau", () => {

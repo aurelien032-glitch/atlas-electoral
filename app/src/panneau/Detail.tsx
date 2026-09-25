@@ -1,9 +1,9 @@
 import { LE_BLOC, LIBELLE_BLOC, palier } from '../carte/couleurs'
 import type { Cible } from '../cibles'
 import { nomCandidature, nuanceCourte } from '../donnees/libelles'
-import { plusieursElections, raisonPlusieursElections, voteParSecteur } from '../donnees/scrutins'
+import { plusieursElections, raisonPlusieursElections, tourDe, typeDe, voteParSecteur } from '../donnees/scrutins'
 import {
-  arrondissementDu, communeDu, departementDe, departementDeCirconscription, numeroDu, titreDe, villeDe,
+  arrondissementDu, communeDu, departementDe, departementDeCirconscription, numeroDu, titreDe, villeDe, type Index,
 } from '../donnees/territoires'
 import { exprimesPourParts, type Bloc, type Candidature, type Resultat } from '../donnees/types'
 import { formatNombre, formatPart, unitePoints } from '../format'
@@ -40,9 +40,15 @@ interface Props {
   actions: Actions
 }
 
-function FilAriane({ ctx, selection, actions }: Pick<Props, 'ctx' | 'selection' | 'actions'>) {
-  const nom = (code: string) => ctx.index.noms.get(code) ?? code
-  const commune = selection.niveau === 'bureau' ? communeDu(selection.code, ctx.index.passage)
+interface PropsEntete {
+  index: Index
+  selection: Selection
+  actions: Actions
+}
+
+function FilAriane({ index, selection, actions }: PropsEntete) {
+  const nom = (code: string) => index.noms.get(code) ?? code
+  const commune = selection.niveau === 'bureau' ? communeDu(selection.code, index.passage)
     : selection.niveau === 'arrondissement' ? villeDe(selection.code) : selection.code
   // Paris, Lyon et Marseille : l'arrondissement s'intercale entre la ville et le bureau.
   const arrondissement = selection.niveau === 'arrondissement' ? selection.code
@@ -51,13 +57,13 @@ function FilAriane({ ctx, selection, actions }: Pick<Props, 'ctx' | 'selection' 
     ? selection.code
     : selection.niveau === 'circonscription'
       ? departementDeCirconscription(selection.code)
-      : ctx.index.territoires.get(commune)?.departement ?? departementDe(commune)
+      : index.territoires.get(commune)?.departement ?? departementDe(commune)
   const etapes: { libelle: string; selection: Selection | undefined }[] = [{ libelle: 'France', selection: undefined }]
   // Paris est à la fois un département et une commune : une seule étape « Paris ».
   const commeLaCommune = selection.niveau !== 'departement' && selection.niveau !== 'circonscription' && nom(departement) === nom(commune)
   if (!commeLaCommune) etapes.push({ libelle: nom(departement), selection: { niveau: 'departement', code: departement } })
   if (selection.niveau === 'circonscription') {
-    etapes.push({ libelle: nom(selection.code).split(', ').pop() ?? selection.code, selection })
+    etapes.push({ libelle: titreDe(selection, index).split(', ').pop() ?? selection.code, selection })
   } else if (selection.niveau !== 'departement') {
     etapes.push({ libelle: nom(commune), selection: { niveau: 'commune', code: commune } })
     if (arrondissement) etapes.push({ libelle: nom(arrondissement), selection: { niveau: 'arrondissement', code: arrondissement } })
@@ -78,16 +84,76 @@ function FilAriane({ ctx, selection, actions }: Pick<Props, 'ctx' | 'selection' 
   )
 }
 
-export function Detail({ ctx, selection, resultat, enChargement, lignes, parent, circonscriptions, supplementaires, panachage, cible, complement, actions }: Props) {
+/**
+ * Haut de la fiche : fil d'Ariane et fermeture. Il ne dépend que de l'index des territoires : rendu avec les
+ * réglages, il reste en place pendant le chargement d'un autre scrutin (le sélecteur garde le focus).
+ */
+export function EnteteFiche({ index, selection, actions }: PropsEntete) {
+  return (
+    <div className="detail-haut">
+      <FilAriane index={index} selection={selection} actions={actions} />
+      <button type="button" className="fermer" aria-label="Fermer le détail et revenir à la France entière" onClick={() => actions.territoire(undefined)}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+      </button>
+    </div>
+  )
+}
+
+/** Aucun résultat pour le territoire choisi à ce scrutin : pourquoi, et où en trouver. */
+function SansResultat({ ctx, selection, actions }: Pick<Props, 'ctx' | 'selection' | 'actions'>) {
+  const nom = (code: string) => ctx.index.noms.get(code) ?? code
+  const lien = (s: Selection) => (
+    <button type="button" className="lien" onClick={() => actions.territoire(s)}>{nom(s.code)}</button>
+  )
+  const commune = selection.niveau === 'bureau' ? communeDu(selection.code, ctx.index.passage) : selection.code
+  const departement = selection.niveau === 'departement' ? selection.code
+    : selection.niveau === 'circonscription' ? departementDeCirconscription(selection.code) : departementDe(commune)
+  if (selection.niveau === 'circonscription' && ctx.scrutin.portee !== 'circonscription') {
+    return (
+      <p className="note">
+        {typeDe(ctx.scrutin.id) === 'legi'
+          ? 'Les données de ce scrutin ne rattachent pas les bureaux à une circonscription : les résultats par circonscription commencent aux législatives de 2012.'
+          : "Les résultats par circonscription ne sont donnés qu'aux législatives, depuis 2012."}
+        {' '}Résultats du département : {lien({ niveau: 'departement', code: departement })}.
+      </p>
+    )
+  }
+  if (ctx.scrutin.territoires_absents?.includes(departement)) {
+    return <p className="note">La source (data.gouv.fr) ne contient aucun résultat pour {nom(departement)} à ce scrutin.</p>
+  }
+  // Second tour d'un scrutin local : là où tout s'est joué au premier tour, on n'a pas revoté.
+  const decideAuPremierTour = tourDe(ctx.scrutin.id) === 't2' && ctx.scrutin.portee !== 'national'
+  if (selection.niveau === 'bureau') {
+    const arrondissement = arrondissementDu(selection.code)
+    const parent: Selection = arrondissement ? { niveau: 'arrondissement', code: arrondissement } : { niveau: 'commune', code: commune }
+    // Un numéro de bureau ne désigne pas le même bureau d'une élection à l'autre : on renvoie à la commune (ou à
+    // l'arrondissement), si elle a voté à ce scrutin.
+    if (ctx.agregats.some((a) => a.niveau === parent.niveau && a.code === parent.code)) {
+      return (
+        <p className="note">
+          Aucun bureau n° {numeroDu(selection.code)} dans les résultats de ce scrutin : la numérotation des bureaux
+          peut changer d'une élection à l'autre{decideAuPremierTour && ', et un bureau a pu ne pas voter à ce tour'}.
+          Résultats {arrondissement ? "de l'arrondissement" : 'de la commune'} : {lien(parent)}.
+        </p>
+      )
+    }
+  }
+  return (
+    <p className="note">
+      {decideAuPremierTour
+        ? "Pas de résultat pour ce territoire à ce tour : l'élection a pu s'y décider dès le premier tour, ou la source ne le contient pas."
+        : "Pas de résultat pour ce territoire à ce scrutin : il n'y votait pas, ou la source ne le contient pas."}
+    </p>
+  )
+}
+
+/** Fiche d'un territoire, sous son en-tête (EnteteFiche) et les réglages. */
+export function Detail({
+  ctx, selection, resultat, enChargement, lignes, parent, circonscriptions, supplementaires, panachage, cible, complement, actions,
+}: Props) {
   const titre = titreDe(selection, ctx.index)
   const entete = (
     <>
-      <div className="detail-haut">
-        <FilAriane ctx={ctx} selection={selection} actions={actions} />
-        <button type="button" className="fermer" aria-label="Fermer le détail et revenir à la France entière" onClick={() => actions.territoire(undefined)}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-        </button>
-      </div>
       <div className="titre">
         <h1>{titre}</h1>
         <p className="surtitre-bas">{ctx.scrutin.libelle}</p>
@@ -108,7 +174,7 @@ export function Detail({ ctx, selection, resultat, enChargement, lignes, parent,
     </>
   )
   if (!resultat && enChargement) return <>{entete}<p className="note">Chargement des résultats du bureau…</p></>
-  if (!resultat) return <>{entete}<p className="note">Pas de résultat pour ce territoire à ce scrutin : il n'y votait pas, ou la source ne le contient pas.</p></>
+  if (!resultat) return <>{entete}<SansResultat ctx={ctx} selection={selection} actions={actions} /></>
   if (resultat.exprimes === 0) return <>{entete}<p className="note">Aucun suffrage exprimé.</p></>
 
   const candidature = (cand: number) => ctx.parCand.get(cand) ?? supplementaires?.get(cand)
