@@ -1,3 +1,5 @@
+import { useId } from 'react'
+import { Chevron } from '../Chevron'
 import type { ClasseLegende } from '../modes'
 import { formatNombre } from '../format'
 import { BLOCS_COLORES, COULEUR_BLOC, GRIS, LIBELLE_BLOC } from './couleurs'
@@ -17,6 +19,14 @@ export type DescriptionLegende =
       libelleSansObjet: string
     }
 
+interface Props {
+  description: DescriptionLegende
+  className: string
+  /** Repliée sur son titre : la carte se lit en plus grand, le titre dit encore ce qu'elle montre. */
+  replie: boolean
+  onBasculer: () => void
+}
+
 function Pastille({ couleur }: { couleur: string }) {
   return <span className="pastille" style={{ background: couleur }} />
 }
@@ -24,11 +34,10 @@ function Pastille({ couleur }: { couleur: string }) {
 const Hachures = () => <span className="pastille hachuree" />
 const SansResultat = () => <span className="pastille vide" />
 
-export function Legende({ description, className }: { description: DescriptionLegende; className: string }) {
+function Corps({ description }: { description: DescriptionLegende }) {
   if (description.type === 'tete') {
     return (
-      <section className={`legende ${className}`} aria-label="Légende de la carte">
-        <h2 className="legende-titre">Bloc en tête</h2>
+      <>
         <ul>
           {BLOCS_COLORES.map((bloc) => (
             <li key={bloc}><Pastille couleur={COULEUR_BLOC[bloc]} />{LIBELLE_BLOC[bloc]}</li>
@@ -48,12 +57,11 @@ export function Legende({ description, className }: { description: DescriptionLe
             {(100 * description.couvertureCommune).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} % des inscrits de ce scrutin.
           </p>
         )}
-      </section>
+      </>
     )
   }
   return (
-    <section className={`legende ${className}`} aria-label="Légende de la carte">
-      <h2 className="legende-titre">{description.titre}</h2>
+    <>
       <p className="legende-sous-titre">{description.sousTitre}</p>
       <ul>
         {description.classes.map((c) => (
@@ -72,6 +80,21 @@ export function Legende({ description, className }: { description: DescriptionLe
         )}
         <li><SansResultat /><span className="libelle">Pas de résultat</span></li>
       </ul>
+    </>
+  )
+}
+
+export function Legende({ description, className, replie, onBasculer }: Props) {
+  const id = useId()
+  return (
+    <section className={`legende ${className}`} aria-label="Légende de la carte">
+      <h2 className="legende-titre">
+        <button type="button" aria-expanded={!replie} aria-controls={id} onClick={onBasculer}>
+          <span>{description.type === 'tete' ? 'Bloc en tête' : description.titre}</span>
+          <Chevron ouvert={!replie} />
+        </button>
+      </h2>
+      {!replie && <div id={id} className="legende-corps"><Corps description={description} /></div>}
     </section>
   )
 }

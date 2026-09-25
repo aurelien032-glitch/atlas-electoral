@@ -170,13 +170,15 @@ interface Props {
   visite: VisiteAdresse | null
   /** Bureau trouvé sous l'adresse (null : aucun contour ne la contient ; undefined : la carte n'y est plus). */
   onBureauAdresse: (jeton: number, code: string | null | undefined) => void
+  /** Légende repliée : les cadrages n'ont plus à lui laisser le bas à gauche. */
+  legendeRepliee: boolean
 }
 
-// Marges de cadrage : la légende occupe le bas à gauche sur ordinateur, le volet le bas de l'écran sur mobile.
-function marges() {
-  return window.innerWidth <= 760
-    ? { top: 72, bottom: Math.round(window.innerHeight * 0.45), left: 16, right: 16 }
-    : { top: 84, bottom: 24, left: 320, right: 72 }
+// Marges de cadrage : la légende occupe le bas à gauche sur ordinateur (une ligne seulement, repliée), le volet le
+// bas de l'écran sur mobile.
+function marges(legendeRepliee: boolean) {
+  if (window.innerWidth <= 760) return { top: 72, bottom: Math.round(window.innerHeight * 0.45), left: 16, right: 16 }
+  return legendeRepliee ? { top: 84, bottom: 72, left: 24, right: 72 } : { top: 84, bottom: 24, left: 320, right: 72 }
 }
 
 const FRANCE_METROPOLITAINE: [[number, number], [number, number]] = [[-5.2, 41.3], [9.6, 51.1]]
@@ -206,9 +208,13 @@ function motifHachures(pas = 8, ratio = 2) {
 
 export function Carte({
   coloriage, contours, auBureau, circonscriptions, selection, contour, cadrage, libelle, onSurvol, onClic, onPrete, onEnsemble,
-  onPlan, opacite, repere, visite, onBureauAdresse,
+  onPlan, opacite, repere, visite, onBureauAdresse, legendeRepliee,
 }: Props) {
   const conteneur = useRef<HTMLDivElement>(null)
+  // Lue par les cadrages, dont ceux des écouteurs posés une fois pour toutes.
+  const refLegende = useRef(legendeRepliee)
+  // Vue d'ensemble (la métropole entière à l'écran), tenue à jour à chaque fin de zoom.
+  const refEnsemble = useRef(true)
   const refCarte = useRef<CarteMapLibre | null>(null)
   const refSelection = useRef<Selection | undefined>(undefined)
   const refPoses = useRef(new Map<string, ReadonlyMap<string, Etat>>())
@@ -247,7 +253,7 @@ export function Carte({
     const carte = new CarteMapLibre({
       container: conteneur.current,
       style: STYLE,
-      ...(cadre ? { center: cadre.centre, zoom: cadre.zoom } : { bounds: FRANCE_METROPOLITAINE, fitBoundsOptions: { padding: marges() } }),
+      ...(cadre ? { center: cadre.centre, zoom: cadre.zoom } : { bounds: FRANCE_METROPOLITAINE, fitBoundsOptions: { padding: marges(refLegende.current) } }),
       minZoom: 3,
       maxZoom: 16,
     })
@@ -264,7 +270,7 @@ export function Carte({
       if (!e.isTrusted) return
       const voulu = lireCadre(window.location.hash)
       // Sans fragment, l'entrée précède tout mouvement de la carte : c'est l'accueil, sur la métropole entière.
-      if (!voulu) carte.fitBounds(FRANCE_METROPOLITAINE, { padding: marges(), duration: 0 })
+      if (!voulu) carte.fitBounds(FRANCE_METROPOLITAINE, { padding: marges(refLegende.current), duration: 0 })
       else if (ecrireCadre(voulu) !== cadreActuel()) carte.jumpTo({ center: voulu.centre, zoom: voulu.zoom })
     }
     carte.on('moveend', noterCadre)
@@ -319,16 +325,34 @@ export function Carte({
     const carte = refCarte.current
     if (!carte || !prete) return
     const signaler = () => {
-      const france = carte.cameraForBounds(FRANCE_METROPOLITAINE, { padding: marges() })?.zoom
-      onEnsemble(france === undefined || carte.getZoom() < france + 1)
+      const france = carte.cameraForBounds(FRANCE_METROPOLITAINE, { padding: marges(refLegende.current) })?.zoom
+      refEnsemble.current = france === undefined || carte.getZoom() < france + 1
+      onEnsemble(refEnsemble.current)
       onPlan(carte.getZoom() >= ZOOM_BUREAUX)
+    }
+    // Vue d'ensemble : quand la place change (panneau replié ou rouvert, fenêtre redimensionnée), la métropole
+    // reste cadrée au mieux ; une carte zoomée sur un territoire, elle, ne bouge pas.
+    const recadrer = () => {
+      if (refEnsemble.current) carte.fitBounds(FRANCE_METROPOLITAINE, { padding: marges(refLegende.current), duration: 0 })
     }
     signaler()
     carte.on('zoomend', signaler)
+    carte.on('resize', recadrer)
     return () => {
       carte.off('zoomend', signaler)
+      carte.off('resize', recadrer)
     }
   }, [prete, onEnsemble, onPlan])
+
+  // Légende repliée ou dépliée : en vue d'ensemble, la métropole se recadre dans la place libérée ou reprise.
+  useEffect(() => {
+    // Seulement quand la légende change : au premier affichage, le cadrage d'un lien partagé l'emporte.
+    const change = refLegende.current !== legendeRepliee
+    refLegende.current = legendeRepliee
+    const carte = refCarte.current
+    if (!change || !carte || !prete || !refEnsemble.current) return
+    carte.fitBounds(FRANCE_METROPOLITAINE, { padding: marges(legendeRepliee), duration: 300 })
+  }, [prete, legendeRepliee])
 
   // Opacité des couleurs sur le plan, réglée par le curseur sous le zoom (les hachures, une texture, restent).
   useEffect(() => {
@@ -357,7 +381,7 @@ export function Carte({
     refAttente.current?.()
     // Décalage plutôt que `padding` : passée à flyTo, la marge resterait celle de la carte et s'ajouterait à
     // celle de tous les cadrages suivants, qui ne tiendraient plus dans l'écran (MapLibre y renonce en silence).
-    const m = marges()
+    const m = marges(refLegende.current)
     carte.flyTo({
       center: [visite.lon, visite.lat], zoom: ZOOM_ADRESSE, offset: [(m.left - m.right) / 2, (m.top - m.bottom) / 2], duration: 900,
     })
@@ -486,7 +510,7 @@ export function Carte({
     if (cle === refCadre.current) return
     refCadre.current = cle
     const [ouest, sud, est, nord] = cadrage.emprise
-    carte.fitBounds([[ouest, sud], [est, nord]], { padding: marges(), maxZoom: 13, duration: 600 })
+    carte.fitBounds([[ouest, sud], [est, nord]], { padding: marges(refLegende.current), maxZoom: 13, duration: 600 })
   }, [prete, cadrage])
 
   useEffect(() => {

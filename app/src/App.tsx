@@ -9,7 +9,7 @@ import { Infobulle } from './carte/Infobulle'
 import { Legende, type DescriptionLegende } from './carte/Legende'
 import { ReglageOpacite } from './carte/Opacite'
 import { Onglets } from './carte/Onglets'
-import { garderOpacite, opaciteGardee } from './carte/preferences'
+
 import { blocEnTete, optionsCibles, retenueDuBloc } from './cibles'
 import { nomCandidature } from './donnees/libelles'
 import {
@@ -41,6 +41,8 @@ import { Reglages } from './panneau/Reglages'
 import type { Adresse } from './recherche/adresses'
 import { indexerCodesPostaux, preparer } from './recherche/chercher'
 import { Recherche } from './recherche/Recherche'
+import { Chevron } from './Chevron'
+import { garderOpacite, garderRepli, opaciteGardee, repliGarde } from './preferences'
 import { useUrl } from './url'
 import { ecrireSelection, lireCadre, lireVue, type Selection } from './vue'
 
@@ -124,6 +126,8 @@ interface PropsZone {
   onCadrer: (emprise: [number, number, number, number]) => void
   /** Carte prête, ou en échec : ce qui attendait la carte peut se télécharger. */
   onPrete: () => void
+  /** Légende repliée : la carte cadre sans lui réserver le bas à gauche. */
+  legendeRepliee: boolean
   /** Adresse choisie : son repère, la visite de la carte et le bureau trouvé (voir Carte). */
   repere: [number, number] | null
   visite: VisiteAdresse | null
@@ -144,6 +148,12 @@ function ZoneCarte({ lancee, contenu, encarts, onChoisirEncart, onCadrer, onPret
     setOpacite(valeur)
     garderOpacite(valeur)
   }, [])
+  // Encarts repliés par défaut sur téléphone, où ils couvriraient la carte.
+  const [encartsReplies, setEncartsReplies] = useState(() => repliGarde('encarts', window.matchMedia('(max-width: 760px)').matches))
+  const basculerEncarts = useCallback(() => {
+    setEncartsReplies(!encartsReplies)
+    garderRepli('encarts', !encartsReplies)
+  }, [encartsReplies])
   const bulle = survol && contenu(survol)
   return (
     <div className="zone-carte-fond">
@@ -158,6 +168,7 @@ function ZoneCarte({ lancee, contenu, encarts, onChoisirEncart, onCadrer, onPret
         <Encarts
           encarts={encarts} coloriage={props.coloriage} onSurvol={setSurvol} onChoisir={onChoisirEncart} onCadrer={onCadrer}
           parCirconscription={props.circonscriptions && (props.coloriage?.circonscriptions?.size ?? 0) > 0}
+          replies={encartsReplies} onBasculer={basculerEncarts}
         />
       )}
       {lancee && <ReglageOpacite valeur={opacite} actif={plan} onChange={changerOpacite} />}
@@ -173,6 +184,18 @@ export default function App() {
   const [selectionInitiale] = useState(() => lireVue(new URLSearchParams(window.location.search)).selection)
   // Volet déplié (mobile) dès qu'un territoire est choisi : par la carte, la recherche ou un lien partagé.
   const [deplie, setDeplie] = useState(selectionInitiale !== undefined)
+  // Panneau replié pour lire la carte en grand : ôté sur ordinateur (une languette le rouvre), réduit à une fine
+  // barre sur téléphone. Choisir un territoire le rouvre, pour montrer sa fiche.
+  const [panneauReplie, setPanneauReplie] = useState(() => repliGarde('panneau', false))
+  const replierPanneau = useCallback((replie: boolean) => {
+    setPanneauReplie(replie)
+    garderRepli('panneau', replie)
+  }, [])
+  const [legendeRepliee, setLegendeRepliee] = useState(() => repliGarde('legende', false))
+  const basculerLegende = useCallback(() => {
+    setLegendeRepliee(!legendeRepliee)
+    garderRepli('legende', !legendeRepliee)
+  }, [legendeRepliee])
 
   const catalogue = useCatalogue()
   const scrutins = useMemo(() => catalogue.data?.scrutins ?? [], [catalogue.data])
@@ -436,12 +459,14 @@ export default function App() {
   const choisirSurCarte = useCallback((survol: Survol) => {
     modifierUrl({ sel: ecrireSelection({ niveau: survol.niveau, code: survol.code }), page: null })
     setDeplie(true)
-  }, [modifierUrl])
+    replierPanneau(false)
+  }, [modifierUrl, replierPanneau])
 
   const allerA = useCallback((t: Territoire) => {
     actions.territoire({ niveau: t.niveau, code: t.code })
     setDeplie(true)
-  }, [actions])
+    replierPanneau(false)
+  }, [actions, replierPanneau])
 
   // Adresse choisie dans la recherche : sa commune (ou son arrondissement) s'affiche aussitôt, dans une nouvelle
   // entrée d'historique, où la carte note ensuite le cadrage de la rue ; la fiche ne dépend donc pas de la carte.
@@ -462,7 +487,8 @@ export default function App() {
     retenirAdresse({ adresse, jeton: Date.now(), selection, etat: 'recherche' })
     modifierUrl({ sel: ecrireSelection(selection), page: null })
     setDeplie(true)
-  }, [retenirAdresse, modifierUrl])
+    replierPanneau(false)
+  }, [retenirAdresse, modifierUrl, replierPanneau])
   // Bureau lu sous l'adresse ; undefined : la carte n'était plus sur l'adresse.
   const trouverBureau = useCallback((jeton: number, code: string | null | undefined) => {
     const a = refAdresse.current
@@ -652,15 +678,24 @@ export default function App() {
     ?? contours.error ?? territoires.error ?? departements.error ?? agregatsDe.error ?? agregatsVoixDe.error ?? candidatsDe.error
 
   return (
-    <div className="atlas">
-      <aside className="panneau" data-deplie={deplie}>
-        <button type="button" className="poignee" aria-expanded={deplie} aria-controls="panneau-corps" onClick={() => setDeplie(!deplie)}>
-          <span className="visuellement-cache">{deplie ? 'Réduire le panneau' : 'Déplier le panneau'}</span>
+    <div className="atlas" data-panneau-replie={panneauReplie}>
+      <aside id="panneau" className="panneau" data-deplie={deplie} data-replie={panneauReplie}>
+        <button
+          type="button" className="poignee" aria-expanded={!panneauReplie && deplie} aria-controls="panneau-corps"
+          onClick={() => (panneauReplie ? replierPanneau(false) : setDeplie(!deplie))}
+        >
+          <span className="visuellement-cache">{panneauReplie ? 'Rouvrir le volet' : deplie ? 'Réduire le volet' : 'Agrandir le volet'}</span>
         </button>
         <header className="panneau-entete">
           <span className="marque">Atlas électoral</span>
           <a href={lienMethodologie} aria-current={vue.page === 'methodologie' ? 'page' : undefined}
             onClick={(e) => { e.preventDefault(); modifierUrl({ page: 'methodologie' }); setDeplie(true) }}>Méthodologie</a>
+          {/* Téléphone : le volet descend jusqu'à une fine barre, pour voir toute la carte. */}
+          <button type="button" className="replier-volet" aria-expanded={!panneauReplie} aria-controls="panneau-corps"
+            onClick={() => replierPanneau(!panneauReplie)}>
+            <span className="visuellement-cache">{panneauReplie ? 'Rouvrir le volet' : 'Replier le volet'}</span>
+            <Chevron ouvert={!panneauReplie} />
+          </button>
         </header>
         <Recherche entrees={entreesRecherche} postaux={postaux} onActiver={activerRecherche} onChoisir={allerA} onChoisirAdresse={choisirAdresse} />
         <div id="panneau-corps" className="panneau-corps">
@@ -713,7 +748,9 @@ export default function App() {
               fusion={niveauSerie === 'commune' && index.fusionnees.has(codeSerie)}
             />
           )}
-          {vue.page !== 'methodologie' && etatCarte?.legende && <Legende description={etatCarte.legende} className="legende-panneau" />}
+          {vue.page !== 'methodologie' && etatCarte?.legende && (
+            <Legende description={etatCarte.legende} className="legende-panneau" replie={legendeRepliee} onBasculer={basculerLegende} />
+          )}
           {!chargement && <p className="sources">
             Résultats : ministère de l'Intérieur, via data.gouv.fr. Contours des bureaux : data.gouv.fr (répertoire
             électoral de 2022, indicatifs). Limites administratives : IGN, simplifiées par Etalab (communes au 1er janvier
@@ -722,6 +759,15 @@ export default function App() {
         </div>
       </aside>
       <main className="zone-carte">
+        {/* Ordinateur : languette au bord du panneau, qui le replie (la carte prend toute la largeur) ou le rouvre. */}
+        <button type="button" className="languette" aria-expanded={!panneauReplie} aria-controls="panneau"
+          title={panneauReplie ? 'Déplier le panneau' : 'Replier le panneau'} onClick={() => replierPanneau(!panneauReplie)}>
+          <span className="visuellement-cache">{panneauReplie ? 'Déplier le panneau des résultats' : 'Replier le panneau des résultats'}</span>
+          <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+            <path d={panneauReplie ? 'M4.5 2.5 8 6l-3.5 3.5' : 'M7.5 2.5 4 6l3.5 3.5'} fill="none" stroke="currentColor"
+              strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
         <ZoneCarte
           lancee={carteLancee}
           onPrete={signalerCarte}
@@ -742,9 +788,12 @@ export default function App() {
           repere={repere}
           visite={visite}
           onBureauAdresse={trouverBureau}
+          legendeRepliee={legendeRepliee}
         />
         <Onglets mode={vue.mode} onMode={changerMode} />
-        {etatCarte?.legende && <Legende description={etatCarte.legende} className="legende-carte" />}
+        {etatCarte?.legende && (
+          <Legende description={etatCarte.legende} className="legende-carte" replie={legendeRepliee} onBasculer={basculerLegende} />
+        )}
       </main>
     </div>
   )

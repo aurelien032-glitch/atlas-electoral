@@ -50,7 +50,8 @@ flowchart TB
   subgraph carte["Carte"]
     direction TB
     onglets["Onglets : En tête · Score · Participation · Évolution"]:::carte
-    ensemble["Vue d'ensemble : communes (circonscriptions aux législatives)<br/>et encarts petite couronne, outre-mer"]:::carte
+    ensemble["Vue d'ensemble : communes (circonscriptions aux législatives)<br/>et encarts petite couronne, départements et collectivités d'outre-mer"]:::carte
+    replis["Replis : panneau (languette, fine barre sur téléphone),<br/>légende et encarts (leur titre)"]:::carte
     bureaux["Zoom des bureaux : bureaux sur le Plan IGN"]:::carte
     opacite["Bouton ◐ : opacité des couleurs sur le plan<br/>(actif au zoom des bureaux)"]:::carte
   end
@@ -62,6 +63,7 @@ flowchart TB
   recherche -->|"territoire : cadrage"| niveaux
   recherche -->|"adresse : vol jusqu'à la rue, repère,<br/>bureau qui la contient (commune avant 2022)"| niveaux
   opacite -->|"préférence du navigateur"| bureaux
+  replis -->|"préférences du navigateur ; en vue d'ensemble, la métropole se recadre"| ensemble
   synthese -->|"un département : cadrage"| niveaux
   raccourcis -->|"cadrage"| niveaux
   ensemble -->|"clic, sans déplacer la carte"| niveaux
@@ -85,6 +87,9 @@ flowchart TB
 | Choisir un résultat de recherche | Recherche | `sel` ; efface `page` | Cadrée sur le territoire |
 | Choisir une adresse | Recherche | `sel` : la commune (ou l'arrondissement) aussitôt, dans une nouvelle entrée ; puis, dans la même entrée, le bureau dont le contour contient l'adresse (sauf si la carte du scrutin s'arrête à la commune) ; efface `page` | Vol jusqu'à la rue, repère sur l'adresse |
 | Régler l'opacité des couleurs | Bouton sous le zoom | aucun : préférence gardée par le navigateur | Couleurs des bureaux de 10 à 100 % sur le plan (70 % par défaut) |
+| Replier ou rouvrir le panneau | Languette au bord (ordinateur), bouton ▾ du volet ou poignée (téléphone) | aucun : préférence gardée par le navigateur | Toute la largeur (ordinateur) ou tout l'écran (téléphone) ; en vue d'ensemble, la métropole se recadre |
+| Replier la légende | Son titre | aucun : préférence gardée par le navigateur | En vue d'ensemble, la métropole se recadre dans la place libérée |
+| Replier les encarts | Leur titre « Petite couronne et outre-mer » | aucun : préférence gardée par le navigateur (repliés par défaut sur téléphone) | — |
 | Cliquer un département extrême, un raccourci | Vue nationale | `sel` | Cadrée sur le territoire |
 | Cliquer un territoire | Carte | `sel` ; efface `page` | Immobile (le territoire est à l'écran) |
 | Cliquer un territoire dans un encart | Encarts | `sel` | Cadrée sur le territoire |
@@ -120,9 +125,11 @@ flowchart TB
    d'Ariane et fermeture cadrent la carte ; un clic sur la carte montre un territoire déjà à l'écran ; un lien
    partagé s'ouvre sur son cadrage, ou, s'il n'en porte pas, sur le territoire choisi.
 7. **Les encarts appartiennent à la vue d'ensemble** : au plus un niveau de zoom au-delà de la métropole
-   entière, dont le zoom dépend de l'écran. Zoomée sur une région, la carte n'en a plus besoin.
-8. **Sur mobile, le volet se déplie dès qu'un territoire est choisi** : par la carte, la recherche ou un lien
-   partagé.
+   entière, dont le zoom dépend de l'écran. Zoomée sur une région, la carte n'en a plus besoin. Ils montrent la
+   petite couronne, les cinq départements et les six collectivités d'outre-mer (la Polynésie par Tahiti et Moorea,
+   dit sous les encarts), défilent dans une fenêtre basse et se replient sur leur titre.
+8. **Choisir un territoire montre sa fiche** : sur mobile, le volet se déplie (par la carte, la recherche ou un
+   lien partagé) ; replié, le panneau se rouvre (ordinateur comme téléphone).
 9. **Le titre de l'onglet nomme la vue** (« Lyon · Présidentielle 2022, 1er tour · Score · Atlas électoral »),
    pour l'historique, les favoris et les liens partagés.
 10. **Une adresse mène à son bureau de vote** : sa commune (l'arrondissement à Paris, Lyon et Marseille)
@@ -131,8 +138,8 @@ flowchart TB
     l'on est passé à autre chose entre-temps. Le repère et le rappel de l'adresse accompagnent ce territoire ; leur
     texte suit le scrutin affiché. Le texte tapé ne part au géocodeur de l'IGN que s'il contient un chiffre ou un
     type de voie (rue, avenue, place…).
-11. **Les préférences d'affichage ne sont pas dans l'URL** : l'opacité des couleurs est gardée par le navigateur,
-    et un lien partagé montre le réglage par défaut (70 %).
+11. **Les préférences d'affichage ne sont pas dans l'URL** : l'opacité des couleurs et les replis (panneau,
+    légende, encarts) sont gardés par le navigateur ; un lien partagé montre l'affichage par défaut.
 
 ## Comportements assumés
 
@@ -158,6 +165,10 @@ flowchart TB
 | `?scrutin=2017_pres_t1`, recherche « place bellecour lyon » | Lyon 2e Arrondissement (carte à l'arrondissement pour ce scrutin), adresse rappelée |
 | Bouton ◐ au zoom des bureaux, curseur à 30 %, puis « Revenir à 70 % » | Plan lisible sous les couleurs ; réglage gardé d'une visite à l'autre, puis effacé |
 | Bouton ◐ en vue nationale | Curseur grisé : « zoomez pour l'utiliser » |
+| Replier légende et encarts, puis la languette du panneau (1 024 × 768) | La métropole s'agrandit à chaque place libérée ; la languette « › » rouvre le panneau |
+| `?sel=commune:69123#12.5/45.764/4.836`, légende repliée | Cadrage du lien conservé (zoom 12,5), pas de recadrage sur la France |
+| Téléphone, premier passage | Encarts repliés sur leur titre ; bouton ▾ : volet réduit à une fine barre, la poignée le rouvre |
+| Encarts dépliés | Collectivités coloriées : Wallis-et-Futuna en deux moitiés (un seul résultat, 98601), Polynésie par Tahiti et Moorea |
 | `?scrutin=2022_pres_t1&sel=bureau:75056_2099` | Aucun bureau n° 2099 ; lien vers Paris 20e |
 | `?scrutin=2017_pres_t1&mode=evolution&de=2022_pres_t1` | Départ ramené à 2012 ; aucun départ postérieur proposé |
 | `?scrutin=1999_euro_t1&mode=evolution` | Pas de « De », message, carte vide, pas de légende |

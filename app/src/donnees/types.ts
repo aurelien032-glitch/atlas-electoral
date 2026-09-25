@@ -187,6 +187,10 @@ export interface Circonscription {
 export interface Encart {
   code: string
   nom: string
+  /** Légende de l'encart quand le nom n'y tient pas (« St-Barthélemy »). */
+  court?: string
+  /** Ce que l'encart ne montre pas (Polynésie : Tahiti et Moorea seulement). */
+  note?: string
   largeur: number
   hauteur: number
   emprise: [number, number, number, number]

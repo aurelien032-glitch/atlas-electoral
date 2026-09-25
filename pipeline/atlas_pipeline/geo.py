@@ -41,6 +41,22 @@ AUTRES_TERRITOIRES = {
 }
 
 
+# Wallis-et-Futuna : les résultats en font un seul territoire (98601), le découpage trois circonscriptions
+# territoriales (Alo, Sigave, Uvea) ; on fusionne leurs contours sous le code des résultats.
+WALLIS_ET_FUTUNA = {"98611", "98612", "98613"}
+
+
+def fusionner_wallis_et_futuna(collection: dict) -> None:
+    parties = [e for e in collection["features"] if e["properties"]["code"] in WALLIS_ET_FUTUNA]
+    if not parties:
+        return
+    polygones = [p for e in parties
+                 for p in ([e["geometry"]["coordinates"]] if e["geometry"]["type"] == "Polygon" else e["geometry"]["coordinates"])]
+    collection["features"] = [e for e in collection["features"] if e["properties"]["code"] not in WALLIS_ET_FUTUNA] + [
+        {"type": "Feature", "properties": {"code": "98601", "nom": "Wallis-et-Futuna"},
+         "geometry": {"type": "MultiPolygon", "coordinates": polygones}}]
+
+
 def arrondissement_municipal(code: str) -> bool:
     """Arrondissements de Paris, Lyon et Marseille : leurs résultats viennent des numéros de bureau (niveau
     « arrondissement » des agrégats). Voir docs/etude-paris-lyon-marseille.md."""
@@ -145,6 +161,8 @@ def main() -> None:
         for entite in collection["features"]:
             p = entite["properties"]
             entite["properties"] = {"code": p.get("code"), "nom": p.get("nom")}
+        if couche == "communes":
+            fusionner_wallis_et_futuna(collection)
         publiee = {"type": "FeatureCollection", "features": [
             {"type": "Feature", "properties": {"code": e["properties"]["code"]}, "geometry": e["geometry"]}
             for e in collection["features"]]}

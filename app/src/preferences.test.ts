@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { OPACITE_SUR_PLAN } from './couleurs'
+import { OPACITE_SUR_PLAN } from './carte/couleurs'
 import { lireOpacite } from './preferences'
 
 describe('opacité des couleurs gardée par le navigateur', () => {

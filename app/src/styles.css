@@ -55,7 +55,7 @@ a:hover, .lien:hover { color: var(--encre-2); }
 }
 .poignee { display: none; }
 .panneau-entete {
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
   padding: var(--ecart-sections) var(--marge-panneau) 0; font-size: var(--t-petit);
 }
 .marque, .surtitre {
@@ -249,6 +249,14 @@ p, li { text-wrap: pretty; }
 .legende-carte { position: absolute; left: var(--cadre-carte); bottom: var(--cadre-carte); z-index: 2; width: 270px; max-height: calc(100% - 120px); overflow-y: auto; }
 .legende-panneau { display: none; }
 .legende-titre { margin: 0; font-size: var(--t-texte); font-weight: 600; }
+/* Le titre replie la légende : il reste visible, pour dire ce que montre la carte. */
+.legende-titre button {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; min-height: 24px;
+  padding: 0; font: inherit; color: var(--encre); text-align: left; background: none; border: 0; cursor: pointer;
+}
+.legende-corps { display: flex; flex-direction: column; gap: 8px; }
+.chevron { flex: none; color: var(--encre-2); transition: transform 150ms ease-out; }
+.chevron[data-ouvert='false'] { transform: rotate(-90deg); }
 .legende-sous-titre, .legende-note { margin: 0; font-size: var(--t-note); color: var(--encre-2); }
 .legende ul { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .legende li { display: flex; align-items: center; gap: 8px; }
@@ -269,6 +277,20 @@ p, li { text-wrap: pretty; }
 }
 .infobulle-titre { font-size: var(--t-texte); font-weight: 600; }
 
+/* Panneau repliable, sur ordinateur : il s'efface, la carte prend toute la largeur ; une languette au bord du
+   panneau le replie ou le rouvre. Sur téléphone, le volet descend jusqu'à une fine barre (bouton de l'en-tête). */
+.languette, .replier-volet { display: none; }
+@media (min-width: 761px) {
+  .atlas[data-panneau-replie='true'] { grid-template-columns: 0 1fr; }
+  .atlas[data-panneau-replie='true'] .panneau { visibility: hidden; overflow: hidden; border-right: 0; }
+  .languette {
+    position: absolute; left: 0; top: calc(var(--cadre-carte) + 56px); z-index: 3;
+    display: grid; place-items: center; width: 24px; height: 48px; padding: 0; cursor: pointer;
+    color: var(--encre); background: var(--surface); border: 1px solid var(--bord-champ); border-left: 0;
+    border-radius: 0 6px 6px 0;
+  }
+}
+
 /* Mobile : la carte occupe l'écran, le panneau devient un volet en bas. */
 @media (max-width: 760px) {
   :root { --marge-panneau: 24px; --ecart-sections: 16px; --cadre-carte: 12px; --haut-controles: 72px; }
@@ -285,6 +307,16 @@ p, li { text-wrap: pretty; }
     box-shadow: 0 -6px 24px rgba(27, 26, 23, 0.08); transition: height 200ms ease-out;
   }
   .panneau[data-deplie='true'] { height: 88dvh; }
+  .panneau[data-replie='true'] { height: auto; }
+  .panneau[data-replie='true'] > :not(.poignee):not(.panneau-entete) { display: none; }
+  .panneau-entete a { margin-left: auto; }
+  .replier-volet {
+    display: grid; place-items: center; flex: none; width: 44px; height: 44px; margin-right: -12px; padding: 0;
+    color: var(--encre); background: none; border: 0; cursor: pointer;
+  }
+  .replier-volet .chevron { color: var(--encre); }
+  /* Volet réduit : le chevron pointe vers le haut, là où il remonte. */
+  .replier-volet .chevron[data-ouvert='false'] { transform: rotate(180deg); }
   .poignee {
     display: block; align-self: center; width: 64px; height: 28px; flex: none; cursor: pointer;
     border: 0; background: linear-gradient(var(--bord-champ), var(--bord-champ)) no-repeat center / 40px 4px;
@@ -315,20 +347,29 @@ p, li { text-wrap: pretty; }
 .depliant code { font-size: var(--t-note); word-break: break-all; }
 .panneau-entete a[aria-current='page'] { text-decoration-thickness: 2px; }
 
-/* Encarts de la vue nationale : petite couronne et outre-mer, sous les boutons de zoom et d'opacité. */
+/* Encarts de la vue nationale : petite couronne, départements et collectivités d'outre-mer, sous les boutons de
+   zoom et d'opacité. Leur titre les replie ; dans une fenêtre basse, ils défilent. */
 .encarts {
   position: absolute; top: calc(var(--haut-controles) + 90px + 8px + 44px + 8px); right: var(--cadre-carte); z-index: 2;
-  display: grid; grid-template-columns: repeat(2, auto); gap: 8px; padding: 8px;
+  display: flex; flex-direction: column; gap: 8px; padding: 8px; overflow-y: auto;
+  max-height: calc(100% - var(--haut-controles) - 150px - var(--cadre-carte));
   background: var(--surface); border: 1px solid var(--filet); border-radius: 8px;
 }
+.encarts-titre {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 24px; padding: 0;
+  font-family: inherit; text-align: left; background: none; border: 0; cursor: pointer;
+}
+.encarts-grille { display: grid; grid-template-columns: repeat(3, 70px); gap: 8px; align-items: start; }
 .encarts figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
 .encarts figure:first-child { grid-column: 1 / -1; }
 .encarts svg { display: block; background: var(--papier); border-radius: 4px; }
 .encarts .forme { stroke: #fff; stroke-width: 0.4; cursor: pointer; }
 .encarts .forme:hover { stroke: var(--encre); stroke-width: 1; }
-.encarts figcaption .lien { font-size: var(--t-note); color: var(--encre-2); }
-@media (max-width: 760px), (max-height: 640px) {
-  .encarts { display: none; }
+.encarts figcaption .lien { font-size: var(--t-note); line-height: 1.3; color: var(--encre-2); }
+.encarts-note { grid-column: 1 / -1; margin: 0; font-size: var(--t-note); color: var(--encre-2); }
+@media (max-width: 760px) {
+  /* Sous le zoom et l'opacité, jusqu'au haut du volet (42 % de l'écran), qu'ils ne recouvrent pas. */
+  .encarts { max-height: calc(58dvh - var(--haut-controles) - 150px - var(--cadre-carte)); }
 }
 
 /* Raccourcis vers l'outre-mer et les Français de l'étranger, sous l'aperçu. */

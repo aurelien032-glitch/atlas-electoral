@@ -295,15 +295,32 @@ ENCARTS = PUBLICATION / "geo" / "encarts.json"
 def test_encarts_aux_codes_des_resultats(con):
     # Chaque commune et chaque circonscription dessinée dans un encart doit trouver sa couleur.
     encarts = json.loads(ENCARTS.read_text(encoding="utf-8"))["encarts"]
-    assert [e["code"] for e in encarts] == ["IDF", "971", "972", "973", "974", "976"]
+    assert [e["code"] for e in encarts] == ["IDF", "971", "972", "973", "974", "976", "975", "977", "978", "986", "987", "988"]
     communes = {c for (c,) in con.sql(f"""SELECT code FROM {fichier('2022_pres_t1', 'agregats.parquet')}
                                           WHERE niveau IN ('commune', 'arrondissement')""").fetchall()}
     circonscriptions = {c for (c,) in con.sql(f"""SELECT code FROM {fichier('2024_legi_t1', 'agregats.parquet')}
                                                   WHERE niveau = 'circonscription'""").fetchall()}
     for e in encarts:
         assert set(e["communes"]) <= communes, e["code"]
-        assert e["circonscriptions"] and set(e["circonscriptions"]) <= circonscriptions, e["code"]
+        # Sans contour de bureau (Saint-Barthélemy, Saint-Martin, Wallis-et-Futuna, Polynésie, Nouvelle-Calédonie),
+        # pas de circonscription dessinée : l'encart garde ses communes aux législatives.
+        if e["code"] not in {"977", "978", "986", "987", "988"}:
+            assert e["circonscriptions"] and set(e["circonscriptions"]) <= circonscriptions, e["code"]
         assert all(e["communes"].values()), e["code"]
+    par_code = {e["code"]: e for e in encarts}
+    assert set(par_code["986"]["communes"]) == {"98601"}
+    # Polynésie : Tahiti et Moorea seulement, mais le nom recadre sur tout le territoire (jusqu'aux Marquises).
+    assert 10 <= len(par_code["987"]["communes"]) < 48 and par_code["987"]["emprise"][3] > -8
+
+
+COMMUNES_CARTE = PUBLICATION / "geo" / "communes.geojson"
+
+
+@pytest.mark.skipif(not COMMUNES_CARTE.exists(), reason="lancer d'abord python -m atlas_pipeline.geo")
+def test_wallis_et_futuna_au_code_des_resultats():
+    # Les résultats désignent Wallis-et-Futuna par un seul code : la carte aussi, sinon il reste sans couleur.
+    codes = {f["properties"]["code"] for f in json.loads(COMMUNES_CARTE.read_text(encoding="utf-8"))["features"]}
+    assert "98601" in codes and not codes & {"98611", "98612", "98613"}
 
 
 @pytest.mark.parametrize("scrutin", SCRUTINS)

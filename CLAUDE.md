@@ -123,14 +123,21 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   peint (« sans résultat ») ; les hachures marquent une valeur sans objet (pas de candidat du bloc, pas
   comparable). `removeFeatureState` efface aussi la sélection : la remettre après chaque coloriage.
 - Le mode Évolution se lit à la commune : les numéros de bureaux changent d'un scrutin à l'autre.
-- Encarts de la vue nationale (petite couronne, départements d'outre-mer) : chemins SVG précalculés
-  (`geo/encarts.json`), colorés avec les mêmes états que la carte, affichés dans la vue d'ensemble seulement (au
-  plus un niveau de zoom au-delà de la métropole entière, signalé par `onEnsemble`). Les contours des circonscriptions d'outre-mer
+- Encarts de la vue nationale (petite couronne, départements et collectivités d'outre-mer) : chemins SVG
+  précalculés (`geo/encarts.json`), colorés avec les mêmes états que la carte, affichés dans la vue d'ensemble
+  seulement (au plus un niveau de zoom au-delà de la métropole entière, signalé par `onEnsemble`), repliables.
+  Collectivités sans contour de circonscription (977, 978, 986, 987, 988) : leurs encarts gardent les communes aux
+  législatives. Polynésie : Tahiti et Moorea seulement (note sous les encarts). Wallis-et-Futuna : un seul code de
+  résultats (98601) ; carte et index fusionnent ses trois circonscriptions territoriales (`geo.py`), l'encart
+  dessine ses deux groupes d'îles en deux moitiés. Les contours des circonscriptions d'outre-mer
   portent le code INSEE des résultats (« 971-01 »), pas celui du ministère (« ZA-01 ») : un test le vérifie.
 - Cadrage dans le fragment de l'URL (`#zoom/lat/lon`, `lireCadre` et `ecrireCadre` de `vue.ts`, décision Q18) :
   écrit à chaque `moveend` par `replaceState` (jamais d'entrée d'historique) ; Précédent et Suivant (`popstate` du
   navigateur, `hashchange`) y ramènent la carte ; un lien qui en porte un n'est pas recadré sur son territoire. Pas
   l'option `hash` de MapLibre : `remove()` efface le fragment, ce que fait le double montage de StrictMode.
+- Panneau (languette sur ordinateur, fine barre sur téléphone), légende et encarts repliables ; préférences dans
+  `preferences.ts` (`localStorage`, jamais dans l'URL). En vue d'ensemble, la métropole se recadre quand la place
+  change (`resize`, légende repliée ou dépliée) ; une carte zoomée ou le cadrage d'un lien partagé ne bougent pas.
 - Commune sélectionnée : contour détaillé demandé à `geo.api.gouv.fr` (API officielle, CORS ouvert), contour
   simplifié en secours. Dans le panneau intégré, MapLibre attend une image (`requestAnimationFrame`) pour
   charger son style : une capture d'écran la déclenche, ce n'est pas un bug du site.

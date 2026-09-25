@@ -1,4 +1,4 @@
-"""Encarts de la carte nationale : Paris et la petite couronne, et les cinq départements d'outre-mer.
+"""Encarts de la carte nationale : Paris et la petite couronne, les départements et collectivités d'outre-mer.
 
 À l'échelle de la France entière, la petite couronne est illisible et l'outre-mer hors du cadre. On
 précalcule pour chaque encart les chemins SVG, déjà projetés et simplifiés, de ses communes et de ses
@@ -22,15 +22,29 @@ API = "https://geo.api.gouv.fr/departements/{dep}/communes?format=geojson&geomet
 API_ARRONDISSEMENTS = ("https://geo.api.gouv.fr/communes?codeDepartement={dep}&type=arrondissement-municipal"
                        "&format=geojson&geometry=contour&fields=code")
 
-# Taille des encarts, en pixels : la petite couronne, plus dense, a droit à un cadre plus grand.
+# Taille des encarts, en pixels : la petite couronne, plus dense, a droit à un cadre plus grand ; l'outre-mer
+# tient en trois colonnes de sa largeur. « court » : légende de l'encart quand le nom n'y tient pas.
+PETIT = (70, 52)
 ENCARTS = [
-    {"code": "IDF", "nom": "Paris et petite couronne", "departements": ["75", "92", "93", "94"], "cadre": (180, 110),
+    {"code": "IDF", "nom": "Paris et petite couronne", "departements": ["75", "92", "93", "94"], "cadre": (226, 134),
      "par_arrondissement": ["75"]},
-    {"code": "971", "nom": "Guadeloupe", "departements": ["971"], "cadre": (86, 64)},
-    {"code": "972", "nom": "Martinique", "departements": ["972"], "cadre": (86, 64)},
-    {"code": "973", "nom": "Guyane", "departements": ["973"], "cadre": (86, 64)},
-    {"code": "974", "nom": "La Réunion", "departements": ["974"], "cadre": (86, 64)},
-    {"code": "976", "nom": "Mayotte", "departements": ["976"], "cadre": (86, 64)},
+    {"code": "971", "nom": "Guadeloupe", "departements": ["971"], "cadre": PETIT},
+    {"code": "972", "nom": "Martinique", "departements": ["972"], "cadre": PETIT},
+    {"code": "973", "nom": "Guyane", "departements": ["973"], "cadre": PETIT},
+    {"code": "974", "nom": "La Réunion", "departements": ["974"], "cadre": PETIT},
+    {"code": "976", "nom": "Mayotte", "departements": ["976"], "cadre": PETIT},
+    {"code": "975", "nom": "Saint-Pierre-et-Miquelon", "court": "St-Pierre-et-Miquelon", "departements": ["975"], "cadre": PETIT},
+    {"code": "977", "nom": "Saint-Barthélemy", "court": "St-Barthélemy", "departements": ["977"], "cadre": PETIT},
+    {"code": "978", "nom": "Saint-Martin", "court": "St-Martin", "departements": ["978"], "cadre": PETIT},
+    # Un seul territoire dans les résultats (98601) ; ses deux groupes d'îles, à 230 km l'un de l'autre, occupent
+    # chacun une moitié de l'encart : Wallis (Uvea) à gauche, Futuna et Alofi (Alo, Sigave) à droite.
+    {"code": "986", "nom": "Wallis-et-Futuna", "departements": ["986"], "cadre": PETIT, "fusion": "98601",
+     "moities": [["98613"], ["98611", "98612"]]},
+    # 48 communes sur 2 000 km, invisibles à cette taille : l'encart montre Tahiti et Moorea (îles du Vent, trois
+    # habitants sur quatre) ; son nom recadre la carte principale sur tout le territoire.
+    {"code": "987", "nom": "Polynésie française", "court": "Polynésie", "departements": ["987"], "cadre": PETIT,
+     "recadrage": (-150.0, -17.92, -149.1, -17.44), "note": "Tahiti et Moorea ; les autres îles sur la carte principale"},
+    {"code": "988", "nom": "Nouvelle-Calédonie", "departements": ["988"], "cadre": PETIT},
 ]
 MARGE = 4
 TOLERANCE = 0.35  # simplification, en pixels de l'encart
@@ -65,10 +79,31 @@ def simplifier(points: list[tuple[float, float]], tolerance: float) -> list[tupl
     return [p for p, g in zip(points, garder) if g]
 
 
-def chemin(geometrie: dict, projeter) -> str:
-    """Chemin SVG d'une géométrie projetée ; les anneaux réduits à moins de trois sommets disparaissent."""
+def boite(entites: list[dict]) -> tuple[float, float, float, float]:
+    """Emprise (ouest, sud, est, nord) d'un ensemble d'entités GeoJSON."""
+    points = [p for f in entites for anneau in anneaux(f["geometry"]) for p in anneau]
+    return min(p[0] for p in points), min(p[1] for p in points), max(p[0] for p in points), max(p[1] for p in points)
+
+
+def projection(emprise: tuple[float, float, float, float], cadre: tuple[float, float, float, float]):
+    """Projette une emprise dans un cadre (x, y, largeur, hauteur) de l'encart, centrée, marges comprises.
+    Équirectangulaire locale : à ces latitudes et à cette échelle, la déformation est invisible."""
+    ouest, sud, est, nord = emprise
+    x0, y0, largeur, hauteur = cadre
+    kx = math.cos(math.radians((sud + nord) / 2))
+    echelle = min((largeur - 2 * MARGE) / ((est - ouest) * kx), (hauteur - 2 * MARGE) / (nord - sud))
+    dx = x0 + (largeur - (est - ouest) * kx * echelle) / 2
+    dy = y0 + (hauteur - (nord - sud) * echelle) / 2
+    return lambda lon, lat: (dx + (lon - ouest) * kx * echelle, dy + (nord - lat) * echelle)
+
+
+def chemin(geometrie: dict, projeter, garder: tuple[float, float, float, float] | None = None) -> str:
+    """Chemin SVG d'une géométrie projetée ; les anneaux réduits à moins de trois sommets disparaissent, comme,
+    si `garder` est donnée, ceux qui tombent entièrement hors de cette emprise."""
     morceaux = []
     for anneau in anneaux(geometrie):
+        if garder and not any(garder[0] <= lon <= garder[2] and garder[1] <= lat <= garder[3] for lon, lat in anneau):
+            continue
         points = simplifier([projeter(lon, lat) for lon, lat in anneau], TOLERANCE)
         if len(points) >= 4:
             morceaux.append("M" + "L".join(f"{x:.1f},{y:.1f}" for x, y in points[:-1]) + "Z")
@@ -81,24 +116,33 @@ def telecharger(dep: str, par_arrondissement: bool = False) -> list[dict]:
 
 
 def construire_encart(encart: dict, communes: list[dict], circonscriptions: list[dict]) -> dict:
-    points = [p for f in communes for anneau in anneaux(f["geometry"]) for p in anneau]
-    ouest, est = min(p[0] for p in points), max(p[0] for p in points)
-    sud, nord = min(p[1] for p in points), max(p[1] for p in points)
-    # Projection équirectangulaire locale : à ces latitudes et à cette échelle, la déformation est invisible.
-    kx = math.cos(math.radians((sud + nord) / 2))
     largeur, hauteur = encart["cadre"]
-    echelle = min((largeur - 2 * MARGE) / ((est - ouest) * kx), (hauteur - 2 * MARGE) / (nord - sud))
-    dx = (largeur - (est - ouest) * kx * echelle) / 2
-    dy = (hauteur - (nord - sud) * echelle) / 2
-
-    def projeter(lon: float, lat: float) -> tuple[float, float]:
-        return dx + (lon - ouest) * kx * echelle, dy + (nord - lat) * echelle
-
+    # Le nom de l'encart recadre la carte principale sur tout le territoire, même quand l'encart n'en montre
+    # qu'une partie.
+    emprise = boite(communes)
+    if "moities" in encart:
+        # Territoire d'un seul tenant dans les résultats : ses groupes d'îles, chacun dans sa part de l'encart,
+        # sous le code des résultats.
+        part = largeur / len(encart["moities"])
+        chemins = {encart["fusion"]: ""}
+        for i, codes in enumerate(encart["moities"]):
+            groupe = [f for f in communes if f["properties"]["code"] in codes]
+            projeter = projection(boite(groupe), (i * part, 0, part, hauteur))
+            chemins[encart["fusion"]] += "".join(chemin(f["geometry"], projeter) for f in groupe)
+        traces_circonscriptions: dict[str, str] = {}
+    else:
+        garder = encart.get("recadrage")
+        projeter = projection(garder or emprise, (0, 0, largeur, hauteur))
+        chemins = {f["properties"]["code"]: chemin(f["geometry"], projeter, garder) for f in communes}
+        traces_circonscriptions = {f["properties"]["code"]: chemin(f["geometry"], projeter, garder) for f in circonscriptions}
     return {
-        "code": encart["code"], "nom": encart["nom"], "largeur": largeur, "hauteur": hauteur,
-        "emprise": [round(ouest, 4), round(sud, 4), round(est, 4), round(nord, 4)],
-        "communes": {f["properties"]["code"]: chemin(f["geometry"], projeter) for f in communes},
-        "circonscriptions": {f["properties"]["code"]: chemin(f["geometry"], projeter) for f in circonscriptions},
+        "code": encart["code"], "nom": encart["nom"],
+        **{cle: encart[cle] for cle in ("court", "note") if cle in encart},
+        "largeur": largeur, "hauteur": hauteur,
+        "emprise": [round(v, 4) for v in emprise],
+        # Communes hors du cadre (Polynésie hors de Tahiti et Moorea) : rien à dessiner.
+        "communes": {code: d for code, d in chemins.items() if d},
+        "circonscriptions": {code: d for code, d in traces_circonscriptions.items() if d},
     }
 
 
