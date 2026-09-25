@@ -1,7 +1,7 @@
 import { classeDe } from '../calculs/classes'
 import type { Mesure } from '../calculs/parts'
 import type { Bloc, Resultat } from '../donnees/types'
-import { COULEUR_BLOC, FOND_CARTE, GRIS, estColore, palier } from './couleurs'
+import { COULEUR_BLOC, FOND_CARTE, GRIS, estColore } from './couleurs'
 
 /**
  * État MapLibre (feature-state) d'un territoire. Sans état, un territoire n'est pas peint : il reste
@@ -30,15 +30,16 @@ export function etatTete(
   // voix, ses candidatures ne s'affrontant pas toutes (décision Q16).
   if (resultat.bloc_en_tete) {
     if (resultat.egalite_bloc) return { couleur: GRIS.egalite, opacite: 1, hachure: false }
-    return etatDuBloc(resultat.bloc_en_tete, resultat.avance_bloc_x10000 ?? 0)
+    return etatDuBloc(resultat.bloc_en_tete)
   }
   if (resultat.tete === null) return null
   if (resultat.egalite) return { couleur: GRIS.egalite, opacite: 1, hachure: false }
-  return etatDuBloc(blocDe(resultat.tete), resultat.avance_x10000 ?? 0)
+  return etatDuBloc(blocDe(resultat.tete))
 }
 
-function etatDuBloc(bloc: Bloc, avance: number): Etat {
-  if (estColore(bloc)) return { couleur: COULEUR_BLOC[bloc], opacite: palier(avance).opacite, hachure: false }
+// Couleurs pleines : l'avance se lit dans l'infobulle et la fiche, pas dans l'intensité (décision du 25/09).
+function etatDuBloc(bloc: Bloc): Etat {
+  if (estColore(bloc)) return { couleur: COULEUR_BLOC[bloc], opacite: 1, hachure: false }
   return { couleur: bloc === 'DIV' ? GRIS.divers : GRIS.nonClasse, opacite: 1, hachure: false }
 }
 

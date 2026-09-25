@@ -1,6 +1,6 @@
 import type { ClasseLegende } from '../modes'
 import { formatNombre } from '../format'
-import { BLOCS_COLORES, COULEUR_BLOC, GRIS, LIBELLE_BLOC, PALIERS } from './couleurs'
+import { BLOCS_COLORES, COULEUR_BLOC, GRIS, LIBELLE_BLOC } from './couleurs'
 
 export type DescriptionLegende =
   | {
@@ -17,8 +17,8 @@ export type DescriptionLegende =
       libelleSansObjet: string
     }
 
-function Pastille({ couleur, opacite = 1 }: { couleur: string; opacite?: number }) {
-  return <span className="pastille" style={{ background: couleur, opacity: opacite }} />
+function Pastille({ couleur }: { couleur: string }) {
+  return <span className="pastille" style={{ background: couleur }} />
 }
 
 const Hachures = () => <span className="pastille hachuree" />
@@ -29,24 +29,19 @@ export function Legende({ description, className }: { description: DescriptionLe
     return (
       <section className={`legende ${className}`} aria-label="Légende de la carte">
         <h2 className="legende-titre">Bloc en tête</h2>
-        <p className="legende-sous-titre">Intensité selon l'avance : {PALIERS.map((p) => p.libelle).join(', ')}</p>
         <ul>
           {BLOCS_COLORES.map((bloc) => (
-            <li key={bloc}>
-              <span className="pastilles">
-                {PALIERS.map((p) => <Pastille key={p.libelle} couleur={COULEUR_BLOC[bloc]} opacite={p.opacite} />)}
-              </span>
-              {LIBELLE_BLOC[bloc]}
-            </li>
+            <li key={bloc}><Pastille couleur={COULEUR_BLOC[bloc]} />{LIBELLE_BLOC[bloc]}</li>
           ))}
-          <li><span className="pastilles"><Pastille couleur={GRIS.divers} /></span>Divers</li>
+          <li><Pastille couleur={GRIS.divers} />Divers</li>
           <li>
-            <span className="pastilles"><Pastille couleur={GRIS.nonClasse} /></span>
+            <Pastille couleur={GRIS.nonClasse} />
             <span>Non classé <small>: candidatures sans nuance du ministère, dans les petites communes</small></span>
           </li>
-          <li><span className="pastilles"><Pastille couleur={GRIS.egalite} /></span>Égalité en tête</li>
-          <li><span className="pastilles"><SansResultat /></span>Pas de résultat</li>
+          <li><Pastille couleur={GRIS.egalite} />Égalité en tête</li>
+          <li><SansResultat />Pas de résultat</li>
         </ul>
+        <p className="legende-note">L'avance sur le suivant (serrée, nette, large) est donnée au survol et dans la fiche.</p>
         {description.couvertureCommune !== null && (
           <p className="legende-note">
             Carte à la commune : les contours de bureaux datent de 2022 et ne couvrent que{' '}

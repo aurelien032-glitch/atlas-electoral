@@ -225,7 +225,6 @@ p, li { text-wrap: pretty; }
 .legende li { display: flex; align-items: center; gap: 8px; }
 .legende small { font-size: var(--t-note); color: var(--encre-2); }
 .legende .libelle { flex: 1; }
-.pastilles { display: inline-flex; gap: 2px; flex: none; width: 46px; }
 .pastille { flex: none; width: 14px; height: 14px; border-radius: 2px; }
 .pastille.vide { background: var(--papier); box-shadow: inset 0 0 0 1px var(--bord-champ); }
 .pastille.hachuree {

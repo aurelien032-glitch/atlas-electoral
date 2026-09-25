@@ -59,12 +59,14 @@ export const GRIS = {
 /** Trait des hachures « pas de candidat » et « non comparable » : une texture, lisible sans la couleur. */
 export const TRAIT_HACHURES = '#8F8F89'
 
-// Intensité selon l'avance de la tête (décision du 24/09 : serré, net, large). Avec cinq couleurs, le
-// plancher validé est 0,8 : à 0,6, l'extrême gauche et la gauche pâlies se confondent (écart de 11,5).
+// Paliers de l'avance de la tête, pour le texte (infobulle, fiche). La carte ne les montre plus (décision du
+// 25/09) : en opacité, deux paliers voisins ne différaient que de 3 à 6 (CIEDE2000), et aucun palier de clarté
+// n'est possible, la palette distinguant déjà l'extrême gauche de la gauche et la droite de l'extrême droite
+// par la clarté.
 export const PALIERS = [
-  { jusqua: 500, opacite: 0.8, libelle: 'serrée' }, // moins de 5 points
-  { jusqua: 1500, opacite: 0.9, libelle: 'nette' }, // de 5 à 15 points
-  { jusqua: Infinity, opacite: 1, libelle: 'large' }, // plus de 15 points
+  { jusqua: 500, libelle: 'serrée' }, // moins de 5 points
+  { jusqua: 1500, libelle: 'nette' }, // de 5 à 15 points
+  { jusqua: Infinity, libelle: 'large' }, // plus de 15 points
 ] as const
 
 export function palier(avanceX10000: number) {
@@ -91,7 +93,15 @@ export const RAMPE_SCORE: Record<BlocColore | 'DIV', readonly string[]> = {
 export const RAMPE_PARTICIPATION = ['#72b7b7', '#3d9f9f', '#048484', '#016767', '#034b4b'] as const
 
 // Mode Évolution (décision du 24/09 : orange ↔ violet, d'après ColorBrewer PuOr) : baisse en orange,
-// hausse en violet, centre gris « stable ». Bras monotones ; toutes paires : écart ≥ 13,3 pour les
-// daltoniens et ≥ 15,1 en vision normale.
-export const SEUILS_EVOLUTION = [-10, -5, -1, 1, 5, 10] as const
-export const PALETTE_EVOLUTION = ['#914601', '#cd6a1d', '#efa374', '#dddbd5', '#bda7e5', '#8c6ebc', '#5e388f'] as const
+// hausse en violet, centre gris « stable », bras à clarté monotone.
+//
+// Seuils fixes, pour comparer les cartes entre elles (décision du 25/09) : « stable » à moins de 2 points, puis
+// 2 à 5, 5 à 10, 10 à 20 et plus de 20 dans chaque sens. Sur les 166 cartes que propose le site, la classe la
+// plus remplie regroupe 39 % des électeurs en médiane (43 % avec les anciens seuils ±1, ±5, ±10, qui laissaient
+// 76 % des électeurs dans une seule classe pour l'extrême droite entre 2019 et 2024).
+// Palette à 9 classes : les six teintes de la précédente, une marche plus claire de chaque côté et un gris plus
+// net sur le papier. Marches voisines ≥ 10,2 (CIEDE2000, vision normale, protan, deutan), bras opposés ≥ 36.
+export const SEUILS_EVOLUTION = [-20, -10, -5, -2, 2, 5, 10, 20] as const
+export const PALETTE_EVOLUTION = [
+  '#914601', '#cd6a1d', '#efa374', '#fcccb0', '#d9d7d3', '#ddd0f6', '#bda7e5', '#8c6ebc', '#5e388f',
+] as const

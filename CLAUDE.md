@@ -119,7 +119,8 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
 ## Couleurs et accessibilité
 
 - Toute palette passe le validateur du skill `dataviz` (`node scripts/validate_palette.js "<hex,…>" --pairs all`)
-  **à chaque niveau d'opacité utilisé** : avec cinq blocs, le plancher d'intensité est 0,8. Les dégradés
+  **à chaque niveau d'opacité utilisé**. Carte « En tête » en couleurs pleines (l'avance ne se lit que dans le
+  texte : un palier de clarté confondrait les blocs). Évolution : seuils fixes ±2, ±5, ±10, ±20. Les dégradés
   (Score dans la teinte du bloc, Participation en sarcelle, bras de l'Évolution) passent `--ordinal`, sur le
   fond papier `#F6F4EF`. Palettes dans `app/src/carte/couleurs.ts`.
 - Couleur toujours doublée (légende, panneau de détail, vue tableau à venir). Charte sobre et neutre, sans

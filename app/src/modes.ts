@@ -210,11 +210,13 @@ export function libellesPourcent(seuils: readonly number[]): string[] {
 }
 
 export const LIBELLES_EVOLUTION = [
-  'moins de −10',
+  'baisse de plus de 20',
+  '−20 à −10',
   '−10 à −5',
-  '−5 à −1',
-  'stable, −1 à +1',
-  '+1 à +5',
+  '−5 à −2',
+  'stable, −2 à +2',
+  '+2 à +5',
   '+5 à +10',
-  '+10 ou plus',
+  '+10 à +20',
+  'hausse de plus de 20',
 ] as const

@@ -13,7 +13,8 @@
 > - charte sobre et neutre ;
 > - données locales archivées hors du dépôt ; publication de nos données nettoyées : plus tard ;
 > - prototype de carte réalisé le 24/09 (`spikes/carte-pmtiles/`, § 7.5) : l'architecture proposée fonctionne ;
-> - carte « Tête » : intensité en 3 paliers selon l'avance (serré, net, large), catégorie dédiée pour les égalités ;
+> - carte « Tête » : couleurs pleines, catégorie dédiée pour les égalités ; l'avance (serrée, nette, large) se lit dans l'infobulle et la fiche (25/09 : les 3 paliers d'intensité du 24/09 étaient invisibles) ;
+> - carte « Évolution » : seuils fixes ±2 (stable), ±5, ±10, ±20 points, 9 classes (25/09) ;
 > - pipeline de données v1 réalisé (§ 10) ; dépôt renommé `atlas-electoral` ;
 > - squelette de l'application réalisé (`app/`, § 11) ; prototype v0 retiré, conservé sous le tag `prototype-v0` ;
 > - contours administratifs : versions simplifiées d'Etalab, les tuiles IGN étant trop lourdes (§ 4.1) ;
@@ -675,6 +676,11 @@ Budgets : moins de 450 Ko de JavaScript initial compressé (MapLibre compris) et
 - palette des cinq blocs validée : extrême gauche `#A0283C`, gauche `#E0607E`, centre `#D9960A`, droite `#5AA0D0`, extrême droite `#3558A6` (écart minimal de 13 pour les daltoniens) ; avec cinq couleurs, **le plancher d'intensité remonte à 0,8** (à 0,6, extrême gauche et gauche pâlies se confondent) ;
 - vérifications : TypeScript, oxlint, 5 tests Vitest, build de production testé dans le navigateur ;
 - JavaScript : 457 Ko compressés, juste au-dessus du budget, plus le worker de MapLibre (510 Ko, chargé à part) : découpage à prévoir.
+
+**Paliers des cartes revus le 25/09** (retour : « revoir les paliers des cartes ») :
+- carte « En tête » : les trois paliers d'avance jouaient sur l'opacité (0,8 / 0,9 / 1) ; deux paliers voisins ne différaient que de 3 à 6 (CIEDE2000, il en faut une dizaine sur une carte), et aucun palier de clarté n'est possible : la palette distingue déjà l'extrême gauche de la gauche et la droite de l'extrême droite par la clarté (une extrême droite claire se confond avec la droite, écart de 2,8 à 7 pour les daltoniens). **Couleurs pleines** ; l'avance reste écrite dans l'infobulle et la fiche ;
+- carte « Évolution » : les seuils fixes ±1, ±5, ±10 saturaient (76 % des électeurs dans « plus de 10 » pour l'extrême droite entre les européennes 2019 et 2024). Évalués sur les 166 cartes que propose le site, des **seuils fixes ±2, ±5, ±10, ±20** (9 classes) gardent la comparaison d'une carte à l'autre et séparent mieux « stable » et « forte hausse » : classe la plus remplie à 39 % des électeurs en médiane (43 %), cartes saturées 27 % (34 %), « stable » 18 % des électeurs (10 %). Palette à 9 classes : les six teintes précédentes, une marche claire de plus de chaque côté ; marches voisines ≥ 10,2 en vision normale et pour les daltoniens ;
+- cartes Score et Participation : classes par quantiles pondérés (autant d'électeurs dans chacune), inchangées.
 
 **Typographie harmonisée le 25/09** (retour : « trop de styles d'écriture différents ») : 37 combinaisons de styles de texte → 20, 12 tailles → 6 (échelle 12, 14, 16, 18, 24, 32 en variables CSS), Newsreader réservé au titre de la page et aux grands chiffres (il servait aussi au chapô, à la légende, à l'infobulle et aux intertitres), un seul style de capitales espacées au lieu de deux, deux encres au lieu de trois, mention de la carte dans la police du site. Au passage : titres équilibrés (`text-wrap: balance`), noms composés insécables, colonnes de chiffres du tableau alignées et séparées. Espacements ensuite (même jour) : 21 valeurs → grille de 4 px, trois variables de rythme ; onglets, zoom, encarts et légende alignés à 24 px des bords de la carte (le zoom et les encarts ne l'étaient pas).
 

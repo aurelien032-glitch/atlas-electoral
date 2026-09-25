@@ -16,8 +16,9 @@ describe('palier', () => {
 })
 
 describe('etatTete', () => {
-  it('colore selon le bloc de la tête et nuance selon son avance', () => {
-    expect(etatTete(resultat, () => 'GAU')).toEqual({ couleur: COULEUR_BLOC.GAU, opacite: 0.9, hachure: false })
+  it('colore selon le bloc de la tête, en couleur pleine quelle que soit l’avance', () => {
+    expect(etatTete(resultat, () => 'GAU')).toEqual({ couleur: COULEUR_BLOC.GAU, opacite: 1, hachure: false })
+    expect(etatTete({ ...resultat, avance_x10000: 100 }, () => 'GAU')).toEqual({ couleur: COULEUR_BLOC.GAU, opacite: 1, hachure: false })
   })
 
   it('met les égalités dans leur propre catégorie, sans nuance', () => {
@@ -44,8 +45,8 @@ describe('etatTete', () => {
 describe('etatClasse', () => {
   it('prend la couleur de la classe, bornes comprises dans la classe supérieure', () => {
     const seuils = [...SEUILS_EVOLUTION]
-    expect([-12, -10, -3, -1, 0.99, 1, 25].map((v) => etatClasse(v, seuils, PALETTE_EVOLUTION).couleur))
-      .toEqual([0, 1, 2, 3, 3, 4, 6].map((i) => PALETTE_EVOLUTION[i]))
+    expect([-25, -20, -12, -7, -3, -1.9, 1.99, 2, 7, 12, 25].map((v) => etatClasse(v, seuils, PALETTE_EVOLUTION).couleur))
+      .toEqual([0, 1, 1, 2, 3, 4, 4, 5, 6, 7, 8].map((i) => PALETTE_EVOLUTION[i]))
   })
 
   it('hachure une valeur sans objet', () => {
