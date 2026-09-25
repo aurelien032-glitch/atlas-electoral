@@ -28,8 +28,9 @@ place.
 3. **Jeton de compte** (recommandé par Cloudflare pour l'automatisation, car il n'est lié à aucune
    personne) : *Gérer le compte* → *Jetons d'API du compte* → *Créer un jeton* → *Commencer à zéro*, une
    seule permission : *Developer Platform* → *Pages* → *Edit*. Nom « atlas-electoral · Publier (GitHub
-   Actions) », **valable jusqu'au 26/09/2027** : le renouveler avant (*Renouveler le jeton*), puis mettre à
-   jour le secret, sinon « Publier » échouera au déploiement. Le jeton ne s'affiche qu'une fois : le copier
+   Actions) », **sans expiration** (décision du 25/09 : pas de renouvellement à prévoir ; la portée reste
+   étroite, les Pages de ce seul compte). S'il fuit un jour : le supprimer (*Jetons d'API du compte* → « … » →
+   *Supprimer*), en créer un autre et remplacer le secret. Le jeton ne s'affiche qu'une fois : le copier
    directement dans GitHub, jamais ailleurs (conversation, fichier, message).
 4. **Secrets GitHub** : *Settings* → *Secrets and variables* → *Actions* :
    - `CLOUDFLARE_API_TOKEN` : le jeton de l'étape 3 ;
