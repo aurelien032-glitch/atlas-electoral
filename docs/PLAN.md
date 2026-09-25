@@ -718,6 +718,17 @@ Budgets : moins de 450 Ko de JavaScript initial compressé (MapLibre compris) et
 
 **Typographie harmonisée le 25/09** (retour : « trop de styles d'écriture différents ») : 37 combinaisons de styles de texte → 20, 12 tailles → 6 (échelle 12, 14, 16, 18, 24, 32 en variables CSS), Newsreader réservé au titre de la page et aux grands chiffres (il servait aussi au chapô, à la légende, à l'infobulle et aux intertitres), un seul style de capitales espacées au lieu de deux, deux encres au lieu de trois, mention de la carte dans la police du site. Au passage : titres équilibrés (`text-wrap: balance`), noms composés insécables, colonnes de chiffres du tableau alignées et séparées. Espacements ensuite (même jour) : 21 valeurs → grille de 4 px, trois variables de rythme ; onglets, zoom, encarts et légende alignés à 24 px des bords de la carte (le zoom et les encarts ne l'étaient pas).
 
+**Mise en page vérifiée à toutes les tailles le 26/09** (« vérifier interface graphique et responsive ») : de 360 ×
+640 à 1 920 × 1 080, 26 villes de repère projetées sur la carte. Avant : dès que les encarts étaient dépliés, la
+carte cadrait la métropole dessous (16 villes sur 23 cachées à 1 280 × 720, l'Alsace et la Corse jusqu'à 1 920) ;
+de 761 à 1 023 px, le panneau de 460 px ne laissait que 300 px à la carte (onglets hors de l'écran, France
+invisible sur un téléphone à l'horizontale) ; sur téléphone, le titre des encarts repliés couvrait Dijon et
+Besançon, les sources de la carte étaient sous le volet, et replier le volet ne recadrait pas la métropole. Après
+(Q22) : marges de cadrage calculées d'après ce qui est déplié (`carte/place.ts`, testé), volet en bas pour les
+tablettes tenues verticalement, panneau de 320 px à l'horizontale, encarts repliés sur un bouton sous ◐, repli au
+premier passage selon la largeur, sources abrégées et posées sur le volet, cibles d'au moins 24 px (lien
+Méthodologie, noms des encarts). Tableau des tailles dans `parcours-utilisateur.md`.
+
 **Direction A codée le 24/09** (`app/`) :
 - panneau éditorial à gauche (volet en bas sur mobile), onglets de mode et légende posés sur la carte, infobulle au survol ;
 - modes **Tête**, **Score** (candidature ou bloc), **Participation** et **Évolution** (bloc, scrutin de départ, scrutin d'arrivée) ; l'état complet est dans l'URL (`?scrutin=…&mode=…&cible=…&bloc=…&de=…&sel=…`) ;
@@ -828,6 +839,7 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 | Q19 | Transparence de la carte : où agit le réglage, où le placer ? | **Tranché le 25/09** : au zoom des bureaux seulement (pas de plan dessous en vue nationale, rien de plus à télécharger) ; bouton sous le zoom, même geste sur ordinateur et téléphone ; réglage gardé par le navigateur (§ 9) | — |
 | Q20 | Recherche d'adresse : que montrer, quand interroger le géocodeur ? | **Tranché le 25/09** : le bureau de vote dont le contour contient l'adresse (la commune quand la carte s'y arrête) ; suggestions pendant la frappe, pour un texte qui ressemble à une adresse (§ 9) | — |
 | Q21 | Place de la carte (« pourquoi que la métropole ? », « je veux pouvoir réduire légende et panneaux ») | **Tranché et réalisé le 25/09** : panneau repliable (languette au bord ; fine barre sur téléphone), légende repliée sur son titre, encarts repliables et visibles même dans une fenêtre basse (repliés par défaut sur téléphone), préférences gardées par le navigateur ; en vue d'ensemble, la métropole se recadre dans la place libérée ; encarts des six collectivités d'outre-mer ajoutés (§ 7.1) | — |
+| Q22 | Mise en page selon l'écran (« vérifier interface graphique et responsive ») | **Tranché et réalisé le 26/09** : tablette tenue verticalement en volet, comme sur téléphone ; encarts repliés sur un bouton de 44 px sous ◐ ; la carte laisse la place à ce qui est déplié, et au premier passage : légende et encarts dépliés dès 1 500 px, légende seule de 1 280 à 1 499 px, rien en dessous (légende dans le volet sur téléphone) | — |
 | Q6 | Publication de nos données sur data.gouv | **Tranché** : plus tard | P2 |
 
 ## 16. Outillage Claude : skills, plugins, connecteurs

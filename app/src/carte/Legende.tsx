@@ -87,9 +87,9 @@ function Corps({ description }: { description: DescriptionLegende }) {
 export function Legende({ description, className, replie, onBasculer }: Props) {
   const id = useId()
   return (
-    <section className={`legende ${className}`} aria-label="Légende de la carte">
+    <section className={`legende ${className}`} data-replie={replie} aria-label="Légende de la carte">
       <h2 className="legende-titre">
-        <button type="button" aria-expanded={!replie} aria-controls={id} onClick={onBasculer}>
+        <button type="button" aria-expanded={!replie} aria-controls={replie ? undefined : id} onClick={onBasculer}>
           <span>{description.type === 'tete' ? 'Bloc en tête' : description.titre}</span>
           <Chevron ouvert={!replie} />
         </button>

@@ -12,13 +12,15 @@ interface Props {
   coloriage: Coloriage | null
   /** Législatives : la vue nationale colore les circonscriptions, les encarts aussi. */
   parCirconscription: boolean
-  /** Repliés sur leur titre : la carte principale se lit en entier. */
+  /** Repliés sur un bouton sous celui de l'opacité : la carte principale se lit en entier. */
   replies: boolean
   onBasculer: () => void
   onSurvol: (survol: Survol | null) => void
   onChoisir: (selection: Selection) => void
   onCadrer: (emprise: [number, number, number, number]) => void
 }
+
+const TITRE = 'Petite couronne et outre-mer'
 
 /**
  * Petites cartes de Paris et de la petite couronne, des départements et des collectivités d'outre-mer, posées sur
@@ -30,10 +32,24 @@ export function Encarts({ encarts, coloriage, parCirconscription, replies, onBas
   const idGrille = useId()
   const notes = encarts.filter((e) => e.note)
   return (
-    <section className="encarts" aria-label="Encarts : Paris et petite couronne, outre-mer">
-      <button type="button" className="encarts-titre surtitre" aria-expanded={!replies} aria-controls={idGrille} onClick={onBasculer}>
-        <span>Petite couronne et outre-mer</span>
-        <Chevron ouvert={!replies} />
+    <section className="encarts" data-replies={replies} aria-label="Encarts : Paris et petite couronne, outre-mer">
+      {/* Un seul bouton, replié ou déplié : le focus reste dessus quand il bascule. Replié, il tient dans la colonne
+          du zoom (44 px) et son nom est dit par l'infobulle et les lecteurs d'écran. */}
+      <button
+        type="button" className="encarts-titre surtitre" aria-expanded={!replies} aria-controls={replies ? undefined : idGrille}
+        aria-label={replies ? TITRE : undefined} title={replies ? TITRE : undefined} onClick={onBasculer}
+      >
+        {replies ? (
+          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" strokeWidth="2" />
+            <rect x="6" y="12" width="7" height="5" rx="1" fill="currentColor" />
+          </svg>
+        ) : (
+          <>
+            <span>{TITRE}</span>
+            <Chevron ouvert />
+          </>
+        )}
       </button>
       {!replies && (
         <div id={idGrille} className="encarts-grille">

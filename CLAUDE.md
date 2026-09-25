@@ -125,7 +125,8 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
 - Le mode Évolution se lit à la commune : les numéros de bureaux changent d'un scrutin à l'autre.
 - Encarts de la vue nationale (petite couronne, départements et collectivités d'outre-mer) : chemins SVG
   précalculés (`geo/encarts.json`), colorés avec les mêmes états que la carte, affichés dans la vue d'ensemble
-  seulement (au plus un niveau de zoom au-delà de la métropole entière, signalé par `onEnsemble`), repliables.
+  seulement (au plus un niveau de zoom au-delà de la métropole entière, signalé par `onEnsemble`), repliés sur
+  un bouton de 44 px sous ◐ (le même bouton, replié ou déplié : le focus reste dessus).
   Collectivités sans contour de circonscription (977, 978, 986, 987, 988) : leurs encarts gardent les communes aux
   législatives. Polynésie : Tahiti et Moorea seulement (note sous les encarts). Wallis-et-Futuna : un seul code de
   résultats (98601) ; carte et index fusionnent ses trois circonscriptions territoriales (`geo.py`), l'encart
@@ -135,9 +136,17 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   écrit à chaque `moveend` par `replaceState` (jamais d'entrée d'historique) ; Précédent et Suivant (`popstate` du
   navigateur, `hashchange`) y ramènent la carte ; un lien qui en porte un n'est pas recadré sur son territoire. Pas
   l'option `hash` de MapLibre : `remove()` efface le fragment, ce que fait le double montage de StrictMode.
-- Panneau (languette sur ordinateur, fine barre sur téléphone), légende et encarts repliables ; préférences dans
-  `preferences.ts` (`localStorage`, jamais dans l'URL). En vue d'ensemble, la métropole se recadre quand la place
-  change (`resize`, légende repliée ou dépliée) ; une carte zoomée ou le cadrage d'un lien partagé ne bougent pas.
+- Deux mises en page (décision Q22), même requête dans `styles.css` et `carte/place.ts` : panneau à gauche
+  (≥ 1 024 px, ou dès 761 px à l'horizontale avec un panneau de 320 px) ; volet en bas (téléphone, tablette tenue
+  verticalement, texte centré sur 640 px). Panneau (languette, fine barre du volet), légende et encarts repliables ;
+  préférences dans `preferences.ts` (`localStorage`, jamais dans l'URL) ; au premier passage, repli selon la
+  largeur (`repliParDefaut` : légende repliée sous 1 280 px, encarts dépliés dès 1 500 px).
+- Cadrage : `marges()` de `carte/place.ts` (testé) laisse la place à ce qui est déplié, pour que rien ne cache la
+  métropole : légende à gauche, encarts dépliés à droite (métropole entière seulement : zoomée, la carte les
+  masque), volet et sources en bas ; faute de place, encarts puis légende se posent sur la carte. En vue
+  d'ensemble, la métropole se recadre quand la place change (`resize`, légende, encarts, volet du téléphone) ; une
+  carte zoomée ou le cadrage d'un lien partagé ne bougent pas. Mentions des sources brèves (une ligne de
+  téléphone), posées à gauche sur le volet.
 - Commune sélectionnée : contour détaillé demandé à `geo.api.gouv.fr` (API officielle, CORS ouvert), contour
   simplifié en secours. Dans le panneau intégré, MapLibre attend une image (`requestAnimationFrame`) pour
   charger son style : une capture d'écran la déclenche, ce n'est pas un bug du site.

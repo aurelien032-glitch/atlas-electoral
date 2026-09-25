@@ -51,7 +51,7 @@ flowchart TB
     direction TB
     onglets["Onglets : En tête · Score · Participation · Évolution"]:::carte
     ensemble["Vue d'ensemble : communes (circonscriptions aux législatives)<br/>et encarts petite couronne, départements et collectivités d'outre-mer"]:::carte
-    replis["Replis : panneau (languette, fine barre sur téléphone),<br/>légende et encarts (leur titre)"]:::carte
+    replis["Replis : panneau (languette, fine barre du volet),<br/>légende (son titre), encarts (bouton sous ◐)"]:::carte
     bureaux["Zoom des bureaux : bureaux sur le Plan IGN"]:::carte
     opacite["Bouton ◐ : opacité des couleurs sur le plan<br/>(actif au zoom des bureaux)"]:::carte
   end
@@ -87,9 +87,9 @@ flowchart TB
 | Choisir un résultat de recherche | Recherche | `sel` ; efface `page` | Cadrée sur le territoire |
 | Choisir une adresse | Recherche | `sel` : la commune (ou l'arrondissement) aussitôt, dans une nouvelle entrée ; puis, dans la même entrée, le bureau dont le contour contient l'adresse (sauf si la carte du scrutin s'arrête à la commune) ; efface `page` | Vol jusqu'à la rue, repère sur l'adresse |
 | Régler l'opacité des couleurs | Bouton sous le zoom | aucun : préférence gardée par le navigateur | Couleurs des bureaux de 10 à 100 % sur le plan (70 % par défaut) |
-| Replier ou rouvrir le panneau | Languette au bord (ordinateur), bouton ▾ du volet ou poignée (téléphone) | aucun : préférence gardée par le navigateur | Toute la largeur (ordinateur) ou tout l'écran (téléphone) ; en vue d'ensemble, la métropole se recadre |
-| Replier la légende | Son titre | aucun : préférence gardée par le navigateur | En vue d'ensemble, la métropole se recadre dans la place libérée |
-| Replier les encarts | Leur titre « Petite couronne et outre-mer » | aucun : préférence gardée par le navigateur (repliés par défaut sur téléphone) | — |
+| Replier ou rouvrir le panneau | Languette au bord (panneau à gauche), bouton ▾ du volet ou poignée (volet en bas) | aucun : préférence gardée par le navigateur | Toute la largeur, ou tout l'écran moins la barre du volet ; en vue d'ensemble, la métropole se recadre |
+| Replier la légende | Son titre | aucun : préférence gardée par le navigateur (repliée d'office sous 1 280 px) | En vue d'ensemble, la métropole se recadre dans la place libérée ; repliée, la légende se réduit à son titre |
+| Déplier ou replier les encarts | Bouton sous ◐ (icône d'encart, nommé au survol), puis leur titre | aucun : préférence gardée par le navigateur (dépliés d'office dès 1 500 px, jamais dans le volet) | En vue d'ensemble, la métropole se décale pour leur laisser la place ; dans le volet, ils s'ouvrent sur la carte, à gauche du zoom |
 | Cliquer un département extrême, un raccourci | Vue nationale | `sel` | Cadrée sur le territoire |
 | Cliquer un territoire | Carte | `sel` ; efface `page` | Immobile (le territoire est à l'écran) |
 | Cliquer un territoire dans un encart | Encarts | `sel` | Cadrée sur le territoire |
@@ -127,7 +127,7 @@ flowchart TB
 7. **Les encarts appartiennent à la vue d'ensemble** : au plus un niveau de zoom au-delà de la métropole
    entière, dont le zoom dépend de l'écran. Zoomée sur une région, la carte n'en a plus besoin. Ils montrent la
    petite couronne, les cinq départements et les six collectivités d'outre-mer (la Polynésie par Tahiti et Moorea,
-   dit sous les encarts), défilent dans une fenêtre basse et se replient sur leur titre.
+   dit sous les encarts), défilent dans une fenêtre basse et se replient sur un bouton sous ◐.
 8. **Choisir un territoire montre sa fiche** : sur mobile, le volet se déplie (par la carte, la recherche ou un
    lien partagé) ; replié, le panneau se rouvre (ordinateur comme téléphone).
 9. **Le titre de l'onglet nomme la vue** (« Lyon · Présidentielle 2022, 1er tour · Score · Atlas électoral »),
@@ -140,6 +140,10 @@ flowchart TB
     type de voie (rue, avenue, place…).
 11. **Les préférences d'affichage ne sont pas dans l'URL** : l'opacité des couleurs et les replis (panneau,
     légende, encarts) sont gardés par le navigateur ; un lien partagé montre l'affichage par défaut.
+12. **Rien de ce qui est posé sur la carte ne cache la métropole** (décision Q22) : la carte laisse la place à ce
+    qui est déplié (légende à gauche, encarts à droite, volet et sources en bas) ; faute de place, légende et
+    encarts sont repliés au premier passage. Panneau à gauche sur ordinateur et à l'horizontale, volet en bas sur
+    téléphone et tablette tenus verticalement.
 
 ## Comportements assumés
 
@@ -165,9 +169,9 @@ flowchart TB
 | `?scrutin=2017_pres_t1`, recherche « place bellecour lyon » | Lyon 2e Arrondissement (carte à l'arrondissement pour ce scrutin), adresse rappelée |
 | Bouton ◐ au zoom des bureaux, curseur à 30 %, puis « Revenir à 70 % » | Plan lisible sous les couleurs ; réglage gardé d'une visite à l'autre, puis effacé |
 | Bouton ◐ en vue nationale | Curseur grisé : « zoomez pour l'utiliser » |
-| Replier légende et encarts, puis la languette du panneau (1 024 × 768) | La métropole s'agrandit à chaque place libérée ; la languette « › » rouvre le panneau |
+| Déplier les encarts, les replier au clavier, replier la légende, puis la languette (1 280 × 720) | La métropole se décale puis revient (202 px, puis 428), le focus reste sur le bouton des encarts ; la languette « › » rouvre le panneau |
 | `?sel=commune:69123#12.5/45.764/4.836`, légende repliée | Cadrage du lien conservé (zoom 12,5), pas de recadrage sur la France |
-| Téléphone, premier passage | Encarts repliés sur leur titre ; bouton ▾ : volet réduit à une fine barre, la poignée le rouvre |
+| Téléphone, premier passage | Encarts repliés sur leur bouton ; bouton ▾ : volet réduit à une fine barre, métropole recentrée, sources posées sur la barre ; la poignée le rouvre |
 | Encarts dépliés | Collectivités coloriées : Wallis-et-Futuna en deux moitiés (un seul résultat, 98601), Polynésie par Tahiti et Moorea |
 | `?scrutin=2022_pres_t1&sel=bureau:75056_2099` | Aucun bureau n° 2099 ; lien vers Paris 20e |
 | `?scrutin=2017_pres_t1&mode=evolution&de=2022_pres_t1` | Départ ramené à 2012 ; aucun départ postérieur proposé |
@@ -175,3 +179,21 @@ flowchart TB
 | Vue nationale, zoom avant puis arrière | Encarts masqués au-delà d'un niveau de zoom, puis de retour |
 | Fiche, ×, Méthodologie, Précédent | Vue nationale ; Méthodologie sans réglages ; retour à la vue nationale |
 | Mobile, `?mode=evolution&sel=commune:69123` | Volet déplié : fil d'Ariane, réglages, puis « Lyon » et l'écart du bloc |
+
+## Tailles d'écran vérifiées (26/09, premier passage)
+
+Mesure : 26 villes de repère (Brest, Dunkerque, Lauterbourg, Nice, Bonifacio…) projetées sur la carte ; aucune ne
+doit tomber sous un élément posé dessus.
+
+| Écran | Mise en page | Dépliés d'office | Métropole | Cachée |
+|---|---|---|---|---|
+| 1 920 × 1 080 | Panneau à gauche | Légende, encarts | 842 px | rien |
+| 1 536 × 864 | Panneau à gauche | Légende, encarts | 458 px | rien |
+| 1 440 × 900 | Panneau à gauche | Légende | 588 px | rien |
+| 1 280 × 720 | Panneau à gauche | Légende | 428 px | rien (encarts dépliés : 202 px) |
+| 1 024 × 768 | Panneau à gauche | — | 468 px | rien |
+| 844 × 390 (téléphone à l'horizontale) | Panneau de 320 px | — | 244 px | rien |
+| 768 × 1 024 (tablette tenue verticalement) | Volet, texte centré | Légende, dans le volet | 506 px | rien |
+| 390 × 844 | Volet | Légende, dans le volet | 358 px | pointe de l'Alsace sous ◐ |
+| 360 × 640 | Volet | Légende, dans le volet | 274 px | rien |
+| 667 × 375 (petit téléphone à l'horizontale) | Volet, zoom à côté des onglets | — | 168 px (zoom minimal) | — |

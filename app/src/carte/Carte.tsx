@@ -16,6 +16,7 @@ import type { Coloriage } from '../modes'
 import type { Etat } from './etats'
 import { ecrireCadre, lireCadre, type Selection } from '../vue'
 import { FOND_CARTE, OPACITE_SUR_PLAN, TRAIT_HACHURES } from './couleurs'
+import { enVolet, estFrance, FRANCE_METROPOLITAINE, marges, memesMarges, type Ecran, type Place } from './place'
 
 // Contours des bureaux de vote : fichier officiel de data.gouv.fr (millésime 2022), lu directement.
 const TUILES_BUREAUX = 'https://data-pipeline-open.s3.sbg.io.cloud.ovh.net/reu/reu-france-entiere-2022-06-01-v2.pmtiles'
@@ -59,6 +60,7 @@ const siSelection = (largeur: number) => ({
 
 // Contours administratifs : versions simplifiées d'Etalab (COG 2026), copiées par le pipeline. Les
 // tuiles ADMIN EXPRESS de l'IGN sont trop lourdes en vue nationale (11,4 Mo par tuile au zoom 5).
+// Mentions des sources brèves, pour tenir sur une ligne d'un téléphone ; le détail est dans le panneau.
 const STYLE: StyleSpecification = {
   version: 8,
   sources: {
@@ -66,13 +68,13 @@ const STYLE: StyleSpecification = {
       type: 'vector',
       url: `pmtiles://${TUILES_BUREAUX}`,
       promoteId: 'codeBureauVote',
-      attribution: 'Contours des bureaux : data.gouv.fr (2022, indicatifs)',
+      attribution: 'Bureaux : data.gouv.fr (2022)',
     },
     communes: {
       type: 'geojson',
       data: `${RACINE_DONNEES}/geo/communes.geojson`,
       promoteId: 'code',
-      attribution: 'Contours administratifs : IGN, simplifiés par Etalab',
+      attribution: 'Limites : IGN, Etalab',
     },
     departements: { type: 'geojson', data: `${RACINE_DONNEES}/geo/departements.geojson`, promoteId: 'code' },
     contour: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
@@ -81,7 +83,7 @@ const STYLE: StyleSpecification = {
     repere: { type: 'geojson', data: VIDE },
     // Tuiles demandées à partir du zoom des bureaux seulement : sans ce plancher, MapLibre précharge les niveaux
     // parents (zooms 2 à 8), qu'on n'affiche pas.
-    plan: { type: 'raster', tiles: [PLAN_IGN], tileSize: 256, minzoom: ZOOM_BUREAUX, maxzoom: 19, attribution: 'Fond de plan : IGN (Plan IGN)' },
+    plan: { type: 'raster', tiles: [PLAN_IGN], tileSize: 256, minzoom: ZOOM_BUREAUX, maxzoom: 19, attribution: 'Plan IGN' },
   },
   layers: [
     { id: 'fond', type: 'background', paint: { 'background-color': FOND_CARTE } },
@@ -170,18 +172,16 @@ interface Props {
   visite: VisiteAdresse | null
   /** Bureau trouvé sous l'adresse (null : aucun contour ne la contient ; undefined : la carte n'y est plus). */
   onBureauAdresse: (jeton: number, code: string | null | undefined) => void
-  /** Légende repliée : les cadrages n'ont plus à lui laisser le bas à gauche. */
+  /** Ce qui est déplié sur la carte ou par-dessus : les cadrages lui laissent sa place (voir place.ts). */
   legendeRepliee: boolean
+  encartsDeplies: boolean
+  voletReplie: boolean
 }
 
-// Marges de cadrage : la légende occupe le bas à gauche sur ordinateur (une ligne seulement, repliée), le volet le
-// bas de l'écran sur mobile.
-function marges(legendeRepliee: boolean) {
-  if (window.innerWidth <= 760) return { top: 72, bottom: Math.round(window.innerHeight * 0.45), left: 16, right: 16 }
-  return legendeRepliee ? { top: 84, bottom: 72, left: 24, right: 72 } : { top: 84, bottom: 24, left: 320, right: 72 }
-}
-
-const FRANCE_METROPOLITAINE: [[number, number], [number, number]] = [[-5.2, 41.3], [9.6, 51.1]]
+const [OUEST, SUD, EST, NORD] = FRANCE_METROPOLITAINE
+const FRANCE: [[number, number], [number, number]] = [[OUEST, SUD], [EST, NORD]]
+const ecranDe = (element: HTMLElement): Ecran => ({ largeur: element.clientWidth, hauteur: element.clientHeight, volet: enVolet() })
+const margesDe = (carte: CarteMapLibre, place: Place, cadre: 'france' | 'territoire') => marges(place, ecranDe(carte.getContainer()), cadre)
 
 // Territoire à surligner (les circonscriptions ont leur couche, chargée pour les législatives).
 function cible(selection: Selection): FeatureIdentifier | null {
@@ -208,11 +208,11 @@ function motifHachures(pas = 8, ratio = 2) {
 
 export function Carte({
   coloriage, contours, auBureau, circonscriptions, selection, contour, cadrage, libelle, onSurvol, onClic, onPrete, onEnsemble,
-  onPlan, opacite, repere, visite, onBureauAdresse, legendeRepliee,
+  onPlan, opacite, repere, visite, onBureauAdresse, legendeRepliee, encartsDeplies, voletReplie,
 }: Props) {
   const conteneur = useRef<HTMLDivElement>(null)
   // Lue par les cadrages, dont ceux des écouteurs posés une fois pour toutes.
-  const refLegende = useRef(legendeRepliee)
+  const refPlace = useRef<Place>({ legendeRepliee, encartsDeplies, voletReplie })
   // Vue d'ensemble (la métropole entière à l'écran), tenue à jour à chaque fin de zoom.
   const refEnsemble = useRef(true)
   const refCarte = useRef<CarteMapLibre | null>(null)
@@ -253,7 +253,8 @@ export function Carte({
     const carte = new CarteMapLibre({
       container: conteneur.current,
       style: STYLE,
-      ...(cadre ? { center: cadre.centre, zoom: cadre.zoom } : { bounds: FRANCE_METROPOLITAINE, fitBoundsOptions: { padding: marges(refLegende.current) } }),
+      ...(cadre ? { center: cadre.centre, zoom: cadre.zoom }
+        : { bounds: FRANCE, fitBoundsOptions: { padding: marges(refPlace.current, ecranDe(conteneur.current), 'france') } }),
       minZoom: 3,
       maxZoom: 16,
     })
@@ -270,7 +271,7 @@ export function Carte({
       if (!e.isTrusted) return
       const voulu = lireCadre(window.location.hash)
       // Sans fragment, l'entrée précède tout mouvement de la carte : c'est l'accueil, sur la métropole entière.
-      if (!voulu) carte.fitBounds(FRANCE_METROPOLITAINE, { padding: marges(refLegende.current), duration: 0 })
+      if (!voulu) carte.fitBounds(FRANCE, { padding: margesDe(carte, refPlace.current, 'france'), duration: 0 })
       else if (ecrireCadre(voulu) !== cadreActuel()) carte.jumpTo({ center: voulu.centre, zoom: voulu.zoom })
     }
     carte.on('moveend', noterCadre)
@@ -325,7 +326,7 @@ export function Carte({
     const carte = refCarte.current
     if (!carte || !prete) return
     const signaler = () => {
-      const france = carte.cameraForBounds(FRANCE_METROPOLITAINE, { padding: marges(refLegende.current) })?.zoom
+      const france = carte.cameraForBounds(FRANCE, { padding: margesDe(carte, refPlace.current, 'france') })?.zoom
       refEnsemble.current = france === undefined || carte.getZoom() < france + 1
       onEnsemble(refEnsemble.current)
       onPlan(carte.getZoom() >= ZOOM_BUREAUX)
@@ -333,7 +334,7 @@ export function Carte({
     // Vue d'ensemble : quand la place change (panneau replié ou rouvert, fenêtre redimensionnée), la métropole
     // reste cadrée au mieux ; une carte zoomée sur un territoire, elle, ne bouge pas.
     const recadrer = () => {
-      if (refEnsemble.current) carte.fitBounds(FRANCE_METROPOLITAINE, { padding: marges(refLegende.current), duration: 0 })
+      if (refEnsemble.current) carte.fitBounds(FRANCE, { padding: margesDe(carte, refPlace.current, 'france'), duration: 0 })
     }
     signaler()
     carte.on('zoomend', signaler)
@@ -344,15 +345,18 @@ export function Carte({
     }
   }, [prete, onEnsemble, onPlan])
 
-  // Légende repliée ou dépliée : en vue d'ensemble, la métropole se recadre dans la place libérée ou reprise.
+  // Légende, encarts ou volet du téléphone repliés ou dépliés : en vue d'ensemble, la métropole se recadre dans la
+  // place libérée ou reprise. Seulement quand la place change : au premier affichage, le cadrage d'un lien partagé
+  // l'emporte.
   useEffect(() => {
-    // Seulement quand la légende change : au premier affichage, le cadrage d'un lien partagé l'emporte.
-    const change = refLegende.current !== legendeRepliee
-    refLegende.current = legendeRepliee
+    const avant = refPlace.current
+    refPlace.current = { legendeRepliee, encartsDeplies, voletReplie }
     const carte = refCarte.current
-    if (!change || !carte || !prete || !refEnsemble.current) return
-    carte.fitBounds(FRANCE_METROPOLITAINE, { padding: marges(legendeRepliee), duration: 300 })
-  }, [prete, legendeRepliee])
+    if (!carte || !prete || !refEnsemble.current) return
+    const voulues = margesDe(carte, refPlace.current, 'france')
+    if (memesMarges(voulues, margesDe(carte, avant, 'france'))) return
+    carte.fitBounds(FRANCE, { padding: voulues, duration: 300 })
+  }, [prete, legendeRepliee, encartsDeplies, voletReplie])
 
   // Opacité des couleurs sur le plan, réglée par le curseur sous le zoom (les hachures, une texture, restent).
   useEffect(() => {
@@ -381,7 +385,7 @@ export function Carte({
     refAttente.current?.()
     // Décalage plutôt que `padding` : passée à flyTo, la marge resterait celle de la carte et s'ajouterait à
     // celle de tous les cadrages suivants, qui ne tiendraient plus dans l'écran (MapLibre y renonce en silence).
-    const m = marges(refLegende.current)
+    const m = margesDe(carte, refPlace.current, 'territoire')
     carte.flyTo({
       center: [visite.lon, visite.lat], zoom: ZOOM_ADRESSE, offset: [(m.left - m.right) / 2, (m.top - m.bottom) / 2], duration: 900,
     })
@@ -510,7 +514,8 @@ export function Carte({
     if (cle === refCadre.current) return
     refCadre.current = cle
     const [ouest, sud, est, nord] = cadrage.emprise
-    carte.fitBounds([[ouest, sud], [est, nord]], { padding: marges(refLegende.current), maxZoom: 13, duration: 600 })
+    const padding = margesDe(carte, refPlace.current, estFrance(cadrage.emprise) ? 'france' : 'territoire')
+    carte.fitBounds([[ouest, sud], [est, nord]], { padding, maxZoom: 13, duration: 600 })
   }, [prete, cadrage])
 
   useEffect(() => {

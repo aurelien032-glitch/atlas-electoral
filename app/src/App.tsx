@@ -9,6 +9,7 @@ import { Infobulle } from './carte/Infobulle'
 import { Legende, type DescriptionLegende } from './carte/Legende'
 import { ReglageOpacite } from './carte/Opacite'
 import { Onglets } from './carte/Onglets'
+import { enVolet, FRANCE_METROPOLITAINE, repliParDefaut } from './carte/place'
 
 import { blocEnTete, optionsCibles, retenueDuBloc } from './cibles'
 import { nomCandidature } from './donnees/libelles'
@@ -60,7 +61,6 @@ function voixDuPanachage(lignes: readonly VoixPanachage[]) {
   for (const l of lignes) sommes.set(l.cand, (sommes.get(l.cand) ?? 0) + l.voix)
   return [...sommes].map(([cand, voix]) => ({ cand, voix }))
 }
-const FRANCE_METROPOLITAINE: [number, number, number, number] = [-5.2, 41.3, 9.6, 51.1]
 
 // MapLibre (270 Ko compressés) arrive après l'application : le panneau et ses chiffres s'affichent sans
 // attendre que la carte soit prête.
@@ -126,8 +126,9 @@ interface PropsZone {
   onCadrer: (emprise: [number, number, number, number]) => void
   /** Carte prête, ou en échec : ce qui attendait la carte peut se télécharger. */
   onPrete: () => void
-  /** Légende repliée : la carte cadre sans lui réserver le bas à gauche. */
+  /** Légende repliée, volet du téléphone réduit à sa barre : la carte cadre dans la place laissée. */
   legendeRepliee: boolean
+  voletReplie: boolean
   /** Adresse choisie : son repère, la visite de la carte et le bureau trouvé (voir Carte). */
   repere: [number, number] | null
   visite: VisiteAdresse | null
@@ -148,8 +149,8 @@ function ZoneCarte({ lancee, contenu, encarts, onChoisirEncart, onCadrer, onPret
     setOpacite(valeur)
     garderOpacite(valeur)
   }, [])
-  // Encarts repliés par défaut sur téléphone, où ils couvriraient la carte.
-  const [encartsReplies, setEncartsReplies] = useState(() => repliGarde('encarts', window.matchMedia('(max-width: 760px)').matches))
+  // Encarts repliés sur leur bouton, sauf sur grand écran : dépliés, ils prennent à la métropole 300 px de large.
+  const [encartsReplies, setEncartsReplies] = useState(() => repliGarde('encarts', repliParDefaut('encarts', window.innerWidth, enVolet())))
   const basculerEncarts = useCallback(() => {
     setEncartsReplies(!encartsReplies)
     garderRepli('encarts', !encartsReplies)
@@ -160,7 +161,10 @@ function ZoneCarte({ lancee, contenu, encarts, onChoisirEncart, onCadrer, onPret
       {lancee && (
         <GardeCarte onEchec={onPrete}>
           <Suspense fallback={null}>
-            <Carte {...props} onSurvol={setSurvol} onPrete={onPrete} onEnsemble={setEnsemble} onPlan={setPlan} opacite={opacite} />
+            <Carte
+              {...props} onSurvol={setSurvol} onPrete={onPrete} onEnsemble={setEnsemble} onPlan={setPlan} opacite={opacite}
+              encartsDeplies={!encartsReplies}
+            />
           </Suspense>
         </GardeCarte>
       )}
@@ -191,7 +195,7 @@ export default function App() {
     setPanneauReplie(replie)
     garderRepli('panneau', replie)
   }, [])
-  const [legendeRepliee, setLegendeRepliee] = useState(() => repliGarde('legende', false))
+  const [legendeRepliee, setLegendeRepliee] = useState(() => repliGarde('legende', repliParDefaut('legende', window.innerWidth, enVolet())))
   const basculerLegende = useCallback(() => {
     setLegendeRepliee(!legendeRepliee)
     garderRepli('legende', !legendeRepliee)
@@ -789,6 +793,7 @@ export default function App() {
           visite={visite}
           onBureauAdresse={trouverBureau}
           legendeRepliee={legendeRepliee}
+          voletReplie={panneauReplie}
         />
         <Onglets mode={vue.mode} onMode={changerMode} />
         {etatCarte?.legende && (
