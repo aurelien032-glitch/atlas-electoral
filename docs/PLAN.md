@@ -561,7 +561,8 @@ Tous les classements hérités sont signalés comme cas limites quand l'analogie
    - exports CSV et PNG.
 4. **Espace données** : téléchargements, dictionnaire des données, méthodologie, rapport qualité.
 
-**État partageable** : chaque vue a son URL, par exemple `/2022_pres_t1/commune/75056?mode=score&cible=…`.
+**État partageable** : chaque vue a son URL, cadrage de la carte compris, par exemple
+`?scrutin=2022_pres_t1&mode=score&cible=c1&sel=commune:75056#11.4/48.8566/2.3522`.
 
 **Cohérence du parcours (revue du 25/09)** : graphe des vues, commandes et règles dans
 [parcours-utilisateur.md](parcours-utilisateur.md), à tenir à jour à chaque nouvel écran, lien ou sélecteur.
@@ -807,7 +808,7 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 | Q15 | Paris, Lyon et Marseille : niveau « arrondissement » (à partir des numéros de bureau) et secteurs des municipales jusqu'en 2020, avant ou juste après l'ouverture de la bêta ? Voir l'étude | **Tranché et réalisé le 24/09** : avant la bêta | — |
 | Q16 | Communes et arrondissements qui réunissent plusieurs élections distinctes (plusieurs circonscriptions ou cantons, secteurs de Paris, Lyon et Marseille jusqu'en 2020, communes fusionnées depuis) : 127 communes aux législatives 2024, 217 aux départementales 2015. Leur « candidature en tête » compare des gens qui ne s'affrontaient pas. Le texte le dit désormais (pas de phrase « en tête », note dans la fiche, infobulle) ; sur la carte, quelle couleur : celle de la candidature la plus votée, le bloc qui totalise le plus de voix, ou des hachures « plusieurs élections » ? | **Tranché le 25/09** : le bloc qui totalise le plus de voix, intensité selon son avance sur le deuxième (`bloc_en_tete`, `avance_bloc_x10000` des agrégats) ; même lecture dans l'infobulle, la fiche et le décompte national | — |
 | Q17 | Sources incomplètes avant 2010 (départements absents ou partiels, inscrits aberrants) : les compléter par une autre source officielle (fichiers par département du ministère) ? | **Tranché le 25/09** : non, signaler seulement (aperçu, fiche, rapport qualité) ; une seule source par scrutin | — |
-| Q18 | Précédent et Suivant du navigateur ramènent le panneau à la vue d'avant, pas la carte (sa position n'est pas dans l'URL). Ajouter le zoom et le centre à l'URL (`#zoom/lat/lon`), pour que l'historique et les liens partagés restituent aussi le cadrage ? | Ouverte (revue du parcours, 25/09) | Parcours |
+| Q18 | Précédent et Suivant du navigateur ramènent le panneau à la vue d'avant, pas la carte (sa position n'est pas dans l'URL). Ajouter le zoom et le centre à l'URL (`#zoom/lat/lon`), pour que l'historique et les liens partagés restituent aussi le cadrage ? | **Tranché et réalisé le 25/09** : oui. Fragment `#zoom/lat/lon`, noté à chaque fin de mouvement sans entrée d'historique (`replaceState`) ; Précédent, Suivant et les liens partagés le restituent ; un lien sans fragment cadre sur le territoire choisi | — |
 | Q6 | Publication de nos données sur data.gouv | **Tranché** : plus tard | P2 |
 
 ## 16. Outillage Claude : skills, plugins, connecteurs

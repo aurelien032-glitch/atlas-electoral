@@ -37,7 +37,7 @@ import { Reglages } from './panneau/Reglages'
 import { indexerCodesPostaux, preparer } from './recherche/chercher'
 import { Recherche } from './recherche/Recherche'
 import { useUrl } from './url'
-import { ecrireSelection, lireVue, type Selection } from './vue'
+import { ecrireSelection, lireCadre, lireVue, type Selection } from './vue'
 
 
 /** Candidat d'une commune au panachage, sous la forme des candidatures publiées. */
@@ -393,13 +393,15 @@ export default function App() {
   }), [modifierUrl, index])
 
   // Un lien partagé qui sélectionne un territoire cadre la carte dessus, au chargement seulement : ensuite,
-  // seul le panneau recadre (un clic sur la carte montre un territoire déjà à l'écran).
+  // seul le panneau recadre (un clic sur la carte montre un territoire déjà à l'écran). Un lien qui porte le
+  // cadrage de la carte (« #zoom/lat/lon ») le garde : c'est celui qu'on a partagé.
+  const [cadreDansLien] = useState(() => lireCadre(window.location.hash) !== null)
   const cadrageInitial = useMemo((): Cadrage | null => {
-    if (!selectionInitiale) return null
+    if (!selectionInitiale || cadreDansLien) return null
     const s = selectionInitiale
     const zone = emprise(index.territoires.get(s.niveau === 'bureau' ? communeDu(s.code, index.passage) : s.code))
     return zone && { emprise: zone, jeton: 0 }
-  }, [selectionInitiale, index])
+  }, [selectionInitiale, cadreDansLien, index])
 
   const choisirSurCarte = useCallback((survol: Survol) => {
     modifierUrl({ sel: ecrireSelection({ niveau: survol.niveau, code: survol.code }), page: null })

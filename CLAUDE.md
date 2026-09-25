@@ -119,6 +119,10 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   (`geo/encarts.json`), colorés avec les mêmes états que la carte, affichés dans la vue d'ensemble seulement (au
   plus un niveau de zoom au-delà de la métropole entière, signalé par `onEnsemble`). Les contours des circonscriptions d'outre-mer
   portent le code INSEE des résultats (« 971-01 »), pas celui du ministère (« ZA-01 ») : un test le vérifie.
+- Cadrage dans le fragment de l'URL (`#zoom/lat/lon`, `lireCadre` et `ecrireCadre` de `vue.ts`, décision Q18) :
+  écrit à chaque `moveend` par `replaceState` (jamais d'entrée d'historique) ; Précédent et Suivant (`popstate` du
+  navigateur, `hashchange`) y ramènent la carte ; un lien qui en porte un n'est pas recadré sur son territoire. Pas
+  l'option `hash` de MapLibre : `remove()` efface le fragment, ce que fait le double montage de StrictMode.
 - Commune sélectionnée : contour détaillé demandé à `geo.api.gouv.fr` (API officielle, CORS ouvert), contour
   simplifié en secours. Dans le panneau intégré, MapLibre attend une image (`requestAnimationFrame`) pour
   charger son style : une capture d'écran la déclenche, ce n'est pas un bug du site.

@@ -5,7 +5,8 @@ et à tenir à jour à chaque nouvel écran, lien ou sélecteur. Revue du 25/09/
 
 ## L'état d'une vue
 
-Tout l'état de la vue tient dans l'URL (`app/src/vue.ts`) : un lien reproduit exactement ce qu'on voit.
+Tout l'état de la vue tient dans l'URL (`app/src/vue.ts`), cadrage de la carte compris : un lien reproduit
+exactement ce qu'on voit.
 
 | Paramètre | Valeurs | Rôle |
 |---|---|---|
@@ -15,6 +16,7 @@ Tout l'état de la vue tient dans l'URL (`app/src/vue.ts`) : un lien reproduit e
 | `bloc`, `de` | `DTE`, `2017_pres_t1` | Évolution : bloc suivi et scrutin de départ (l'arrivée est `scrutin`) |
 | `sel` | `commune:69123`, `bureau:69123_0816`… | Territoire choisi : département, circonscription, commune, arrondissement ou bureau |
 | `page` | `methodologie` | Page affichée dans le panneau à la place des résultats |
+| `#zoom/lat/lon` | `#11.2/45.7641/4.8357` | Cadrage de la carte (fragment), noté à chaque fin de mouvement sans créer d'entrée d'historique (décision Q18) |
 
 ## Le graphe
 
@@ -23,7 +25,7 @@ flowchart TB
   classDef reglage fill:#ece8df,stroke:#57534a,color:#1b1a17
   classDef carte fill:#dde8ee,stroke:#3558a6,color:#1b1a17
 
-  lien(["Accueil ou lien partagé<br/>?scrutin · mode · cible · bloc · de · sel · page"])
+  lien(["Accueil ou lien partagé<br/>?scrutin · mode · cible · bloc · de · sel · page #zoom/lat/lon"])
 
   subgraph panneau["Panneau"]
     direction TB
@@ -53,7 +55,7 @@ flowchart TB
   end
 
   lien --> apercu
-  lien -->|"sel=… : cadrage, volet déplié"| fiche
+  lien -->|"sel=… : son cadrage (sinon celui du territoire), volet déplié"| fiche
   reglages -->|"garde le territoire et le mode"| apercu & fiche
   onglets -->|"garde le territoire et les réglages"| apercu & fiche
   recherche -->|"cadrage"| niveaux
@@ -85,12 +87,14 @@ flowchart TB
 | Remonter le fil d'Ariane | Fiche | `sel` | Cadrée sur l'étape |
 | Fermer la fiche (×) | Fiche | efface `sel` | Cadrée sur la France |
 | Méthodologie, Retour aux résultats | En-tête, Méthodologie | `page` | Inchangée |
-| Précédent, Suivant | Navigateur | vue précédente ou suivante | Inchangée |
+| Déplacer ou zoomer la carte | Carte | fragment `#zoom/lat/lon`, sans nouvelle entrée d'historique | — |
+| Précédent, Suivant | Navigateur | vue précédente ou suivante | Revient au cadrage de cette vue |
 
 ## Règles de cohérence
 
-1. **L'URL est la seule source de l'état de la vue.** Un lien reproduit la vue ; Précédent et Suivant la
-   parcourent (sans la position de la carte, qui n'est pas dans l'URL).
+1. **L'URL est la seule source de l'état de la vue**, cadrage de la carte compris. Un lien reproduit la vue ;
+   Précédent et Suivant la parcourent, carte comprise. Déplacer la carte ne crée pas d'entrée d'historique : elle
+   met à jour le cadrage de la vue courante.
 2. **Les réglages sont au même endroit dans les deux vues** (`panneau/Reglages.tsx`) : en tête de la vue
    nationale, sous le fil d'Ariane dans la fiche (« où » d'abord, puis « quoi »). Ils ne dépendent que du
    catalogue : pendant le chargement d'un autre scrutin, ils restent en place et le sélecteur garde le focus. La
@@ -109,7 +113,7 @@ flowchart TB
    dit.
 6. **Le panneau déplace la carte, la carte ne se déplace pas d'elle-même** : recherche, listes, raccourcis, fil
    d'Ariane et fermeture cadrent la carte ; un clic sur la carte montre un territoire déjà à l'écran ; un lien
-   partagé cadre au chargement.
+   partagé s'ouvre sur son cadrage, ou, s'il n'en porte pas, sur le territoire choisi.
 7. **Les encarts appartiennent à la vue d'ensemble** : au plus un niveau de zoom au-delà de la métropole
    entière, dont le zoom dépend de l'écran. Zoomée sur une région, la carte n'en a plus besoin.
 8. **Sur mobile, le volet se déplie dès qu'un territoire est choisi** : par la carte, la recherche ou un lien
@@ -119,8 +123,6 @@ flowchart TB
 
 ## Comportements assumés
 
-- Précédent et Suivant ne ramènent pas la carte là où elle était : sa position n'est pas dans l'URL (question
-  Q18 du plan).
 - « Au fil des scrutins » garde son propre type d'élection, par défaut celui du scrutin affiché : c'est un choix
   de lecture, indépendant de la carte.
 - Un bureau choisi reste désigné par son numéro d'un scrutin à l'autre : même numéro, pas forcément même
@@ -137,6 +139,8 @@ flowchart TB
 | … puis Législatives 2022 | La circonscription retrouve ses résultats |
 | … puis Législatives 2007 | Pas de circonscription dans les données de ce scrutin (depuis 2012) ; lien vers le Rhône |
 | `?scrutin=2020_muni_t2&sel=bureau:01001_0001` | Commune sans second tour : pas de lien vers une fiche vide |
+| Vue nationale, raccourci Guadeloupe, puis Précédent et Suivant | La carte revient sur la métropole, puis sur la Guadeloupe, avec le panneau |
+| `?sel=commune:69123#12.5/45.764/4.836` | Carte au cadrage du lien (zoom 12,5), pas recadrée sur la commune |
 | `?scrutin=2022_pres_t1&sel=bureau:75056_2099` | Aucun bureau n° 2099 ; lien vers Paris 20e |
 | `?scrutin=2017_pres_t1&mode=evolution&de=2022_pres_t1` | Départ ramené à 2012 ; aucun départ postérieur proposé |
 | `?scrutin=1999_euro_t1&mode=evolution` | Pas de « De », message, carte vide, pas de légende |

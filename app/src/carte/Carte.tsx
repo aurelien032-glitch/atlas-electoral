@@ -14,7 +14,7 @@ import { arrondissementDu, estArrondissement, villeDe } from '../donnees/territo
 import type { BureauContour } from '../donnees/types'
 import type { Coloriage } from '../modes'
 import type { Etat } from './etats'
-import type { Selection } from '../vue'
+import { ecrireCadre, lireCadre, type Selection } from '../vue'
 import { FOND_CARTE, TRAIT_HACHURES } from './couleurs'
 
 // Contours des bureaux de vote : fichier officiel de data.gouv.fr (millésime 2022), lu directement.
@@ -217,24 +217,55 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
     if (!conteneur.current) return
     const protocole = new Protocol()
     addProtocol('pmtiles', protocole.tile)
+    // Cadrage porté par le lien (« #zoom/lat/lon », décision Q18), sinon la métropole entière.
+    const cadre = lireCadre(window.location.hash)
     const carte = new CarteMapLibre({
       container: conteneur.current,
       style: STYLE,
-      bounds: FRANCE_METROPOLITAINE,
-      fitBoundsOptions: { padding: marges() },
+      ...(cadre ? { center: cadre.centre, zoom: cadre.zoom } : { bounds: FRANCE_METROPOLITAINE, fitBoundsOptions: { padding: marges() } }),
       minZoom: 3,
       maxZoom: 16,
     })
+    // Le cadrage vit dans le fragment de l'URL : noté à chaque fin de mouvement, sans créer d'entrée
+    // d'historique ; Précédent et Suivant ramènent la carte à celui de leur vue. (L'option `hash` de MapLibre
+    // efface le fragment quand la carte est détruite, ce que fait le double montage de StrictMode.)
+    const cadreActuel = () => ecrireCadre({ zoom: carte.getZoom(), centre: carte.getCenter().toArray() })
+    const noterCadre = () => {
+      const fragment = cadreActuel()
+      if (fragment !== window.location.hash) window.history.replaceState(window.history.state, '', fragment)
+    }
+    const suivreHistorique = (e: Event) => {
+      // Nos propres changements d'URL (événement synthétique, même fragment) ne déplacent pas la carte.
+      if (!e.isTrusted) return
+      const voulu = lireCadre(window.location.hash)
+      // Sans fragment, l'entrée précède tout mouvement de la carte : c'est l'accueil, sur la métropole entière.
+      if (!voulu) carte.fitBounds(FRANCE_METROPOLITAINE, { padding: marges(), duration: 0 })
+      else if (ecrireCadre(voulu) !== cadreActuel()) carte.jumpTo({ center: voulu.centre, zoom: voulu.zoom })
+    }
+    carte.on('moveend', noterCadre)
+    window.addEventListener('popstate', suivreHistorique)
+    window.addEventListener('hashchange', suivreHistorique)
     carte.addControl(new NavigationControl({ showCompass: false }), 'top-right')
     // Motif des hachures, dessiné à la première demande (depuis MapLibre 6.11, l'événement
     // « styleimagemissing » arrive trop tard pour servir cette demande-là).
     carte.setMissingStyleImageResolver((id) => {
       if (id === 'hachures' && !carte.hasImage('hachures')) carte.addImage('hachures', motifHachures(), { pixelRatio: 2 })
     })
+    // Limites départementales : tracé à 1 000 m pour la vue nationale, remplacé une fois pour toutes par
+    // celui à 100 m (huit fois plus lourd) à l'approche du zoom des bureaux.
+    const detaillerDepartements = () => {
+      const source = carte.getSource<GeoJSONSource>('departements')
+      if (!source || carte.getZoom() < ZOOM_BUREAUX - 1) return
+      carte.off('zoomend', detaillerDepartements)
+      source.setData(`${RACINE_DONNEES}/geo/departements-detail.geojson`)
+    }
+    carte.on('zoomend', detaillerDepartements)
     // Les résultats peuvent être appliqués dès que les sources existent : inutile d'attendre le
     // premier rendu complet ('load'), qui tarde quand l'onglet est en arrière-plan.
     carte.once('style.load', () => {
       setPrete(true)
+      // Un lien peut ouvrir la carte déjà zoomée, sans mouvement qui déclencherait le tracé détaillé.
+      detaillerDepartements()
       // Secours : des contours qui tardent (réseau très lent, erreur) ne bloquent pas le reste indéfiniment.
       setTimeout(() => setCommunesChargees(true), 8000)
     })
@@ -245,18 +276,11 @@ export function Carte({ coloriage, contours, auBureau, circonscriptions, selecti
     }
     carte.on('sourcedata', surDonnees)
     carte.on('error', (e) => console.error('Carte :', e.error))
-    // Limites départementales : tracé à 1 000 m pour la vue nationale, remplacé une fois pour toutes par
-    // celui à 100 m (huit fois plus lourd) à l'approche du zoom des bureaux.
-    const detaillerDepartements = () => {
-      const source = carte.getSource<GeoJSONSource>('departements')
-      if (!source || carte.getZoom() < ZOOM_BUREAUX - 1) return
-      carte.off('zoomend', detaillerDepartements)
-      source.setData(`${RACINE_DONNEES}/geo/departements-detail.geojson`)
-    }
-    carte.on('zoomend', detaillerDepartements)
     refCarte.current = carte
     if (import.meta.env.DEV) Object.assign(window, { carteAtlas: carte }) // inspection en développement
     return () => {
+      window.removeEventListener('popstate', suivreHistorique)
+      window.removeEventListener('hashchange', suivreHistorique)
       carte.remove()
       removeProtocol('pmtiles')
       refCarte.current = null
