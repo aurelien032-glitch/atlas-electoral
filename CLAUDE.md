@@ -130,6 +130,9 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   24, 32 px) ; aucune taille en dur. Newsreader seulement pour le titre de la page et les grands chiffres ;
   Source Sans 3 en 400 et 600 pour tout le reste ; deux encres (`--encre`, `--encre-2`) ; un seul style de
   capitales espacées (`.marque`, `.surtitre`). Noms de personnes à trait d'union insécable (`nomCandidature`).
+- Espacements : grille de 4 px (4, 8, 12, 16, 24, 32 ; aucune autre valeur) ; trois variables font le rythme,
+  resserrées sur mobile : `--marge-panneau` (40/24), `--ecart-sections` (24/16), `--cadre-carte` (24/12, retrait
+  commun des onglets, du zoom, des encarts et de la légende).
 
 ## Style de code
 
