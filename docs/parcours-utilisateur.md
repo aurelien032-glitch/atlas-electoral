@@ -88,7 +88,7 @@ flowchart TB
 | Choisir une adresse | Recherche | `sel` : la commune (ou l'arrondissement) aussitôt, dans une nouvelle entrée ; puis, dans la même entrée, le bureau dont le contour contient l'adresse (sauf si la carte du scrutin s'arrête à la commune) ; efface `page` | Vol jusqu'à la rue, repère sur l'adresse |
 | Régler l'opacité des couleurs | Bouton sous le zoom | aucun : préférence gardée par le navigateur | Couleurs des bureaux de 10 à 100 % sur le plan (70 % par défaut) |
 | Replier ou rouvrir le panneau | Languette au bord (panneau à gauche), bouton ▾ du volet ou poignée (volet en bas) | aucun : préférence gardée par le navigateur | Toute la largeur, ou tout l'écran moins la barre du volet ; en vue d'ensemble, la métropole se recadre |
-| Replier la légende | Son titre | aucun : préférence gardée par le navigateur (repliée d'office sous 1 280 px) | En vue d'ensemble, la métropole se recadre dans la place libérée ; repliée, la légende se réduit à son titre |
+| Replier la légende | Son titre | aucun : préférence gardée par le navigateur (repliée d'office sous 1 280 px et dans le volet) | En vue d'ensemble, la métropole se recadre dans la place libérée ; repliée, la légende se réduit à son titre. Dans le volet, elle est sur la carte, en bas à gauche au-dessus des sources ; dépliée, elle monte par-dessus la carte, le volet réduit à sa barre si elle n'y tient pas |
 | Déplier ou replier les encarts | Bouton sous ◐ (icône d'encart, nommé au survol), puis leur titre | aucun : préférence gardée par le navigateur (dépliés d'office dès 1 500 px, jamais dans le volet) | En vue d'ensemble, la métropole se décale pour leur laisser la place ; dans le volet, ils couvrent la carte en plein cadre, le volet réduit à sa barre (il remonte quand on les referme) |
 | Revenir à la France entière | Bouton des encarts, hors de la vue d'ensemble (« Revenir à la France entière ») | aucun | Métropole entière ; encarts dépliés sur ordinateur, refermés dans le volet (qui remonte s'il s'était réduit pour eux) |
 | Cliquer un département extrême, un raccourci | Vue nationale | `sel` | Cadrée sur le territoire |
@@ -179,6 +179,7 @@ flowchart TB
 | Encarts dépliés | Collectivités coloriées : Wallis-et-Futuna en deux moitiés (un seul résultat, 98601), Polynésie par Tahiti et Moorea |
 | Fenêtre de 465 × 468 (volet) : bouton des encarts, « Martinique », puis le bouton de retour | Encarts en plein cadre (389 × 281 px, vignettes de 108 px), volet réduit à sa barre ; la Martinique en grand ; retour à la France entière, encarts refermés, volet remonté |
 | … bouton des encarts, puis une commune de la Guadeloupe | Fiche des Abymes, encarts refermés, volet déplié |
+| … étiquette « Bloc en tête », puis encarts, puis refermer l'un et l'autre | Légende dépliée par-dessus la carte (273 px), volet réduit ; encarts au-dessus de l'étiquette ; volet remonté une fois les deux refermés |
 | 1 280 × 720 : encarts dépliés, « Martinique », puis le bouton de retour | Fenêtre des encarts masquée au zoom, bouton gardé ; retour : France entre la légende et les encarts rouverts, focus sur le bouton |
 | `?scrutin=2022_pres_t1&sel=bureau:75056_2099` | Aucun bureau n° 2099 ; lien vers Paris 20e |
 | `?scrutin=2017_pres_t1&mode=evolution&de=2022_pres_t1` | Départ ramené à 2012 ; aucun départ postérieur proposé |
@@ -200,9 +201,9 @@ doit tomber sous un élément posé dessus.
 | 1 280 × 720 | Panneau à gauche | Légende | 428 px | rien (encarts dépliés : 202 px) |
 | 1 024 × 768 | Panneau à gauche | — | 468 px | rien |
 | 844 × 390 (téléphone à l'horizontale) | Panneau de 320 px | — | 244 px | rien |
-| 768 × 1 024 (tablette tenue verticalement) | Volet, texte centré | Légende, dans le volet | 506 px | rien |
-| 390 × 844 | Volet | Légende, dans le volet | 342 px | rien (la pointe de l'Alsace passait sous ◐ : corrigé le 26/09) |
-| 360 × 640 | Volet | Légende, dans le volet | 274 px | rien |
+| 768 × 1 024 (tablette tenue verticalement) | Volet, texte centré | — | 506 px | rien |
+| 390 × 844 | Volet | — | 342 px | rien (la pointe de l'Alsace passait sous ◐ : corrigé le 26/09) |
+| 360 × 640 | Volet | — | 274 px | rien |
 | 740 × 360, 667 × 375 (téléphone à l'horizontale) | Panneau de 320 px, carte resserrée | — | 237 px, 253 px | rien (en volet : 168 px, au zoom minimal) |
 | 568 × 320 (plus petit téléphone à l'horizontale) | Panneau de 320 px, carte resserrée, onglets défilants | — | 176 px | rien |
 

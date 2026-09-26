@@ -67,6 +67,8 @@ function voixDuPanachage(lignes: readonly VoixPanachage[]) {
 const Carte = lazy(() => import('./carte/Carte').then((m) => ({ default: m.Carte })))
 // Référence stable : un tableau vide recréé à chaque rendu relancerait tout le coloriage de la carte.
 const AUCUN_CONTOUR: BureauContour[] = []
+/** Fenêtres posées sur la carte qui réduisent le volet à sa barre, le temps de les lire. */
+type Reduction = 'encarts' | 'legende'
 /** Territoires hors de la métropole, accessibles depuis l'aperçu : départements et collectivités d'outre-mer,
  * Français établis hors de France (« ZZ »). */
 const HORS_METROPOLE = ['971', '972', '973', '974', '976', '975', '977', '978', '986', '987', '988', 'ZZ']
@@ -192,15 +194,38 @@ export default function App() {
   // Panneau replié pour lire la carte en grand : ôté sur ordinateur (une languette le rouvre), réduit à une fine
   // barre sur téléphone. Choisir un territoire le rouvre, pour montrer sa fiche.
   const [panneauReplie, setPanneauReplie] = useState(() => repliGarde('panneau', false))
+  // Dans le volet, une fenêtre posée sur la carte qui n'y tient pas (encarts, légende dépliée) le réduit à sa barre
+  // le temps de la lire, sans que ce repli soit gardé ; il remonte quand plus aucune ne l'y oblige.
+  const [voletReduitPour, setVoletReduitPour] = useState<ReadonlySet<Reduction>>(() => new Set())
+  const voletReplie = panneauReplie || voletReduitPour.size > 0
+  const reduireVolet = useCallback((pour: Reduction) => setVoletReduitPour((avant) => new Set(avant).add(pour)), [])
+  const rendreVolet = useCallback((pour: Reduction) => setVoletReduitPour((avant) => {
+    if (!avant.has(pour)) return avant
+    const apres = new Set(avant)
+    apres.delete(pour)
+    return apres
+  }), [])
   const replierPanneau = useCallback((replie: boolean) => {
     setPanneauReplie(replie)
     garderRepli('panneau', replie)
+    if (!replie) setVoletReduitPour(new Set())
   }, [])
   const [legendeRepliee, setLegendeRepliee] = useState(() => repliGarde('legende', repliParDefaut('legende', window.innerWidth, enVolet())))
   const basculerLegende = useCallback(() => {
     setLegendeRepliee(!legendeRepliee)
     garderRepli('legende', !legendeRepliee)
-  }, [legendeRepliee])
+    if (!legendeRepliee) {
+      rendreVolet('legende')
+      return
+    }
+    // Dépliée dans le volet (le rendu du clic est fait au tour suivant) : si elle ne tient pas au-dessus de lui, il
+    // se réduit le temps de la lire.
+    if (!enVolet()) return
+    setTimeout(() => {
+      const legende = document.querySelector('.legende-carte')
+      if (legende && legende.scrollHeight > legende.clientHeight + 1) reduireVolet('legende')
+    }, 0)
+  }, [legendeRepliee, reduireVolet, rendreVolet])
   // Encarts repliés sur leur bouton, sauf sur grand écran : dépliés, ils prennent à la métropole 300 px de large.
   // Dans le volet, ils s'ouvrent en plein cadre sur la carte, au-dessus du volet (décision Q23).
   const [encartsReplies, setEncartsReplies] = useState(() => repliGarde('encarts', repliParDefaut('encarts', window.innerWidth, enVolet())))
@@ -564,40 +589,28 @@ export default function App() {
   }, [parametres])
 
   const cadrer = useCallback((emprise: [number, number, number, number]) => setCadrage({ emprise, jeton: Date.now() }), [])
-  // Dans le volet, les encarts ouverts prennent tout l'écran au-dessus de sa barre : il se réduit le temps de les
-  // lire (sans garder ce repli), et remonte quand on les referme, qu'on revient à la France ou qu'on choisit un
-  // territoire.
-  const refVoletPourEncarts = useRef(false)
-  const rendreVolet = useCallback(() => {
-    if (!refVoletPourEncarts.current) return
-    refVoletPourEncarts.current = false
-    setPanneauReplie(false)
-  }, [])
   // Bouton des encarts : hors de la vue d'ensemble (zoomée sur la Martinique, une commune…), il ramène à la France
   // entière, encarts dépliés sur ordinateur (la carte leur fait place) ; dans le volet, refermés, car en plein
-  // cadre ils la cacheraient. Dans la vue d'ensemble, il les déplie ou les replie.
+  // cadre ils la cacheraient. Dans la vue d'ensemble, il les déplie ou les replie ; dans le volet, ouverts en plein
+  // cadre, ils prennent tout l'écran au-dessus de sa barre.
   const boutonEncarts = useCallback((ensemble: boolean) => {
     const volet = enVolet()
     if (!ensemble) {
       cadrer(FRANCE_METROPOLITAINE)
       replierEncarts(volet)
-      if (volet) rendreVolet()
+      if (volet) rendreVolet('encarts')
       return
     }
     replierEncarts(!encartsReplies)
     if (!volet) return
-    if (!encartsReplies) rendreVolet()
-    else if (!panneauReplie) {
-      refVoletPourEncarts.current = true
-      setPanneauReplie(true)
-    }
-  }, [encartsReplies, panneauReplie, cadrer, replierEncarts, rendreVolet])
+    if (encartsReplies) reduireVolet('encarts')
+    else rendreVolet('encarts')
+  }, [encartsReplies, cadrer, replierEncarts, reduireVolet, rendreVolet])
   // Territoire choisi dans les encarts : dans le volet, ils se referment et le volet remonte avec sa fiche.
   const choisirEncart = useCallback((s: Selection) => {
     actions.territoire(s)
     if (!enVolet()) return
     replierEncarts(true)
-    refVoletPourEncarts.current = false
     replierPanneau(false)
     setDeplie(true)
   }, [actions, replierEncarts, replierPanneau])
@@ -731,23 +744,23 @@ export default function App() {
     ?? contours.error ?? territoires.error ?? departements.error ?? agregatsDe.error ?? agregatsVoixDe.error ?? candidatsDe.error
 
   return (
-    <div className="atlas" data-panneau-replie={panneauReplie}>
-      <aside id="panneau" className="panneau" data-deplie={deplie} data-replie={panneauReplie}>
+    <div className="atlas" data-panneau-replie={voletReplie}>
+      <aside id="panneau" className="panneau" data-deplie={deplie} data-replie={voletReplie}>
         <button
-          type="button" className="poignee" aria-expanded={!panneauReplie && deplie} aria-controls="panneau-corps"
-          onClick={() => (panneauReplie ? replierPanneau(false) : setDeplie(!deplie))}
+          type="button" className="poignee" aria-expanded={!voletReplie && deplie} aria-controls="panneau-corps"
+          onClick={() => (voletReplie ? replierPanneau(false) : setDeplie(!deplie))}
         >
-          <span className="visuellement-cache">{panneauReplie ? 'Rouvrir le volet' : deplie ? 'Réduire le volet' : 'Agrandir le volet'}</span>
+          <span className="visuellement-cache">{voletReplie ? 'Rouvrir le volet' : deplie ? 'Réduire le volet' : 'Agrandir le volet'}</span>
         </button>
         <header className="panneau-entete">
           <span className="marque">Atlas électoral</span>
           <a href={lienMethodologie} aria-current={vue.page === 'methodologie' ? 'page' : undefined}
             onClick={(e) => { e.preventDefault(); modifierUrl({ page: 'methodologie' }); setDeplie(true) }}>Méthodologie</a>
           {/* Téléphone : le volet descend jusqu'à une fine barre, pour voir toute la carte. */}
-          <button type="button" className="replier-volet" aria-expanded={!panneauReplie} aria-controls="panneau-corps"
-            onClick={() => replierPanneau(!panneauReplie)}>
-            <span className="visuellement-cache">{panneauReplie ? 'Rouvrir le volet' : 'Replier le volet'}</span>
-            <Chevron ouvert={!panneauReplie} />
+          <button type="button" className="replier-volet" aria-expanded={!voletReplie} aria-controls="panneau-corps"
+            onClick={() => replierPanneau(!voletReplie)}>
+            <span className="visuellement-cache">{voletReplie ? 'Rouvrir le volet' : 'Replier le volet'}</span>
+            <Chevron ouvert={!voletReplie} />
           </button>
         </header>
         <Recherche entrees={entreesRecherche} postaux={postaux} onActiver={activerRecherche} onChoisir={allerA} onChoisirAdresse={choisirAdresse} />
@@ -801,9 +814,6 @@ export default function App() {
               fusion={niveauSerie === 'commune' && index.fusionnees.has(codeSerie)}
             />
           )}
-          {vue.page !== 'methodologie' && etatCarte?.legende && (
-            <Legende description={etatCarte.legende} className="legende-panneau" replie={legendeRepliee} onBasculer={basculerLegende} />
-          )}
           {!chargement && <p className="sources">
             Résultats : ministère de l'Intérieur, via data.gouv.fr. Contours des bureaux : data.gouv.fr (répertoire
             électoral de 2022, indicatifs). Limites administratives : IGN, simplifiées par Etalab (communes au 1er janvier
@@ -813,11 +823,11 @@ export default function App() {
       </aside>
       <main className="zone-carte">
         {/* Ordinateur : languette au bord du panneau, qui le replie (la carte prend toute la largeur) ou le rouvre. */}
-        <button type="button" className="languette" aria-expanded={!panneauReplie} aria-controls="panneau"
-          title={panneauReplie ? 'Déplier le panneau' : 'Replier le panneau'} onClick={() => replierPanneau(!panneauReplie)}>
-          <span className="visuellement-cache">{panneauReplie ? 'Déplier le panneau des résultats' : 'Replier le panneau des résultats'}</span>
+        <button type="button" className="languette" aria-expanded={!voletReplie} aria-controls="panneau"
+          title={voletReplie ? 'Déplier le panneau' : 'Replier le panneau'} onClick={() => replierPanneau(!voletReplie)}>
+          <span className="visuellement-cache">{voletReplie ? 'Déplier le panneau des résultats' : 'Replier le panneau des résultats'}</span>
           <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-            <path d={panneauReplie ? 'M4.5 2.5 8 6l-3.5 3.5' : 'M7.5 2.5 4 6l3.5 3.5'} fill="none" stroke="currentColor"
+            <path d={voletReplie ? 'M4.5 2.5 8 6l-3.5 3.5' : 'M7.5 2.5 4 6l3.5 3.5'} fill="none" stroke="currentColor"
               strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
@@ -844,7 +854,7 @@ export default function App() {
           visite={visite}
           onBureauAdresse={trouverBureau}
           legendeRepliee={legendeRepliee}
-          voletReplie={panneauReplie}
+          voletReplie={voletReplie}
         />
         <Onglets mode={vue.mode} onMode={changerMode} />
         {etatCarte?.legende && (

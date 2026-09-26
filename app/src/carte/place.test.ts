@@ -26,8 +26,8 @@ describe('marges du cadrage', () => {
 
   it('garde le haut de l\'écran au-dessus du volet, sources comprises, et dégage l\'Alsace de la colonne du zoom', () => {
     const telephone = { largeur: 390, hauteur: 844, volet: true, retrait: 12 }
-    expect(marges(tout, telephone, 'france')).toEqual({ top: 72, bottom: 354 + 36, left: 16, right: 32 })
-    expect(marges({ ...tout, voletReplie: true }, telephone, 'france').bottom).toBe(73 + 36)
+    expect(marges(tout, telephone, 'france')).toEqual({ top: 72, bottom: 354 + 36 + 50, left: 16, right: 32 })
+    expect(marges({ ...tout, voletReplie: true }, telephone, 'france').bottom).toBe(73 + 36 + 50)
   })
 
   it('ne réserve rien aux encarts dans le volet : ils s\'ouvrent en plein cadre, par-dessus la carte', () => {
@@ -59,8 +59,8 @@ describe('repli au premier passage', () => {
     expect(repliParDefaut('legende', 1024, false)).toBe(true)
   })
 
-  it('garde la légende dépliée dans le volet, et les encarts repliés', () => {
-    expect(repliParDefaut('legende', 390, true)).toBe(false)
+  it('replie légende et encarts dans le volet : dépliés, ils cacheraient la France', () => {
+    expect(repliParDefaut('legende', 390, true)).toBe(true)
     expect(repliParDefaut('encarts', 820, true)).toBe(true)
   })
 })

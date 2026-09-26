@@ -47,6 +47,7 @@ const ZOOM = 45 + 3            // colonne du zoom, de l'opacité et du bouton de
 const ENCARTS = 258 + 16       // encarts dépliés (barre de défilement comprise)
 const VOLET_REPLIE = 73        // barre du volet réduit : poignée, en-tête et bordure
 const SOURCES_VOLET = 36       // mention des sources, posée sur le haut du volet
+const LEGENDE_VOLET = 50       // légende repliée, au-dessus des sources : une étiquette de 42 px, et 8
 // Dans le volet, la colonne du zoom ne descend pas jusqu'à la Corse : il suffit de dégager la pointe nord de
 // l'Alsace (Lauterbourg), plutôt que de réserver toute la colonne (la métropole perdrait 14 % de sa largeur).
 const COLONNE_VOLET = 32
@@ -61,7 +62,9 @@ const MINIMUM = 160
 export function marges(place: Place, ecran: Ecran, cadre: 'france' | 'territoire'): Marges {
   if (ecran.volet) {
     const volet = place.voletReplie ? VOLET_REPLIE : Math.round(ecran.hauteur * 0.42)
-    const m = { top: ecran.retrait + ONGLETS, bottom: volet + SOURCES_VOLET, left: 16, right: COLONNE_VOLET }
+    const m = { top: ecran.retrait + ONGLETS, bottom: volet + SOURCES_VOLET + LEGENDE_VOLET, left: 16, right: COLONNE_VOLET }
+    // Écran bas : la légende repliée, puis les sources, mordent sur le bas à gauche (l'Espagne, l'Atlantique).
+    if (ecran.hauteur - m.top - m.bottom < MINIMUM) m.bottom = volet + SOURCES_VOLET
     if (ecran.hauteur - m.top - m.bottom < MINIMUM) m.bottom = volet
     return m
   }
@@ -82,9 +85,9 @@ export const memesMarges = (a: Marges, b: Marges) =>
 
 /**
  * Repli au premier passage, selon la largeur de la fenêtre (décision du 26/09) ; ensuite, le choix de chacun est
- * gardé. Sur téléphone et tablette tenue verticalement, la légende est dans le volet : dépliée, elle ne cache rien.
+ * gardé. Dans le volet, la légende est une étiquette au-dessus des sources : dépliée, elle cacherait la France.
  */
 export function repliParDefaut(element: 'legende' | 'encarts', largeur: number, volet: boolean): boolean {
-  if (element === 'legende') return !volet && largeur < 1280
+  if (element === 'legende') return volet || largeur < 1280
   return volet || largeur < 1500
 }

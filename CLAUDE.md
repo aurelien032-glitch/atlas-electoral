@@ -128,8 +128,8 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   seulement (au plus un niveau de zoom au-delà de la métropole entière, signalé par `onEnsemble`), repliés sur
   un bouton de 44 px sous ◐ (le même bouton, replié ou déplié : le focus reste dessus). Ce bouton reste hors de la
   vue d'ensemble et ramène alors à la France entière (Q23). Dans le volet, les encarts s'ouvrent en plein cadre sur
-  la carte (grande grille), le volet réduit à sa barre sans garder ce repli ; il remonte quand on les referme, qu'on
-  revient à la France (encarts alors refermés) ou qu'on choisit un territoire (sa fiche).
+  la carte (grande grille, au-dessus de la légende repliée), le volet réduit à sa barre ; il remonte quand on les
+  referme, qu'on revient à la France (encarts alors refermés) ou qu'on choisit un territoire (sa fiche).
   Collectivités sans contour de circonscription (977, 978, 986, 987, 988) : leurs encarts gardent les communes aux
   législatives. Polynésie : Tahiti et Moorea seulement (note sous les encarts). Wallis-et-Futuna : un seul code de
   résultats (98601) ; carte et index fusionnent ses trois circonscriptions territoriales (`geo.py`), l'encart
@@ -144,10 +144,14 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   est posé sur la carte se resserre comme dans le volet) ; volet en bas (téléphone, tablette tenue verticalement,
   texte centré sur 640 px). Panneau (languette, fine barre du volet), légende et encarts repliables ;
   préférences dans `preferences.ts` (`localStorage`, jamais dans l'URL) ; au premier passage, repli selon la
-  largeur (`repliParDefaut` : légende repliée sous 1 280 px, encarts dépliés dès 1 500 px).
+  largeur (`repliParDefaut` : légende repliée sous 1 280 px et dans le volet, encarts dépliés dès 1 500 px). Dans
+  le volet, la légende est sur la carte, en bas à gauche au-dessus des sources (titre en 14 px, comme les onglets ;
+  décision Q24). Une fenêtre posée sur la carte qui n'y tient pas (encarts, légende dépliée) réduit le volet à sa
+  barre le temps de la lire (`voletReduitPour`, jamais gardé ; seul le repli choisi, `panneauReplie`, l'est).
 - Cadrage : `marges()` de `carte/place.ts` (testé) laisse la place à ce qui est déplié, pour que rien ne cache la
   métropole : légende à gauche, encarts dépliés à droite (métropole entière seulement : zoomée, la carte les
-  masque ; dans le volet, sur une tablette seulement), volet et sources en bas ; faute de place, encarts puis
+  masque ; pas dans le volet, où ils s'ouvrent en plein cadre), volet, sources et légende repliée en bas ; faute
+  de place, encarts puis
   légende se posent sur la carte. Les marges suivent le retrait `--cadre-carte` (24 ou 12 px) ; dans le volet, la
   colonne du zoom ne descend pas jusqu'à la Corse, 32 px suffisent à en dégager l'Alsace. Dans le volet, activer la
   recherche le déplie (suggestions au-dessus du clavier). En vue
