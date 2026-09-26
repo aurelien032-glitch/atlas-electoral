@@ -1,5 +1,5 @@
-import { arrondissementDu, villeDe } from '../donnees/territoires'
-import type { Agregat, Bureau, BureauContour } from '../donnees/types'
+import { arrondissementDu } from '../donnees/territoires'
+import type { Bureau, BureauContour } from '../donnees/types'
 
 /**
  * Au-delà de cette part de leurs inscrits sans contour, les bureaux d'un territoire ont changé de numéro depuis 2022
@@ -31,10 +31,28 @@ export interface Repli {
 }
 
 const territoireDe = (codeBv: string, commune: string) => arrondissementDu(codeBv) ?? commune
+// Paris, Lyon et Marseille : la ville n'est jamais peinte, ses arrondissements le sont.
+const VILLES_DECOUPEES = new Set(['75056', '69123', '13055'])
 
 /** Territoire de chaque contour : calculé une fois, les contours ne changent pas d'un scrutin à l'autre. */
 export const territoiresDesContours = (contours: readonly BureauContour[]): ReadonlyMap<string, string> =>
   new Map(contours.map((c) => [c.code_bv, territoireDe(c.code_bv, c.code_commune)]))
+
+/**
+ * Territoires (communes, arrondissements) qui n'ont aucun contour. Calculé sur tous les territoires, pas sur ceux d'un
+ * scrutin : la couche qui les dessine se filtre sur eux, et changer ce filtre recharge toutes les communes.
+ */
+export function territoiresSansDessin(
+  territoireDuContour: ReadonlyMap<string, string>,
+  territoires: Iterable<{ niveau: string; code: string }>,
+): ReadonlySet<string> {
+  const dessines = new Set(territoireDuContour.values())
+  const codes: string[] = []
+  for (const t of territoires) {
+    if ((t.niveau === 'commune' || t.niveau === 'arrondissement') && !dessines.has(t.code) && !VILLES_DECOUPEES.has(t.code)) codes.push(t.code)
+  }
+  return new Set(codes.sort())
+}
 
 /**
  * Repli d'un scrutin. Les bureaux ne sont fournis que pour une carte au bureau ; `communeDu` donne la commune d'un
@@ -42,17 +60,10 @@ export const territoiresDesContours = (contours: readonly BureauContour[]): Read
  */
 export function repli(
   territoireDuContour: ReadonlyMap<string, string>,
-  agregats: readonly Agregat[],
+  sansDessin: ReadonlySet<string>,
   bureaux: readonly Bureau[] | null,
   communeDu: (codeBv: string) => string,
 ): Repli {
-  const dessines = new Set(territoireDuContour.values())
-  // Paris, Lyon et Marseille : la ville n'est jamais peinte, ses arrondissements le sont.
-  const decoupees = new Set<string>(agregats.filter((a) => a.niveau === 'arrondissement').map((a) => villeDe(a.code)))
-  const sansDessin = new Set(agregats
-    .filter((a) => (a.niveau === 'commune' || a.niveau === 'arrondissement') && !dessines.has(a.code) && !decoupees.has(a.code))
-    .map((a) => a.code))
-
   const parTerritoire = new Map<string, SansContour>()
   for (const b of bureaux ?? []) {
     const territoire = territoireDe(b.code_bv, communeDu(b.code_bv))

@@ -89,7 +89,7 @@ flowchart TB
 | Régler l'opacité des couleurs | Bouton sous le zoom | aucun : préférence gardée par le navigateur | Couleurs des bureaux de 10 à 100 % sur le plan (70 % par défaut) |
 | Replier ou rouvrir le panneau | Languette au bord (panneau à gauche), bouton ▾ du volet ou poignée (volet en bas) | aucun : préférence gardée par le navigateur | Toute la largeur, ou tout l'écran moins la barre du volet ; en vue d'ensemble, la métropole se recadre |
 | Replier la légende | Son titre | aucun : préférence gardée par le navigateur (repliée d'office sous 1 280 px et dans le volet) | En vue d'ensemble, la métropole se recadre dans la place libérée ; repliée, la légende se réduit à son titre. Dans le volet, elle est sur la carte, en bas à gauche au-dessus des sources ; dépliée, elle monte par-dessus la carte, le volet réduit à sa barre si elle n'y tient pas |
-| Déplier ou replier les encarts | Bouton sous ◐ (icône d'encart, nommé au survol), puis leur titre | aucun : préférence gardée par le navigateur (dépliés d'office dès 1 500 px, jamais dans le volet) | En vue d'ensemble, la métropole se décale pour leur laisser la place ; dans le volet, ils couvrent la carte en plein cadre, le volet réduit à sa barre (il remonte quand on les referme) |
+| Ouvrir ou fermer les encarts | Bouton fixe sous ◐ (icône d'encart, nommé au survol), enfoncé quand ils sont ouverts | aucun : préférence gardée par le navigateur (ouverts d'office dès 1 500 px, jamais dans le volet) | Fenêtre sous le bouton ; en vue d'ensemble, la métropole se décale pour lui laisser la place ; dans le volet, ils couvrent la carte en plein cadre à gauche de la colonne, le volet réduit à sa barre (il remonte quand on les referme) et la légende se replie |
 | Revenir à la France entière | Bouton des encarts, hors de la vue d'ensemble (« Revenir à la France entière ») | aucun | Métropole entière ; encarts dépliés sur ordinateur, refermés dans le volet (qui remonte s'il s'était réduit pour eux) |
 | Cliquer un département extrême, un raccourci | Vue nationale | `sel` | Cadrée sur le territoire |
 | Cliquer un territoire | Carte | `sel` ; efface `page` | Immobile (le territoire est à l'écran) |
@@ -128,9 +128,10 @@ flowchart TB
 7. **Les encarts appartiennent à la vue d'ensemble** : au plus un niveau de zoom au-delà de la métropole
    entière, dont le zoom dépend de l'écran. Zoomée sur une région, la carte n'en a plus besoin. Ils montrent la
    petite couronne, les cinq départements et les six collectivités d'outre-mer (la Polynésie par Tahiti et Moorea,
-   dit sous les encarts), défilent dans une fenêtre basse et se replient sur un bouton sous ◐. Ce bouton reste
-   quand la carte est zoomée, pour revenir à la France entière. Dans le volet, ils s'ouvrent en plein cadre sur la
-   carte, le volet réduit à sa barre le temps de les lire ; refermés, la France revient.
+   dit sous les encarts) et défilent dans une fenêtre basse. Leur bouton, fixe sous ◐, reste à sa place ouvert ou
+   fermé, comme ◐ ; il reste aussi quand la carte est zoomée, pour revenir à la France entière. Dans le volet, ils
+   s'ouvrent en plein cadre sur la carte, le volet réduit à sa barre le temps de les lire ; refermés, la France
+   revient. Dans le volet, une seule fenêtre à la fois : ouvrir les encarts replie la légende, et inversement.
 8. **Choisir un territoire montre sa fiche** : sur mobile, le volet se déplie (par la carte, la recherche ou un
    lien partagé) ; replié, le panneau se rouvre (ordinateur comme téléphone). Dans le volet, activer la recherche
    le déplie aussi : le champ monte en haut de l'écran, ses suggestions tiennent au-dessus du clavier.
@@ -195,6 +196,16 @@ flowchart TB
 | Vue nationale, zoom avant puis arrière | Encarts masqués au-delà d'un niveau de zoom, puis de retour |
 | Fiche, ×, Méthodologie, Précédent | Vue nationale ; Méthodologie sans réglages ; retour à la vue nationale |
 | Mobile, `?mode=evolution&sel=commune:69123` | Volet déplié : fil d'Ariane, réglages, puis « Lyon » et l'écart du bloc |
+
+## Style et boutons (26/09, 1 280 × 800 et 375 × 812)
+
+| Parcours | Attendu |
+|---|---|
+| Chaque texte affiché, sur 7 écrans (vue nationale, fiches commune, bureau et secteur, Méthodologie, Évolution, volet) | Tailles de l'échelle seulement, Newsreader pour le titre et les grands chiffres, Source Sans 3 en 400 et 600, deux encres |
+| Bouton des encarts, ouvert puis refermé | Il ne bouge pas (1 212, 174 à 1 280 × 800 ; 319, 222 dans le volet), enfoncé quand la fenêtre est ouverte, focus gardé ; fenêtre sous lui, ou en plein cadre à sa gauche dans le volet |
+| Volet : légende dépliée, encarts, puis légende | Une seule fenêtre à la fois : les encarts replient la légende, la légende referme les encarts |
+| Zoom, ◐, encarts, croix de la fiche | Même famille : 44 px, arrondi 6 px, même bord, survol et état ouvert à la même teinte ; + et − au trait des autres icônes |
+| Tableaux dépliables (nuances, données des courbes) | Même chevron que la légende et les encarts |
 
 ## Repli à la commune et secteurs (26/09, 1 280 × 800)
 

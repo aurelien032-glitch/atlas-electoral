@@ -96,13 +96,13 @@ const STYLE: StyleSpecification = {
     },
     // Au zoom des bureaux, une commune qui n'a aucun contour de bureau (Troyes, Belfort…) reste dessinée, à sa couleur.
     { id: 'communes-repli', type: 'fill', source: 'communes', minzoom: ZOOM_BUREAUX, filter: communesParmi([]), paint: REMPLISSAGE_SUR_PLAN },
-    { id: 'communes-repli-hachures', type: 'fill', source: 'communes', minzoom: ZOOM_BUREAUX, filter: communesParmi([]), paint: HACHURES },
+    { id: 'communes-repli-hachures', type: 'fill', source: 'communes', minzoom: ZOOM_BUREAUX, filter: communesParmi([]), paint: HACHURES, layout: { visibility: 'none' } },
     { id: 'communes', type: 'fill', source: 'communes', maxzoom: ZOOM_BUREAUX, paint: REMPLISSAGE },
-    { id: 'communes-hachures', type: 'fill', source: 'communes', maxzoom: ZOOM_BUREAUX, paint: HACHURES },
+    { id: 'communes-hachures', type: 'fill', source: 'communes', maxzoom: ZOOM_BUREAUX, paint: HACHURES, layout: { visibility: 'none' } },
     { id: 'circonscriptions', type: 'fill', source: 'circonscriptions', maxzoom: ZOOM_BUREAUX, paint: REMPLISSAGE, layout: { visibility: 'none' } },
     { id: 'circonscriptions-hachures', type: 'fill', source: 'circonscriptions', maxzoom: ZOOM_BUREAUX, paint: HACHURES, layout: { visibility: 'none' } },
     { id: 'bureaux', type: 'fill', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: ZOOM_BUREAUX, paint: REMPLISSAGE_SUR_PLAN },
-    { id: 'bureaux-hachures', type: 'fill', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: ZOOM_BUREAUX, paint: HACHURES },
+    { id: 'bureaux-hachures', type: 'fill', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: ZOOM_BUREAUX, paint: HACHURES, layout: { visibility: 'none' } },
     {
       id: 'bureaux-contours', type: 'line', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: 10,
       paint: {
@@ -205,6 +205,11 @@ function cible(selection: Selection): FeatureIdentifier | null {
     commune: 'communes', arrondissement: 'communes', circonscription: 'circonscriptions', departement: 'departements',
   }[selection.niveau]
   return { source, id: selection.code }
+}
+
+const aDesHachures = (etats: ReadonlyMap<string, Etat> | null | undefined) => {
+  for (const etat of etats?.values() ?? []) if (etat.hachure) return true
+  return false
 }
 
 // Couches que l'on survole et que l'on clique.
@@ -474,8 +479,18 @@ export function Carte({
     // Aux législatives, la vue nationale montre les circonscriptions à la place des communes.
     const parCirconscription = (coloriage.circonscriptions?.size ?? 0) > 0
     poser(carte, 'circonscriptions', coloriage.circonscriptions ?? new Map())
-    for (const couche of ['circonscriptions', 'circonscriptions-hachures']) carte.setLayoutProperty(couche, 'visibility', parCirconscription ? 'visible' : 'none')
-    for (const couche of ['communes', 'communes-hachures']) carte.setLayoutProperty(couche, 'visibility', parCirconscription ? 'none' : 'visible')
+    // Hachures : une couche qui lit l'état de ses territoires se recalcule à chaque coloriage, même vide (0,8 s sur un
+    // téléphone pour les communes) ; elle ne s'affiche que si le coloriage en a. L'afficher ou la masquer recharge sa
+    // source : « En tête » et « Participation », qui n'en ont jamais, n'en paient rien.
+    const hachuresCommunes = aDesHachures(communes)
+    const visible = (oui: boolean) => (oui ? 'visible' : 'none')
+    carte.setLayoutProperty('circonscriptions', 'visibility', visible(parCirconscription))
+    carte.setLayoutProperty('circonscriptions-hachures', 'visibility', visible(parCirconscription && aDesHachures(coloriage.circonscriptions)))
+    carte.setLayoutProperty('communes', 'visibility', visible(!parCirconscription))
+    carte.setLayoutProperty('communes-hachures', 'visibility', visible(!parCirconscription && hachuresCommunes))
+    carte.setLayoutProperty('communes-repli-hachures', 'visibility', visible(hachuresCommunes))
+    // Un bureau a ses hachures, ou celles de la commune dont il prend l'état (carte à la commune, repli).
+    carte.setLayoutProperty('bureaux-hachures', 'visibility', visible(aDesHachures(coloriage.bureaux) || hachuresCommunes))
     carte.setLayoutProperty('bureaux-contours', 'visibility', auBureau ? 'visible' : 'none')
     // Retirer des états a pu effacer la sélection : on la remet.
     const surlignee = refSelection.current && cible(refSelection.current)

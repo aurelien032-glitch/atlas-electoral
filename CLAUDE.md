@@ -136,11 +136,14 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
 - Le mode Évolution se lit à la commune : les numéros de bureaux changent d'un scrutin à l'autre.
 - Encarts de la vue nationale (petite couronne, départements et collectivités d'outre-mer) : chemins SVG
   précalculés (`geo/encarts.json`), colorés avec les mêmes états que la carte, affichés dans la vue d'ensemble
-  seulement (au plus un niveau de zoom au-delà de la métropole entière, signalé par `onEnsemble`), repliés sur
-  un bouton de 44 px sous ◐ (le même bouton, replié ou déplié : le focus reste dessus). Ce bouton reste hors de la
-  vue d'ensemble et ramène alors à la France entière (Q23). Dans le volet, les encarts s'ouvrent en plein cadre sur
-  la carte (grande grille, au-dessus de la légende repliée), le volet réduit à sa barre ; il remonte quand on les
-  referme, qu'on revient à la France (encarts alors refermés) ou qu'on choisit un territoire (sa fiche).
+  seulement (au plus un niveau de zoom au-delà de la métropole entière, signalé par `onEnsemble`). Leur bouton de
+  44 px est fixe sous ◐ et se comporte comme lui : ouvert ou fermé, il reste à sa place (enfoncé quand la fenêtre
+  est ouverte) et garde le focus ; la fenêtre, à part, s'ouvre sous lui (à gauche de la colonne sur un téléphone
+  tenu à l'horizontale). Hors de la vue d'ensemble, il ramène à la France entière (Q23). Dans le volet, les encarts
+  s'ouvrent en plein cadre sur la carte, à gauche de la colonne (grande grille, au-dessus de la légende repliée), le
+  volet réduit à sa barre ; il remonte quand on les referme, qu'on revient à la France (encarts alors refermés) ou
+  qu'on choisit un territoire (sa fiche). Une seule fenêtre à la fois dans le volet : ouvrir les encarts replie la
+  légende, et inversement, sans changer les préférences gardées.
   Collectivités sans contour de circonscription (977, 978, 986, 987, 988) : leurs encarts gardent les communes aux
   législatives. Polynésie : Tahiti et Moorea seulement (note sous les encarts). Wallis-et-Futuna : un seul code de
   résultats (98601) ; carte et index fusionnent ses trois circonscriptions territoriales (`geo.py`), l'encart
@@ -190,6 +193,11 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   24, 32 px) ; aucune taille en dur. Newsreader seulement pour le titre de la page et les grands chiffres ;
   Source Sans 3 en 400 et 600 pour tout le reste ; deux encres (`--encre`, `--encre-2`) ; un seul style de
   capitales espacées (`.marque`, `.surtitre`). Noms de personnes à trait d'union insécable (`nomCandidature`).
+- Boutons (décision Q26) : quatre familles. Champs et boutons de 44 px : arrondi 6 px, bord `--bord-champ`, fond
+  `--blanc` dans le panneau, `--surface` sur la carte, survol et état ouvert `--piste`, icônes de 20 px au trait de
+  2 px (zoom compris) ; onglets en pilule ; liens soulignés (`.lien`, 24 px de haut au moins) ; titres dépliants à
+  chevron (légende, encarts au même style, tableaux `.depliant`). Tous dans la police du site (`button { font:
+  inherit }`). Couleurs du CSS en variables ; seules les icônes en `data:` écrivent l'encre en clair.
 - Espacements : grille de 4 px (4, 8, 12, 16, 24, 32 ; aucune autre valeur) ; trois variables font le rythme,
   resserrées sur mobile : `--marge-panneau` (40/24), `--ecart-sections` (24/16), `--cadre-carte` (24/12, retrait
   commun des onglets, du zoom, des encarts et de la légende).

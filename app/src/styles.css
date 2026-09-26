@@ -11,6 +11,10 @@
   --piste: #ece8df;
   --bord-champ: #c9c3b5;
   --alerte: #8a3b12;
+  /* Blanc des champs et des boutons ronds, des traits entre les territoires des encarts. */
+  --blanc: #ffffff;
+  /* Trait des hachures (valeur sans objet) : le même gris que sur la carte (TRAIT_HACHURES, carte/couleurs.ts). */
+  --hachures: #8f8f89;
   /* Newsreader : le titre de la page et les grands chiffres, rien d'autre. Source Sans 3 : tout le reste,
      en deux graisses (400, 600). */
   --titre: 'Newsreader Variable', Georgia, serif;
@@ -34,6 +38,8 @@
 }
 
 * { box-sizing: border-box; }
+/* Tous les boutons dans la police du site, jamais celle du navigateur. */
+button { font: inherit; }
 html, body, #root { margin: 0; height: 100%; }
 
 a, .lien { color: var(--encre); text-decoration: underline; text-underline-offset: 2px; }
@@ -75,7 +81,7 @@ a:hover, .lien:hover { color: var(--encre-2); }
 .champ { display: flex; flex-direction: column; gap: 8px; font-size: var(--t-petit); color: var(--encre-2); }
 .champ select, .champ input {
   font: inherit; font-size: var(--t-texte); color: var(--encre); min-height: 44px; padding: 8px 12px;
-  border: 1px solid var(--bord-champ); border-radius: 6px; background: #fff;
+  border: 1px solid var(--bord-champ); border-radius: 6px; background: var(--blanc);
 }
 
 .recherche { position: relative; padding: 16px var(--marge-panneau) 0; }
@@ -104,7 +110,7 @@ h1, h2, .legende-titre, .infobulle-titre { text-wrap: balance; }
 p, li { text-wrap: pretty; }
 .surtitre-bas { margin: 0; color: var(--encre-2); }
 .circonscriptions, .adresse-recherchee { margin: 0; font-size: var(--t-petit); color: var(--encre-2); }
-.mention { margin-left: 8px; padding: 0 4px; border-radius: 3px; background: var(--piste); font-size: var(--t-note); font-weight: 600; color: var(--encre); }
+.mention { margin-left: 8px; padding: 0 4px; border-radius: 4px; background: var(--piste); font-size: var(--t-note); font-weight: 600; color: var(--encre); }
 .chapo { margin: 0; font-size: var(--t-chapo); line-height: 1.45; }
 .complement { margin: 0; font-weight: 600; }
 
@@ -149,9 +155,11 @@ p, li { text-wrap: pretty; }
 .ariane ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: var(--t-petit); color: var(--encre-2); }
 .ariane li + li::before { content: '›'; margin-right: 8px; }
 .ariane [aria-current] { color: var(--encre); }
+/* Liens du fil d'Ariane et des circonscriptions : 24 px de haut au moins, la cible minimale au doigt. */
+.ariane .lien, .circonscriptions .lien { display: inline-flex; align-items: center; min-height: 24px; }
 .fermer {
   flex: none; width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer;
-  color: var(--encre); background: #fff; border: 1px solid var(--bord-champ); border-radius: 22px;
+  color: var(--encre); background: var(--blanc); border: 1px solid var(--bord-champ); border-radius: 6px;
 }
 
 /* Au fil des scrutins : courbes en SVG (traits de 2 px, repères en filet), doublées d'un tableau. */
@@ -180,7 +188,18 @@ p, li { text-wrap: pretty; }
 .bulle-courbe strong { min-width: 46px; text-align: right; font-variant-numeric: tabular-nums; }
 .bulle-courbe li > span:last-child { color: var(--encre-2); }
 /* Tableaux dépliables : données des courbes, nuances des candidatures. */
-.depliant summary { cursor: pointer; font-size: var(--t-petit); padding: 8px 0; }
+.depliant summary {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; list-style: none;
+  cursor: pointer; font-size: var(--t-petit); padding: 8px 0;
+}
+.depliant summary::-webkit-details-marker { display: none; }
+/* Même chevron que les autres éléments repliables, à l'encre secondaire (--encre-2, écrite en clair dans l'image) :
+   vers la droite fermé, vers le bas ouvert. */
+.depliant summary::after {
+  content: ''; flex: none; width: 12px; height: 12px; transform: rotate(-90deg); transition: transform 150ms ease-out;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%2357534a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / 12px 12px;
+}
+.depliant[open] > summary::after { transform: none; }
 .depliant .note-bas { margin-top: 8px; }
 .defilement { overflow-x: auto; }
 .depliant table { border-collapse: collapse; font-size: var(--t-petit); }
@@ -215,11 +234,27 @@ p, li { text-wrap: pretty; }
   border: 0; border-radius: 999px; background: transparent; color: var(--encre);
 }
 .onglets button[aria-pressed='true'] { background: var(--encre); color: var(--surface); }
+.onglets button:not([aria-pressed='true']):hover { background: var(--surface); }
 
 .zone-carte .maplibregl-ctrl-top-right { top: var(--haut-controles); right: var(--cadre-carte); }
 .zone-carte .maplibregl-ctrl-top-right .maplibregl-ctrl { margin: 0; }
+.zone-carte .maplibregl-ctrl-bottom-right .maplibregl-ctrl { margin: 0 var(--cadre-carte) 8px 0; }
 .zone-carte .maplibregl-ctrl-group { border-radius: 6px; box-shadow: none; border: 1px solid var(--bord-champ); background: var(--surface); }
 .zone-carte .maplibregl-ctrl-group button { width: 44px; height: 44px; }
+.zone-carte .maplibregl-ctrl-group button + button { border-top-color: var(--filet); }
+/* Icônes du zoom au trait des nôtres (20 px, 2 px, bouts ronds), à l'encre du site (--encre, écrite en clair : une
+   image ne lit pas les variables). */
+.zone-carte .maplibregl-ctrl button .maplibregl-ctrl-icon { background-size: 20px 20px; }
+.zone-carte .maplibregl-ctrl button.maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 5v14M5 12h14' fill='none' stroke='%231b1a17' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+.zone-carte .maplibregl-ctrl button.maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12h14' fill='none' stroke='%231b1a17' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+/* Survol des boutons de 44 px, sur la carte et dans la fiche : la teinte de leur état ouvert. */
+.fermer:hover, .opacite-bouton:hover, .languette:hover, .encarts-bouton:hover,
+.zone-carte .maplibregl-ctrl-group button:not(:disabled):hover { background-color: var(--piste); }
+.zone-carte .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button { background-color: var(--piste); }
 /* Mention des sources de la carte : dans la police du site, pas celle de MapLibre. */
 .zone-carte .maplibregl-ctrl-attrib { font: var(--t-note)/1.5 var(--texte); color: var(--encre-2); }
 .zone-carte .maplibregl-ctrl-attrib a { color: var(--encre-2); text-decoration: underline; }
@@ -246,17 +281,24 @@ p, li { text-wrap: pretty; }
 
 .legende {
   display: flex; flex-direction: column; gap: 8px;
-  padding: 16px; background: var(--surface); border: 1px solid var(--filet); border-radius: 8px; font-size: var(--t-petit); line-height: 1.4;
+  --legende-v: 16px; --legende-h: 16px;
+  padding: var(--legende-v) var(--legende-h); background: var(--surface); border: 1px solid var(--filet); border-radius: 8px;
+  font-size: var(--t-petit); line-height: 1.4;
 }
 .legende-carte { position: absolute; left: var(--cadre-carte); bottom: var(--cadre-carte); z-index: 2; width: 270px; max-height: calc(100% - 120px); overflow-y: auto; }
 /* Repliée, elle se réduit à son titre : la mention des sources, en bas à droite, garde sa place. */
 .legende-carte[data-replie='true'] { width: auto; max-width: 270px; }
-.legende-titre { margin: 0; font-size: var(--t-texte); font-weight: 600; }
-/* Le titre replie la légende : il reste visible, pour dire ce que montre la carte. */
+.legende-titre { display: flex; margin: 0; font-size: var(--t-texte); font-weight: 600; }
+/* Le titre replie la légende : il reste visible, pour dire ce que montre la carte. Il se touche jusqu'aux bords de la
+   légende (repliée, sur toute l'étiquette), par des marges négatives qui ne déplacent rien. */
 .legende-titre button {
-  display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; min-height: 24px;
-  padding: 0; font: inherit; color: var(--encre); text-align: left; background: none; border: 0; cursor: pointer;
+  display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 24px;
+  width: calc(100% + 2 * var(--legende-h));
+  margin: calc(-1 * var(--legende-v)) calc(-1 * var(--legende-h)) -8px;
+  padding: var(--legende-v) var(--legende-h) 8px;
+  font: inherit; color: var(--encre); text-align: left; background: none; border: 0; cursor: pointer;
 }
+.legende[data-replie='true'] .legende-titre button { margin-bottom: calc(-1 * var(--legende-v)); padding-bottom: var(--legende-v); }
 .legende-corps { display: flex; flex-direction: column; gap: 8px; }
 .chevron { flex: none; color: var(--encre-2); transition: transform 150ms ease-out; }
 .chevron[data-ouvert='false'] { transform: rotate(-90deg); }
@@ -268,7 +310,7 @@ p, li { text-wrap: pretty; }
 .pastille { flex: none; width: 14px; height: 14px; border-radius: 2px; }
 .pastille.vide { background: var(--papier); box-shadow: inset 0 0 0 1px var(--bord-champ); }
 .pastille.hachuree {
-  background: repeating-linear-gradient(135deg, #8f8f89 0 1.5px, var(--papier) 1.5px 5px);
+  background: repeating-linear-gradient(135deg, var(--hachures) 0 1.5px, var(--papier) 1.5px 5px);
   box-shadow: inset 0 0 0 1px var(--bord-champ);
 }
 
@@ -307,22 +349,23 @@ p, li { text-wrap: pretty; }
   :root { --cadre-carte: 12px; --haut-controles: 72px; }
   .onglets { max-width: calc(100% - 2 * var(--cadre-carte)); overflow-x: auto; }
   .onglets button { flex: none; }
-  .encarts[data-replies='false'] { top: 72px; right: calc(var(--cadre-carte) + 45px + 8px); max-height: calc(100% - 72px - 42px); }
+  .encarts { top: var(--haut-controles); right: calc(var(--cadre-carte) + 45px + 8px); max-height: calc(100% - var(--haut-controles) - 40px); }
 }
 
 /* Volet : la carte occupe l'écran, le panneau devient un volet en bas. */
 @media (width < 568px), (width < 1024px) and (orientation: portrait) {
-  :root { --marge-panneau: 24px; --ecart-sections: 16px; --cadre-carte: 12px; --haut-controles: 72px; }
+  /* Volet réduit : poignée (28 px), en-tête (44 px) et bordure ; la même hauteur que dans carte/place.ts. */
+  :root { --marge-panneau: 24px; --ecart-sections: 16px; --cadre-carte: 12px; --haut-controles: 72px; --volet-replie: 73px; }
   .atlas { display: block; }
   .zone-carte { position: fixed; inset: 0; }
   .onglets { max-width: calc(100% - 2 * var(--cadre-carte)); overflow-x: auto; }
   .onglets button { flex: none; padding: 0 12px; font-size: var(--t-petit); }
   /* Légende sur la carte, en bas à gauche, juste au-dessus des sources posées sur le volet (carte/place.ts lui
      laisse 50 px) : repliée, une étiquette ; dépliée, elle monte par-dessus la carte, jusque sous les onglets. */
-  .legende-carte { bottom: calc(42dvh + 42px); padding: 8px 12px; max-height: calc(58dvh - 42px - 80px); }
+  .legende-carte { --legende-v: 8px; --legende-h: 12px; bottom: calc(42dvh + 40px); max-height: calc(58dvh - 40px - 80px); }
   /* Titre à la taille des onglets, posés sur la même carte. */
   .legende-carte .legende-titre { font-size: var(--t-petit); }
-  .panneau[data-replie='true'] ~ .zone-carte .legende-carte { bottom: calc(73px + 42px); max-height: calc(100dvh - 73px - 42px - 80px); }
+  .panneau[data-replie='true'] ~ .zone-carte .legende-carte { bottom: calc(var(--volet-replie) + 40px); max-height: calc(100dvh - var(--volet-replie) - 40px - 80px); }
   .panneau {
     /* Hauteur fixe : un volet qui grandirait à l'arrivée des chiffres déplacerait tout (CLS). */
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; height: 42dvh;
@@ -330,15 +373,14 @@ p, li { text-wrap: pretty; }
     box-shadow: 0 -6px 24px rgba(27, 26, 23, 0.08); transition: height 200ms ease-out;
   }
   .panneau[data-deplie='true'] { height: 88dvh; }
-  /* Réduit : poignée (28 px), en-tête (44 px) et bordure ; la même hauteur que dans carte/place.ts. */
-  .panneau[data-replie='true'] { height: 73px; }
+  .panneau[data-replie='true'] { height: var(--volet-replie); }
   .panneau[data-replie='true'] > :not(.poignee):not(.panneau-entete) { display: none; }
   .panneau-entete a { margin-left: auto; min-height: 44px; }
   /* Sources de la carte posées sur le volet, qui couvre le bas de la carte (déplié, il les couvre aussi) ; à gauche,
      loin de la colonne du zoom. */
   .zone-carte .maplibregl-ctrl-bottom-right { bottom: 42dvh; left: 0; right: auto; transition: bottom 200ms ease-out; }
-  .zone-carte .maplibregl-ctrl-bottom-right .maplibregl-ctrl { float: left; margin: 0 0 10px 10px; }
-  .panneau[data-replie='true'] ~ .zone-carte .maplibregl-ctrl-bottom-right { bottom: 73px; }
+  .zone-carte .maplibregl-ctrl-bottom-right .maplibregl-ctrl { float: left; margin: 0 0 8px var(--cadre-carte); }
+  .panneau[data-replie='true'] ~ .zone-carte .maplibregl-ctrl-bottom-right { bottom: var(--volet-replie); }
   .replier-volet {
     display: grid; place-items: center; flex: none; width: 44px; height: 44px; margin-right: -12px; padding: 0;
     color: var(--encre); background: none; border: 0; cursor: pointer;
@@ -366,7 +408,7 @@ p, li { text-wrap: pretty; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .panneau, .zone-carte .maplibregl-ctrl-bottom-right { transition: none; }
+  .panneau, .zone-carte .maplibregl-ctrl-bottom-right, .chevron, .depliant summary::after { transition: none; }
 }
 
 /* Page Méthodologie, dans le panneau : la carte reste visible. */
@@ -384,46 +426,48 @@ p, li { text-wrap: pretty; }
 .depliant code { font-size: var(--t-note); word-break: break-all; }
 .panneau-entete a[aria-current='page'] { text-decoration-thickness: 2px; }
 
-/* Encarts de la vue nationale : petite couronne, départements et collectivités d'outre-mer, sous les boutons de
-   zoom et d'opacité. Repliés, un bouton comme celui de l'opacité, qui reste hors de la vue d'ensemble pour ramener
-   à la France entière ; dépliés, leur titre les replie, la carte leur laisse leur largeur (carte/place.ts) et, dans
-   une fenêtre basse, ils défilent. Dans le volet, ils s'ouvrent en plein cadre sur la carte, au-dessus du volet. */
-.encarts {
-  position: absolute; top: calc(var(--haut-controles) + 90px + 8px + 44px + 8px); right: var(--cadre-carte); z-index: 2;
-  display: flex; flex-direction: column; gap: 8px; padding: 8px; overflow-y: auto;
-  /* Jusqu'au-dessus de la mention des sources (24 px, à 10 px du bas), à 8 px d'elle. */
-  max-height: calc(100% - var(--haut-controles) - 150px - 42px);
-  background: var(--surface); border: 1px solid var(--filet); border-radius: 8px;
-}
-.encarts-titre {
-  display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 24px; padding: 0;
-  font-family: inherit; text-align: left; background: none; border: 0; cursor: pointer;
-}
-.encarts[data-replies='true'] { padding: 0; background: none; border: 0; }
-.encarts[data-replies='true'] .encarts-titre {
-  justify-content: center; width: 44px; height: 44px;
+/* Encarts de la vue nationale : petite couronne, départements et collectivités d'outre-mer. Leur bouton est fixe,
+   sous ceux du zoom et de l'opacité, et se comporte comme celui de l'opacité : ouvert ou fermé, il reste à sa place,
+   enfoncé quand la fenêtre est ouverte ; hors de la vue d'ensemble, il ramène à la France entière. La fenêtre s'ouvre
+   sous lui ; la carte lui laisse sa largeur (carte/place.ts) et, basse, elle défile. Dans le volet, elle couvre la
+   carte en plein cadre, à gauche de la colonne du zoom et au-dessus du volet. */
+.encarts-bouton {
+  position: absolute; top: calc(var(--haut-controles) + 90px + 8px + 44px + 8px); right: var(--cadre-carte); z-index: 3;
+  width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer;
   color: var(--encre); background: var(--surface); border: 1px solid var(--bord-champ); border-radius: 6px;
 }
+.encarts-bouton[aria-expanded='true'] { background: var(--piste); }
+.encarts {
+  position: absolute; top: calc(var(--haut-controles) + 90px + 8px + 44px + 8px + 44px + 8px); right: var(--cadre-carte); z-index: 2;
+  display: flex; flex-direction: column; gap: 8px; padding: 8px; overflow-y: auto;
+  /* Jusqu'au-dessus de la mention des sources (24 px, à 8 px du bas), à 8 px d'elle. */
+  max-height: calc(100% - var(--haut-controles) - 202px - 40px);
+  background: var(--surface); border: 1px solid var(--filet); border-radius: 8px;
+}
+/* Titre au style de celui de la légende, l'autre fenêtre posée sur la carte. */
+.encarts-titre { flex: none; margin: 0; font-size: var(--t-texte); font-weight: 600; color: var(--encre); }
 .encarts-grille { display: grid; grid-template-columns: repeat(3, 70px); gap: 8px; align-items: start; }
 .encarts-grille figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
 .encarts-grille figure:first-child { grid-column: 1 / -1; }
 .encarts-grille svg { display: block; background: var(--papier); border-radius: 4px; }
-.encarts-grille .forme { stroke: #fff; stroke-width: 0.4; cursor: pointer; }
+.encarts-grille .forme { stroke: var(--blanc); stroke-width: 0.4; cursor: pointer; }
 .encarts-grille .forme:hover { stroke: var(--encre); stroke-width: 1; }
 .encarts-grille figcaption .lien { min-height: 24px; font-size: var(--t-note); line-height: 1.3; color: var(--encre-2); }
 .encarts-note { grid-column: 1 / -1; margin: 0; font-size: var(--t-note); color: var(--encre-2); }
-/* Dans le volet : dépliés, ils couvrent toute la carte au-dessus du volet (sous les onglets, à gauche de la
-   colonne du zoom, au-dessus de la légende repliée et des sources, 92 px), vignettes agrandies ; leurs chemins
-   suivent, ils ont un viewBox. Refermés, la France revient. */
+/* Dans le volet : la fenêtre couvre toute la carte au-dessus du volet (sous les onglets, à gauche de la colonne du
+   zoom, dont le bouton reste visible, et au-dessus de la légende repliée et des sources, 90 px), vignettes agrandies ;
+   leurs chemins suivent, ils ont un viewBox. Refermée, la France revient. */
 @media (width < 568px), (width < 1024px) and (orientation: portrait) {
-  .encarts[data-replies='false'] {
-    top: 72px; left: var(--cadre-carte); right: calc(var(--cadre-carte) + 45px + 8px); bottom: calc(42dvh + 92px);
+  .encarts {
+    top: var(--haut-controles); left: var(--cadre-carte); right: calc(var(--cadre-carte) + 45px + 8px); bottom: calc(42dvh + 90px);
     max-height: none; gap: 12px; padding: 12px;
   }
-  .panneau[data-replie='true'] ~ .zone-carte .encarts[data-replies='false'] { bottom: calc(73px + 92px); }
-  .encarts[data-replies='false'] .encarts-grille { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 12px; }
-  .encarts[data-replies='false'] .encarts-grille svg { width: 100%; height: auto; }
-  .encarts[data-replies='false'] .encarts-grille figure:first-child svg { max-height: 180px; }
+  .panneau[data-replie='true'] ~ .zone-carte .encarts { bottom: calc(var(--volet-replie) + 90px); }
+  /* Titre à la taille de celui de la légende dans le volet. */
+  .encarts-titre { font-size: var(--t-petit); }
+  .encarts .encarts-grille { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 12px; }
+  .encarts .encarts-grille svg { width: 100%; height: auto; }
+  .encarts .encarts-grille figure:first-child svg { max-height: 180px; }
 }
 
 /* Raccourcis vers l'outre-mer et les Français de l'étranger, sous l'aperçu. */

@@ -735,6 +735,18 @@ les deux limites restantes : le téléphone tenu à l'horizontale prend le panne
 métropole passe de 168 à 253 px à 667 × 375 ; en volet, la carte n'avait que 146 px de haut), et dans le volet, la
 métropole se décale de 16 px pour dégager la pointe de l'Alsace de la colonne du zoom.
 
+**Style vérifié le 26/09** (« vérifier cohérence du style ui », « attention au style de tous les boutons ») : taille,
+graisse, police et couleur de chaque texte affiché sur 7 écrans, ordinateur et téléphone ; inventaire de chaque
+bouton. La typographie tenait déjà partout (6 tailles, deux polices dans leurs rôles, deux encres). Corrigé (Q26) :
+quatre couleurs en dur passées en variables (`--blanc`, `--hachures`), une marge de 10 px et un arrondi de 3 px
+remis sur leurs échelles, liens du fil d'Ariane portés à 24 px, titres de la légende et des encarts cliquables
+jusqu'aux bords de leur cadre ; boutons de 44 px d'une même famille (croix de la fiche carrée comme les autres,
+survol et état ouvert à la même teinte, + et − du zoom redessinés au trait des autres icônes, séparateur au filet du
+site), boutons dans la police du site, titres des deux fenêtres de la carte au même style, chevron des tableaux
+dépliables pareil aux autres. Signalé par l'utilisateur : le bouton des encarts disparaissait à l'ouverture (il
+devenait le titre de la fenêtre, en haut à gauche dans le volet) ; il est désormais fixe sous ◐, comme lui, et la
+fenêtre porte son propre titre. Dans le volet, une seule fenêtre à la fois (légende ou encarts).
+
 **Direction A codée le 24/09** (`app/`) :
 - panneau éditorial à gauche (volet en bas sur mobile), onglets de mode et légende posés sur la carte, infobulle au survol ;
 - modes **Tête**, **Score** (candidature ou bloc), **Participation** et **Évolution** (bloc, scrutin de départ, scrutin d'arrivée) ; l'état complet est dans l'URL (`?scrutin=…&mode=…&cible=…&bloc=…&de=…&sel=…`) ;
@@ -764,7 +776,7 @@ il reste, pour ouvrir au public :
 
 | Exigence P0 | État | Reste à faire |
 |---|---|---|
-| 1. Scrutins et carte | **Fait** : 56 tours, modes Tête, Score, Participation (et Évolution), France → commune → bureau | Mesurer le recoloriage (moins d'une seconde) sur le site en ligne |
+| 1. Scrutins et carte | **Fait** : 56 tours, modes Tête, Score, Participation (et Évolution), France → commune → bureau. **Recoloriage mesuré le 26/09** sur le site en ligne (changement de mode en vue nationale) : 0,5 à 0,95 s sur un ordinateur portable (carte graphique Intel UHD 630) ; 2,4 à 3,2 s sur téléphone émulé (processeur ralenti 4 fois), dont environ 2 s de rendu : MapLibre recalcule, pour chacune des 35 000 communes, chaque couche qui lit son état (couleur, hachures, sélection) ; la couche des hachures, même vide, en coûte 0,8 s. **Allégé le même jour (Q26)** : les couches de hachures ne s'affichent que si le coloriage en a (« En tête » et « Participation » n'en ont jamais) ; rendu de 1,4 à 1,7 s au lieu de 2 à 2,4 s, total de 1,9 à 2,8 s (build de production local, téléphone émulé). Au zoom des bureaux (70 000 états), 5 à 9 s en développement sur téléphone émulé | Recoloriage sur téléphone encore au-dessus d'une seconde (calcul React 0,3 à 1,2 s, rendu 1,4 à 1,7 s) ; zoom des bureaux |
 | 1. Bureaux sans contour | **Fait le 26/09** (Q25) : au zoom des bureaux, la carte montre la commune là où les contours manquent (Troyes, Belfort…) ou ne désignent plus les bureaux du scrutin (Bordeaux et Paris Centre en 2024) ; la légende donne la part des inscrits concernés, la fiche le nombre de bureaux | Contours locaux plus récents (P1) |
 | 1. Paris, Lyon, Marseille | **Fait le 24/09** ([étude](etude-paris-lyon-marseille.md), Q15) : niveau « arrondissement » des agrégats, tiré des numéros de bureau (règle vérifiée sur les 56 tours ; contrôle : 20, 9 et 16 arrondissements au plus, couvrant la ville à 0,5 % près) ; sur la carte, les arrondissements, dessinés par-dessus leur ville, portent leurs résultats (encart parisien compris) ; fiche, fil d'Ariane, historique, recherche (nom, code postal) ; aux municipales par secteur (2008-2020), chaque arrondissement montre les listes de son secteur et la ville n'a plus de liste « en tête » ; **le 26/09**, un arrondissement d'un secteur de plusieurs arrondissements (Marseille, Paris Centre en 2020) se compare au secteur entier, nommé dans la fiche | — |
 | 2. Panneau territoire | **Fait le 24/09** : participation, barres triées ; sous chaque candidature, sa nuance officielle (ou « attribuée ») et son bloc ; tableau dépliable « Nuances, familles et blocs » avec les libellés | — |
@@ -849,6 +861,7 @@ Calendrier indicatif, à ajuster selon le temps disponible :
 | Q23 | Encarts sur petit écran (« on ne voit pas bien la fenêtre petite couronne et outre-mer », « l'icône doit rester pour revenir à la carte France métropolitaine ») | **Tranché et réalisé le 26/09** : leur bouton reste quand la carte est zoomée et ramène à la France entière. Dans le volet (téléphone, petite fenêtre, tablette tenue verticalement), les encarts s'ouvrent en plein cadre sur la carte, en grande grille, le volet réduit à sa barre le temps de les lire (d'abord mis dans le panneau, puis replacés sur la carte à la demande de l'utilisateur : « pourquoi dans le panneau du bas ? ») | — |
 | Q24 | Légende sur petit écran (« la légende dans le panneau ce n'est pas pratique ») | **Tranché et réalisé le 26/09** : sur la carte, en bas à gauche, au-dessus des sources posées sur le volet ; repliée d'office en étiquette (titre en 14 px, comme les onglets) ; dépliée, elle monte par-dessus la carte, le volet réduit à sa barre si elle n'y tient pas | — |
 | Q25 | Bureaux sans contour : chercher des contours plus récents (« ça doit exister sur le web ») | **Tranché et réalisé le 26/09** : aucun contour national plus récent (Etalab ne met plus à jour les siens, table de l'Insee quinquennale, vérifié sur data.gouv.fr, le serveur d'Etalab, l'Insee, l'IGN et GitHub). La carte montre la commune là où les contours manquent ou ne désignent plus les bureaux du scrutin (plus de la moitié des inscrits d'un territoire sans contour) ; compléments locaux après l'ouverture (Bordeaux Métropole d'abord) | P1 |
+| Q26 | Style de l'interface et des boutons (« vérifier cohérence du style ui », « attention au style de tous les boutons », « ce bouton disparaît à l'activation ») ; recoloriage sur téléphone | **Tranché et réalisé le 26/09** : tout corriger (couleurs en variables, grille, cibles tactiles, une famille de boutons de 44 px, bouton des encarts fixe comme ◐) ; gains faciles sur le recoloriage tout de suite (hachures masquées quand elles sont vides), le reste après l'ouverture | P1 (recoloriage) |
 | Q6 | Publication de nos données sur data.gouv | **Tranché** : plus tard | P2 |
 
 ## 16. Outillage Claude : skills, plugins, connecteurs

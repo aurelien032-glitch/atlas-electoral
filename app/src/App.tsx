@@ -10,7 +10,7 @@ import { Legende, type DescriptionLegende } from './carte/Legende'
 import { ReglageOpacite } from './carte/Opacite'
 import { Onglets } from './carte/Onglets'
 import { enVolet, FRANCE_METROPOLITAINE, repliParDefaut } from './carte/place'
-import { repli, territoiresDesContours, type Repli } from './carte/repli'
+import { repli, territoiresDesContours, territoiresSansDessin, type Repli } from './carte/repli'
 
 import { blocEnTete, optionsCibles, retenueDuBloc } from './cibles'
 import { nomCandidature } from './donnees/libelles'
@@ -213,6 +213,13 @@ export default function App() {
     garderRepli('panneau', replie)
     if (!replie) setVoletReduitPour(new Set())
   }, [])
+  // Encarts repliés sur leur bouton, sauf sur grand écran : dépliés, ils prennent à la métropole 300 px de large.
+  // Dans le volet, ils s'ouvrent en plein cadre sur la carte, au-dessus du volet (décision Q23).
+  const [encartsReplies, setEncartsReplies] = useState(() => repliGarde('encarts', repliParDefaut('encarts', window.innerWidth, enVolet())))
+  const replierEncarts = useCallback((replies: boolean) => {
+    setEncartsReplies(replies)
+    garderRepli('encarts', replies)
+  }, [])
   const [legendeRepliee, setLegendeRepliee] = useState(() => repliGarde('legende', repliParDefaut('legende', window.innerWidth, enVolet())))
   const basculerLegende = useCallback(() => {
     setLegendeRepliee(!legendeRepliee)
@@ -221,21 +228,19 @@ export default function App() {
       rendreVolet('legende')
       return
     }
-    // Dépliée dans le volet (le rendu du clic est fait au tour suivant) : si elle ne tient pas au-dessus de lui, il
-    // se réduit le temps de la lire.
     if (!enVolet()) return
+    // Dans le volet, une seule fenêtre à la fois sur la carte : la légende referme les encarts (sans changer la
+    // préférence gardée). Dépliée (le rendu du clic est fait au tour suivant), si elle ne tient pas au-dessus du
+    // volet, il se réduit le temps de la lire.
+    if (!encartsReplies) {
+      setEncartsReplies(true)
+      rendreVolet('encarts')
+    }
     setTimeout(() => {
       const legende = document.querySelector('.legende-carte')
       if (legende && legende.scrollHeight > legende.clientHeight + 1) reduireVolet('legende')
     }, 0)
-  }, [legendeRepliee, reduireVolet, rendreVolet])
-  // Encarts repliés sur leur bouton, sauf sur grand écran : dépliés, ils prennent à la métropole 300 px de large.
-  // Dans le volet, ils s'ouvrent en plein cadre sur la carte, au-dessus du volet (décision Q23).
-  const [encartsReplies, setEncartsReplies] = useState(() => repliGarde('encarts', repliParDefaut('encarts', window.innerWidth, enVolet())))
-  const replierEncarts = useCallback((replies: boolean) => {
-    setEncartsReplies(replies)
-    garderRepli('encarts', replies)
-  }, [])
+  }, [legendeRepliee, encartsReplies, reduireVolet, rendreVolet])
 
   const catalogue = useCatalogue()
   const scrutins = useMemo(() => catalogue.data?.scrutins ?? [], [catalogue.data])
@@ -295,11 +300,15 @@ export default function App() {
   // Faute de contour de bureau, la carte montre la commune : villes absentes des contours de 2022, bureaux créés ou
   // renumérotés depuis (décision du 26/09).
   const territoireDuContour = useMemo(() => contours.data && territoiresDesContours(contours.data), [contours.data])
+  const sansDessin = useMemo(
+    () => territoireDuContour && territoiresSansDessin(territoireDuContour, index.territoires.values()),
+    [territoireDuContour, index.territoires],
+  )
   const repliCarte = useMemo(
-    () => territoireDuContour && agregats.data
-      ? repli(territoireDuContour, agregats.data, carteAuBureau ? bureaux.data ?? null : null, (code) => communeDu(code, index.passage))
+    () => territoireDuContour && sansDessin
+      ? repli(territoireDuContour, sansDessin, carteAuBureau ? bureaux.data ?? null : null, (code) => communeDu(code, index.passage))
       : null,
-    [territoireDuContour, agregats.data, carteAuBureau, bureaux.data, index.passage],
+    [territoireDuContour, sansDessin, carteAuBureau, bureaux.data, index.passage],
   )
   // Municipales jusqu'en 2020 : dans les petites communes, on vote pour des personnes (panachage). Leurs
   // candidats sont publiés à part, un fichier par département, chargé à l'ouverture de la fiche.
@@ -625,9 +634,17 @@ export default function App() {
     }
     replierEncarts(!encartsReplies)
     if (!volet) return
-    if (encartsReplies) reduireVolet('encarts')
-    else rendreVolet('encarts')
-  }, [encartsReplies, cadrer, replierEncarts, reduireVolet, rendreVolet])
+    if (!encartsReplies) {
+      rendreVolet('encarts')
+      return
+    }
+    reduireVolet('encarts')
+    // Une seule fenêtre à la fois sur la carte : les encarts referment la légende (sans changer la préférence gardée).
+    if (!legendeRepliee) {
+      setLegendeRepliee(true)
+      rendreVolet('legende')
+    }
+  }, [encartsReplies, legendeRepliee, cadrer, replierEncarts, reduireVolet, rendreVolet])
   // Territoire choisi dans les encarts : dans le volet, ils se referment et le volet remonte avec sa fiche.
   const choisirEncart = useCallback((s: Selection) => {
     actions.territoire(s)
