@@ -223,7 +223,7 @@ flowchart TB
 | `?scrutin=2024_legi_t1&sel=commune:31555`, puis `35238` | Toulouse par son découpage de 2024 (bureaux à lettre, « 190A ») ; Rennes : fiche « découpage en vigueur (Rennes Métropole, ODbL) », attribution « Rennes Métropole (ODbL) » |
 | `?scrutin=2024_legi_t1&sel=commune:10387` | Troyes peinte par son contour détaillé (et non plus un polygone de dix points) ; survol au centre : « Troyes » |
 | `?scrutin=2026_muni_t1` (vue nationale), puis zoom au-delà de 7 | Aucun contour local ni de commune téléchargé avant le zoom 7 ; ensuite `correctifs_bureaux.geojson`, `correctifs_bureaux_odbl.geojson` et `communes_sans_contour.geojson` |
-| `?page=methodologie` | Sources : les quatorze découpages locaux, lus dans les fichiers publiés (auteur, découpage, licence, territoires, année) |
+| `?page=methodologie` | Sources : les quinze découpages locaux, lus dans les fichiers publiés (auteur, découpage, licence, territoires, année) |
 | Légende en 2022 (au bureau), en 2017 (à la commune), en Évolution | « il en manque pour 0,4 % des inscrits de métropole » ; « ne couvrent que 98,9 % » ; pas de note |
 | `?scrutin=2020_muni_t1&sel=arrondissement:13207`, puis `75102` | Colonne « 1er secteur » (1er et 7e arrondissements), puis « Paris Centre » ; une note nomme les arrondissements du secteur |
 

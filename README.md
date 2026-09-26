@@ -30,7 +30,7 @@ cd ../app && npm install && npm run dev
 - Résultats : ministère de l'Intérieur, jeu « Données des élections agrégées » sur data.gouv.fr
 - Contours des bureaux de vote : « Proposition de contours des bureaux de vote », data.gouv.fr (2022, indicatifs) ;
   découpages locaux publiés par les collectivités (Bordeaux Métropole, Ville de Paris, Toulouse Métropole, Nantes,
-  Strasbourg, Lyon, Caen, Saint-Nazaire agglo, Orléans Métropole, Brest métropole, Rennes Métropole) et contours « selon
+  Strasbourg, Lyon, Caen, Saint-Nazaire agglo, Orléans Métropole, La Rochelle, Brest métropole, Rennes Métropole) et contours « selon
   la méthode de l'Insee » de Cédric Rossi (Alès et cinq communes aux contours de 2022 erronés) ; contour détaillé des
   communes sans contour de bureau : API Découpage administratif (geo.api.gouv.fr)
 - Contours administratifs : IGN (ADMIN EXPRESS), versions simplifiées publiées par Etalab

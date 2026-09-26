@@ -24,6 +24,8 @@ Usage, depuis le dossier pipeline/ :
 """
 from __future__ import annotations
 
+import csv
+import io
 import json
 import math
 import re
@@ -163,6 +165,16 @@ def geojson(url: str, modifie: str | None = None) -> Callable[[], tuple[list[dic
     return lambda: (lire(url)["features"], modifie)
 
 
+def csv_geojson(url: str, colonne: str = "geojson") -> Callable[[], tuple[list[dict], str | None]]:
+    """CSV dont une colonne porte la géométrie en GeoJSON (La Rochelle)."""
+    def lire_csv():
+        requete = urllib.request.Request(url, headers={"User-Agent": "atlas-electoral-pipeline"})
+        with urllib.request.urlopen(requete, timeout=600) as reponse:
+            lignes = list(csv.DictReader(io.TextIOWrapper(reponse, encoding="utf-8-sig")))
+        return [{"properties": ligne, "geometry": json.loads(ligne[colonne])} for ligne in lignes if ligne.get(colonne)], None
+    return lire_csv
+
+
 def topojson(topo: dict, garder) -> list[dict]:
     """
     Entités (propriétés et géométrie GeoJSON) d'une topologie quantifiée que retient `garder(propriétés)`. Seuls
@@ -279,6 +291,10 @@ SOURCES = [
            "https://data.orleans-metropole.fr/explore/dataset/administratifadm_secteurs_vote/",
            opendatasoft("data.orleans-metropole.fr", "administratifadm_secteurs_vote"),
            lambda p: f"45234_{numero(p['num_bv'])}"),
+    Source("Ville de La Rochelle", "découpage en vigueur", None, 2024, "Licence Ouverte",
+           "https://www.data.gouv.fr/datasets/decoupage-electoral-bureaux-de-vote/",
+           csv_geojson(LIEN_PERENNE.format(id="fdd41e79-eb40-4224-9dd0-931036cbb8b7")),
+           lambda p: f"17300_{numero(p['num_bureau'])}"),
     Source("Brest métropole", "découpage de 2026", 2026, 2026, "Licence Ouverte",
            "https://www.data.gouv.fr/datasets/bureaux-de-vote-de-brest-a-partir-du-01-01-2026/",
            geojson("https://geo.brest-metropole.fr/arcgis/rest/services/public/GPB_LIM/MapServer/1610030/query"

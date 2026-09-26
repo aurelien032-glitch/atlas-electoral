@@ -110,7 +110,7 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   à la place.
 - Scrutins dont moins de 98 % des inscrits de métropole joignent les contours (`niveau_carte = commune`) :
   chaque bureau prend la couleur de sa commune. La jointure (`construire`) compte les contours locaux avec la règle
-  de la carte (Q29) : les municipales 2026 passent ainsi au bureau (98,2 % et 98,1 %).
+  de la carte (Q29) : les municipales 2026 passent ainsi au bureau (98,3 % et 98,1 %).
 - Bureaux sans contour (décision Q25, `carte/repli.ts`, testé) : les contours de 2022 manquent pour quelques villes
   (Troyes, Alès, Belfort, Dieppe, Aurillac…) et ne suivent pas les bureaux créés ou renumérotés depuis (Bordeaux et
   Paris Centre en 2024). Au zoom des bureaux, une commune sans aucun contour est dessinée par son contour détaillé
@@ -122,8 +122,8 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   pas de contours nationaux plus récents (Etalab ne mettra pas les siens à jour ; table de l'Insee quinquennale).
 - Contours locaux (`atlas_pipeline.correctifs`, décisions Q27 à Q29) : tous les découpages de bureaux publiés en open
   data et trouvés le 26/09 (Bordeaux Métropole, Ville de Paris 2026, Toulouse Métropole 2024, Nantes, Strasbourg,
-  Lyon, La Tour-de-Salvagny, Caen 2026, Saint-Nazaire, Pornichet, Orléans, Brest 2026 ; contours « méthode de
-  l'Insee » de Cédric Rossi), dans `geo/correctifs_bureaux.geojson` (Licence Ouverte) ; Rennes Métropole (ODbL) dans
+  Lyon, La Tour-de-Salvagny, Caen 2026, Saint-Nazaire, Pornichet, Orléans, La Rochelle, Brest 2026 ; contours
+  « méthode de l'Insee » de Cédric Rossi), dans `geo/correctifs_bureaux.geojson` (Licence Ouverte) ; Rennes Métropole (ODbL) dans
   `geo/correctifs_bureaux_odbl.geojson`, à part pour que le partage à l'identique ne s'étende pas au reste ;
   l'application réunit les deux. Numéros normalisés comme ceux des résultats (`numero` : « 0012 », « 601A »). Ne sont
   gardés que les territoires où la source porte des numéros absents des contours de 2022 ; un territoire relève d'une
