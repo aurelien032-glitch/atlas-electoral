@@ -14,6 +14,8 @@ export interface Etat {
   hachure: boolean
   /** Contour de bureau peint à la couleur de sa commune, faute de bureau de ce scrutin : son tracé s'efface. */
   commune?: boolean
+  /** Commune dessinée bureau par bureau par son découpage local : au zoom des bureaux, elle n'est pas peinte dessous. */
+  locale?: boolean
 }
 
 const HACHURE: Etat = { couleur: FOND_CARTE, opacite: 1, hachure: false }

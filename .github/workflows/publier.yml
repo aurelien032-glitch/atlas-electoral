@@ -41,7 +41,7 @@ jobs:
       - name: Encarts de la vue nationale (petite couronne et outre-mer, geo.api.gouv.fr)
         working-directory: pipeline
         run: python -m atlas_pipeline.encarts
-      - name: Contours locaux des bureaux (Bordeaux Métropole, découpage en vigueur)
+      - name: Contours locaux des bureaux (Bordeaux Métropole, Ville de Paris, méthode de l'Insee)
         working-directory: pipeline
         run: python -m atlas_pipeline.correctifs
       - name: Résultats des 56 tours et séries (Parquet officiels, lus à distance)

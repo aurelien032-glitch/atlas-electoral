@@ -10,7 +10,9 @@ import { Legende, type DescriptionLegende } from './carte/Legende'
 import { ReglageOpacite } from './carte/Opacite'
 import { Onglets } from './carte/Onglets'
 import { enVolet, FRANCE_METROPOLITAINE, repliParDefaut } from './carte/place'
-import { repli, territoiresDesContours, territoiresDesCorrectifs, territoiresSansDessin, type Repli } from './carte/repli'
+import {
+  repli, territoiresDesContours, territoiresDesCorrectifs, territoiresDesSources, territoiresRemplaces, territoiresSansDessin, type Repli,
+} from './carte/repli'
 
 import { blocEnTete, optionsCibles, retenueDuBloc } from './cibles'
 import { nomCandidature } from './donnees/libelles'
@@ -271,8 +273,9 @@ export default function App() {
   // Contours de 2022 (bureau → commune) : une carte à la commune en colore les bureaux ; une carte au bureau y lit,
   // une fois prête, où montrer la commune faute de contour.
   const contours = useContours(chiffresPrets && (!carteAuBureau || carteChargee))
-  // Contours locaux des bureaux (Bordeaux Métropole) : pour une carte au bureau, une fois la carte prête.
-  const correctifs = useCorrectifs(chiffresPrets && carteAuBureau && carteChargee)
+  // Contours locaux des bureaux (Bordeaux, Paris Centre, Alès…), une fois la carte prête : certains remplacent des
+  // contours de 2022 faux, à tout scrutin.
+  const correctifs = useCorrectifs(chiffresPrets && carteChargee)
   const encarts = useEncarts(chiffresPrets)
   // Recherche, préparée à la première utilisation du champ (normaliser 35 000 noms prend du temps) : à
   // pertinence égale, les communes qui comptent le plus d'inscrits passent devant.
@@ -314,12 +317,20 @@ export default function App() {
     () => territoiresDesCorrectifs((correctifs.data?.features ?? []).map((f) => f.properties.code_bv)),
     [correctifs.data],
   )
+  // Un découpage local ne dessine que les scrutins à partir de son année.
+  const anneeScrutin = scrutin ? Number(scrutin.date.slice(0, 4)) : 0
+  const correctifsValables = useMemo(
+    () => territoiresDesSources(correctifs.data?.sources ?? [], anneeScrutin),
+    [correctifs.data, anneeScrutin],
+  )
+  // Contours de 2022 faux (le dernier bureau d'Aimargues couvre Alès) : remplacés à tout scrutin.
+  const remplaces = useMemo(() => territoiresRemplaces(correctifs.data?.sources ?? []), [correctifs.data])
   const repliCarte = useMemo(
     () => territoireDuContour && sansDessin
       ? repli(territoireDuContour, sansDessin, carteAuBureau ? bureaux.data ?? null : null, (code) => communeDu(code, index.passage),
-        territoireDuCorrectif)
+        territoireDuCorrectif, correctifsValables, remplaces)
       : null,
-    [territoireDuContour, sansDessin, carteAuBureau, bureaux.data, index.passage, territoireDuCorrectif],
+    [territoireDuContour, sansDessin, carteAuBureau, bureaux.data, index.passage, territoireDuCorrectif, correctifsValables, remplaces],
   )
   // Emprise de chaque département : au zoom des bureaux, la carte ne pose les états que de ceux à l'écran.
   const emprisesDepartements = useMemo((): Emprises => new Map([...index.territoires.values()]
@@ -330,7 +341,7 @@ export default function App() {
     })), [index.territoires])
   // Découpages locaux employés à ce scrutin, cités dans la légende et la fiche.
   const sourcesLocales = useMemo(
-    () => (correctifs.data?.sources ?? []).filter((s) => repliCarte?.corriges.has(s.commune)),
+    () => (correctifs.data?.sources ?? []).filter((s) => s.territoires.some((t) => repliCarte?.corriges.has(t))),
     [correctifs.data, repliCarte],
   )
   // Municipales jusqu'en 2020 : dans les petites communes, on vote pour des personnes (panachage). Leurs
@@ -455,8 +466,8 @@ export default function App() {
     return j.niveau_carte === 'commune'
       ? `Carte à la commune : les contours de bureaux datent de 2022 et ne couvrent que ${part(j.taux_inscrits_metropole)} des inscrits de métropole à ce scrutin.`
       : `Contours des bureaux de 2022 : il en manque pour ${part(1 - j.taux_inscrits_metropole)} des inscrits de métropole ; la carte montre alors leur commune.${
-        sourcesLocales.map((s) => ` ${index.noms.get(s.commune) ?? s.commune} : découpage en vigueur de ${s.nom}.`).join('')}`
-  }, [scrutin, vue.mode, sourcesLocales, index])
+        sourcesLocales.map((s) => ` ${s.lieu} : ${s.titre} (${s.nom}).`).join('')}`
+  }, [scrutin, vue.mode, sourcesLocales])
 
   const apercuEvolution = useMemo((): ApercuEvolution | undefined => {
     if (vue.mode !== 'evolution' || !evolution || !scrutinDe || !etatCarte?.valeurs) return undefined

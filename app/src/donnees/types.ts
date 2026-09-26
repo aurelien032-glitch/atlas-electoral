@@ -185,20 +185,35 @@ export interface Circonscription {
   nord: number | null
 }
 
-/** Source d'un découpage local des bureaux (Bordeaux Métropole…), citée dans la fiche et la légende. */
+/** Source d'un découpage local des bureaux (Bordeaux Métropole, Ville de Paris…), citée dans la fiche et la légende. */
 export interface SourceCorrectif {
-  commune: string
+  /** Territoires (communes, arrondissements) qu'elle dessine. */
+  territoires: string[]
+  /**
+   * Ceux dont les contours de 2022 sont faux (le dernier bureau d'Aimargues couvre Alès) : dessinés par elle à tout
+   * scrutin, même à la commune, leurs contours de 2022 effacés.
+   */
+  remplace: string[]
+  /** Ces territoires, tels que la légende les nomme (« Paris Centre »). */
+  lieu: string
+  /** Auteur du jeu, cité avec un lien vers sa fiche. */
   nom: string
+  /** Ce qu'il publie (« découpage de 2024 »). */
+  titre: string
+  /** Année du découpage ; null pour un découpage « en vigueur », sans date. */
+  annee: number | null
+  /** Premier scrutin (année) qu'elle peut dessiner : pas avant, même si les numéros concordent. */
+  depuis: number
   fiche: string
   licence: string
-  /** Dernière mise à jour du découpage chez sa source (ISO 8601). */
+  /** Dernière mise à jour du jeu chez sa source (ISO 8601). */
   modifie: string | null
   bureaux: number
 }
 
 /**
- * Contours locaux des bureaux (geo/correctifs_bureaux.geojson), là où ceux de 2022 ne suivent plus les bureaux :
- * découpage en vigueur, aux numéros des scrutins récents (décision Q25).
+ * Contours locaux des bureaux (geo/correctifs_bureaux.geojson, et ceux en ODbL dans correctifs_bureaux_odbl.geojson),
+ * là où ceux de 2022 manquent ou ne suivent plus les bureaux (décisions Q25, Q27, Q28).
  */
 export type Correctifs = FeatureCollection<Polygon | MultiPolygon, { code_bv: string }> & { sources: SourceCorrectif[] }
 

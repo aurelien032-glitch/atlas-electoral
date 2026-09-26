@@ -114,15 +114,21 @@ export function useEncarts(actif: boolean) {
   })
 }
 
-/** Contours locaux des bureaux (Bordeaux Métropole) : pour les cartes au bureau seulement, après la carte. */
+/**
+ * Contours locaux des bureaux, pour les cartes au bureau seulement, après la carte : deux fichiers réunis (l'ODbL est
+ * publiée à part, pour que son partage à l'identique ne s'étende pas au reste).
+ */
 export function useCorrectifs(actif: boolean) {
   return useQuery({
-    queryKey: ['geo', 'correctifs_bureaux.geojson'],
+    queryKey: ['geo', 'correctifs_bureaux'],
     enabled: actif,
-    queryFn: async ({ signal }) => {
-      const reponse = await fetch(`${RACINE_DONNEES}/geo/correctifs_bureaux.geojson`, { signal })
-      if (!reponse.ok) throw new Error(`contours locaux indisponibles (HTTP ${reponse.status})`)
-      return (await reponse.json()) as Correctifs
+    queryFn: async ({ signal }): Promise<Correctifs> => {
+      const fichiers = await Promise.all(['correctifs_bureaux.geojson', 'correctifs_bureaux_odbl.geojson'].map(async (nom) => {
+        const reponse = await fetch(`${RACINE_DONNEES}/geo/${nom}`, { signal })
+        if (!reponse.ok) throw new Error(`contours locaux indisponibles (HTTP ${reponse.status})`)
+        return (await reponse.json()) as Correctifs
+      }))
+      return { type: 'FeatureCollection', features: fichiers.flatMap((f) => f.features), sources: fichiers.flatMap((f) => f.sources) }
     },
   })
 }

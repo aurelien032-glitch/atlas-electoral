@@ -376,14 +376,34 @@ def test_couverture_de_la_source():
     assert "59512_0164" in aberrants and "75056_JUS1" not in aberrants
 
 
-def test_contours_locaux_de_bordeaux(con):
-    # Découpage en vigueur de Bordeaux Métropole (atlas_pipeline.correctifs) : il doit porter les numéros des
-    # bureaux de 2024, renumérotés depuis les contours de 2022 (135 sur 153 sans contour).
-    chemin = PUBLICATION / "geo" / "correctifs_bureaux.geojson"
-    correctifs = json.loads(chemin.read_text(encoding="utf-8"))
-    codes = [f["properties"]["code_bv"] for f in correctifs["features"]]
-    assert len(codes) == len(set(codes)) and all(c.startswith("33063_") for c in codes)
-    assert correctifs["sources"][0]["licence"] == "Licence Ouverte"
-    for scrutin in ("2024_euro_t1", "2024_legi_t1", "2024_legi_t2"):
-        bordeaux = {r[0] for r in con.sql(f"SELECT code_bv FROM {fichier(scrutin, 'bureaux.parquet')} WHERE code_bv LIKE '33063%'").fetchall()}
-        assert len(bordeaux & set(codes)) >= 0.95 * len(bordeaux), scrutin
+def territoire_du_bureau(code_bv: str) -> str:
+    # À Paris, l'arrondissement, tiré du numéro du bureau (« 75056_0211 » → 75102).
+    commune, numero = code_bv.split("_")
+    return f"751{numero[:2]}" if commune == "75056" else commune
+
+
+@pytest.mark.parametrize("nom, licence", [("correctifs_bureaux.geojson", "Licence Ouverte"),
+                                          ("correctifs_bureaux_odbl.geojson", "ODbL")])
+def test_contours_locaux(con, nom, licence):
+    # Découpages locaux (atlas_pipeline.correctifs), l'ODbL dans son propre fichier : chaque source porte les numéros
+    # de presque tous les bureaux de ses territoires, à chaque scrutin au bureau depuis son année (Bordeaux, renumérotée
+    # en 2024 : 152 bureaux sur 153 ; Paris Centre, renumérotée en 2024 ; Alès, absente des contours de 2022 ; les cinq
+    # communes dont le contour de 2022 déborde sur une ville absente, remplacées à tout scrutin).
+    correctifs = json.loads((PUBLICATION / "geo" / nom).read_text(encoding="utf-8"))
+    codes = {f["properties"]["code_bv"] for f in correctifs["features"]}
+    assert len(codes) == len(correctifs["features"])
+    assert {territoire_du_bureau(c) for c in codes} == {t for s in correctifs["sources"] for t in s["territoires"]}
+    catalogue = json.loads(CATALOGUE.read_text(encoding="utf-8"))["scrutins"]
+    for source in correctifs["sources"]:
+        assert source["licence"] == licence and set(source["remplace"]) <= set(source["territoires"])
+        communes = ", ".join(sorted({"'75056'" if t.startswith("751") else f"'{t}'" for t in source["territoires"]}))
+        verifies = 0
+        for scrutin in catalogue:
+            if int(scrutin["date"][:4]) < source["depuis"] or (scrutin["jointure_contours"] or {}).get("niveau_carte") != "bureau":
+                continue
+            bureaux = {c for (c,) in con.sql(f"SELECT code_bv FROM {fichier(scrutin['id'], 'bureaux.parquet')} "
+                                             f"WHERE split_part(code_bv, '_', 1) IN ({communes})").fetchall()
+                       if territoire_du_bureau(c) in source["territoires"]}
+            assert len(bureaux & codes) >= 0.95 * len(bureaux), (source["nom"], scrutin["id"])
+            verifies += len(bureaux) > 0
+        assert verifies >= 3, source["nom"]

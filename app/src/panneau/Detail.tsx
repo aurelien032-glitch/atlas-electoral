@@ -164,15 +164,17 @@ function NoteContours({ ctx, selection }: Pick<Props, 'ctx' | 'selection'>) {
     : selection.code
   const lieu = estArrondissement(territoire) ? "l'arrondissement entier" : 'la commune entière'
   const s = repli.sansContour.get(territoire)
-  // Territoire dessiné par son découpage local (Bordeaux Métropole) : on cite la source.
-  const locale = repli.corriges.has(territoire) ? ctx.sourcesLocales.find((l) => l.commune === territoire) : undefined
+  // Territoire dessiné par son découpage local : on cite la source, et l'écart d'années quand il y en a un.
+  const locale = repli.corriges.has(territoire) ? ctx.sourcesLocales.find((l) => l.territoires.includes(territoire)) : undefined
   if (locale) {
     const manque = s ? ` ${s.bureaux === 1 ? 'Un bureau n\'y figure pas' : `${s.bureaux} bureaux n'y figurent pas`} : ${s.bureaux === 1 ? 'il est compté' : 'ils sont comptés'} ici sans être dessiné${s.bureaux === 1 ? '' : 's'}.` : ''
+    const ecart = locale.annee === Number(ctx.scrutin.date.slice(0, 4)) ? '' : ' ; les limites ont pu changer entre-temps'
+    const remplace = locale.remplace.includes(territoire) ? ' Il remplace ici les contours de 2022, erronés.' : ''
     return (
       <p className="note-bas">
-        {selection.niveau === 'bureau' ? 'Contour' : 'Contours des bureaux'} : découpage en vigueur de{' '}
-        <a href={locale.fiche} target="_blank" rel="noreferrer">{locale.nom}</a> ({locale.licence}), aux numéros de
-        ce scrutin ; il a pu être retouché depuis.{selection.niveau === 'bureau' ? '' : manque}
+        {selection.niveau === 'bureau' ? 'Contour' : 'Contours des bureaux'} : {locale.titre} (
+        <a href={locale.fiche} target="_blank" rel="noreferrer">{locale.nom}</a>, {locale.licence}), aux numéros de ce
+        scrutin{ecart}.{remplace}{selection.niveau === 'bureau' ? '' : manque}
       </p>
     )
   }

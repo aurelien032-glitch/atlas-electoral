@@ -28,7 +28,7 @@ cd pipeline && python -m atlas_pipeline.geo                              # conto
 cd pipeline && python -m atlas_pipeline.cog                              # passage des communes vers le COG 2026
 cd pipeline && python -m atlas_pipeline.circonscriptions --source <GeoJSON des bureaux>  # contours (≈ 4 min)
 cd pipeline && python -m atlas_pipeline.encarts                          # encarts petite couronne et outre-mer
-cd pipeline && python -m atlas_pipeline.correctifs                       # contours locaux des bureaux (Bordeaux Métropole)
+cd pipeline && python -m atlas_pipeline.correctifs                       # contours locaux (Bordeaux, Paris Centre, Alès…)
 cd app && npm run dev        # sert aussi ../publication sous /data
 cd app && npx tsc -b && npm run lint && npm test && npm run build          # avant tout commit
 cd app && npm run preview    # build de production avec les en-têtes de public/_headers (CSP)
@@ -115,13 +115,25 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   inscrits votent dans un bureau sans contour ; ces contours perdent leur tracé (`commune` dans le feature-state) et
   désignent la commune au survol, au clic et pour une adresse. Note dans la légende et dans la fiche. Il n'existe
   pas de contours nationaux plus récents (Etalab ne mettra pas les siens à jour ; table de l'Insee quinquennale).
-- Contours locaux (`geo/correctifs_bureaux.geojson`, `atlas_pipeline.correctifs`, décision Q27) : découpage en
-  vigueur de Bordeaux Métropole (Licence Ouverte, lu sans clé ; son historique en exige une), aux numéros de 2024
-  et 2026. Un territoire dont au moins 90 % des bureaux du scrutin y figurent (`SEUIL_CORRECTIF`) est dessiné par eux
-  (source `correctifs`, par-dessus les contours de 2022, rendus transparents) ; légende, fiche et Méthodologie citent
-  la source. Autres villes (Alès et Aurillac en ODbL, Paris…) : P1.
-- Survol et clic : un seul écouteur, qui retient l'élément le plus haut sous le pointeur (`COUCHES_ACTIVES`) ; la
-  sélection d'un bureau se trace sur la source qui le dessine (`cible`).
+- Contours locaux (`atlas_pipeline.correctifs`, décisions Q27, Q28) : `geo/correctifs_bureaux.geojson` (Licence
+  Ouverte : découpage en vigueur de Bordeaux Métropole, lu sans clé ; contours « méthode de l'Insee » de Cédric Rossi)
+  et `geo/correctifs_bureaux_odbl.geojson` (Paris Centre, découpage de 2024 de la Ville de Paris), à part pour que le
+  partage à l'identique de l'ODbL ne s'étende pas au reste ; l'application réunit les deux. Chaque source dit ses
+  `territoires`, son année (`depuis` : pas avant, même si les numéros concordent, comme le 1er arrondissement de
+  Paris) et comment la citer. Carte au bureau : un territoire dont au moins 90 % des bureaux du scrutin y figurent
+  (`SEUIL_CORRECTIF`) est dessiné par eux (source `correctifs`, par-dessus les contours de 2022, rendus transparents :
+  `CACHE`) ; légende, fiche et Méthodologie citent la source, la carte dans son attribution. Une ville dont un polygone
+  n'a pas de numéro n'est pas reprise (Troyes, Belfort, Dieppe, Aurillac) : pas de numéro inventé.
+- Contours de 2022 faux (Q28) : Troyes, Alès, Belfort, Dieppe et Aurillac y sont rattachées, à tort, au dernier bureau
+  de la commune au code INSEE précédent (Trouans, Aimargues, Beaucourt, Déville-lès-Rouen, Auriac-l'Église), qui
+  déborde ainsi sur elles. Ces cinq communes (`remplace`) sont dessinées à tout scrutin par la méthode de l'Insee,
+  leurs contours de 2022 effacés. Sur une carte à la commune, les numéros ne comptant pas, un découpage local dessine
+  aussi une commune sans contour (Alès), à sa couleur, plus fidèlement que le contour simplifié (7 points).
+- Couches des contours locaux filtrées sur les territoires qu'elles dessinent au scrutin (`bureauxParmi`) : invisibles,
+  les autres répondraient au survol. Survol et clic : un seul écouteur, qui retient l'élément le plus haut sous le
+  pointeur (`COUCHES_ACTIVES`), en passant les contours de 2022 effacés (`efface`) ; la sélection d'un bureau se trace
+  sur la source qui le dessine (`cible`). Une commune sans contour dessinée par son découpage local n'est pas peinte
+  dessous (`locale` dans le feature-state des communes).
 - MapLibre 6 est en ESM seul : garder `optimizeDeps.exclude: ['maplibre-gl']`, `worker.format: 'es'` et
   `setWorkerUrl(urlWorker)` (import `?worker&url`), sinon le worker ne se charge pas.
 - La carte (et la feuille de style de MapLibre) est chargée en différé (`React.lazy`) : le panneau s'affiche
@@ -129,7 +141,7 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   `.zone-carte` pour l'emporter. Elle est protégée par `GardeCarte` : si elle échoue, le panneau reste.
 - Ordre des téléchargements (`App.tsx`) : les chiffres du panneau (catalogue, agrégats, candidats, petit index
   des départements) ; puis la carte ; puis, une fois les contours des communes chargés (`onPrete`), l'index
-  complet des territoires, l'historique et les bureaux. Un lien vers un territoire, la recherche ou la fiche
+  complet des territoires, l'historique, les bureaux et les contours locaux. Un lien vers un territoire, la recherche ou la fiche
   d'un bureau demandent tout de suite ce dont ils ont besoin.
 - Ne jamais passer à la carte un tableau ou un objet recréé à chaque rendu (`?? []`) : son effet de coloriage
   se relancerait à chaque mise à jour (plusieurs secondes sur un téléphone). Les états ne sont posés que

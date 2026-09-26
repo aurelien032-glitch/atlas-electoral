@@ -1,5 +1,5 @@
 import { arrondissementDu } from '../donnees/territoires'
-import type { Bureau, BureauContour } from '../donnees/types'
+import type { Bureau, BureauContour, SourceCorrectif } from '../donnees/types'
 
 /**
  * Au-delà de cette part de leurs inscrits sans contour, les bureaux d'un territoire ont changé de numéro depuis 2022
@@ -28,7 +28,11 @@ export interface Repli {
   aLaCommune: ReadonlySet<string>
   /** Carte au bureau : bureaux sans contour, par territoire (seulement ceux qui en ont). */
   sansContour: ReadonlyMap<string, SansContour>
-  /** Carte au bureau : territoires dessinés par leur découpage local (Bordeaux Métropole), aux numéros du scrutin. */
+  /**
+   * Territoires dessinés par leur découpage local, leurs contours de 2022 effacés : aux numéros du scrutin sur une
+   * carte au bureau (Bordeaux Métropole…), et à tout scrutin ceux dont les contours de 2022 sont faux ; sur une carte à
+   * la commune, aussi ceux qui n'en ont aucun (Alès).
+   */
   corriges: ReadonlySet<string>
   /** Territoire de chaque contour local. */
   territoireDuCorrectif: ReadonlyMap<string, string>
@@ -50,6 +54,17 @@ export const territoiresDesCorrectifs = (codes: Iterable<string>): ReadonlyMap<s
   new Map([...codes].map((code) => [code, territoireDe(code, code.split('_')[0])]))
 
 /**
+ * Territoires que leur découpage local peut dessiner à un scrutin de cette année : pas avant l'année de la source,
+ * même si les numéros concordent (le 1er arrondissement de Paris a gardé les siens en 2024, pas forcément ses limites).
+ */
+export const territoiresDesSources = (sources: readonly SourceCorrectif[], annee: number): ReadonlySet<string> =>
+  new Set(sources.filter((s) => s.depuis <= annee).flatMap((s) => s.territoires))
+
+/** Territoires aux contours de 2022 faux, que leur découpage local dessine à tout scrutin. */
+export const territoiresRemplaces = (sources: readonly SourceCorrectif[]): ReadonlySet<string> =>
+  new Set(sources.flatMap((s) => s.remplace))
+
+/**
  * Territoires (communes, arrondissements) qui n'ont aucun contour. Calculé sur tous les territoires, pas sur ceux d'un
  * scrutin : la couche qui les dessine se filtre sur eux, et changer ce filtre recharge toutes les communes.
  */
@@ -67,7 +82,8 @@ export function territoiresSansDessin(
 
 /**
  * Repli d'un scrutin. Les bureaux ne sont fournis que pour une carte au bureau ; `communeDu` donne la commune d'un
- * bureau au découpage des contours et des agrégats (COG 2026).
+ * bureau au découpage des contours et des agrégats (COG 2026) ; `valables`, les territoires que leur découpage local
+ * peut dessiner à ce scrutin (territoiresDesSources) ; `remplaces`, ceux qu'il dessine toujours (territoiresRemplaces).
  */
 export function repli(
   territoireDuContour: ReadonlyMap<string, string>,
@@ -75,8 +91,10 @@ export function repli(
   bureaux: readonly Bureau[] | null,
   communeDu: (codeBv: string) => string,
   territoireDuCorrectif: ReadonlyMap<string, string> = new Map(),
+  valables: ReadonlySet<string> = new Set(territoireDuCorrectif.values()),
+  remplaces: ReadonlySet<string> = new Set(),
 ): Repli {
-  const locaux = new Set(territoireDuCorrectif.values())
+  const locaux = new Set([...territoireDuCorrectif.values()].filter((t) => valables.has(t) || remplaces.has(t)))
   const parTerritoire = new Map<string, SansContour>()
   // Territoires qui ont un découpage local : leurs bureaux absents de ce découpage.
   const horsCorrectif = new Map<string, { bureaux: number; inscrits: number }>()
@@ -97,17 +115,26 @@ export function repli(
       horsCorrectif.set(territoire, h)
     }
   }
-  // Découpage local aux numéros du scrutin (presque tous ses bureaux y figurent) : il dessine le territoire, et ce
-  // qui manque se mesure sur lui.
+  // Découpage local aux numéros du scrutin (presque tous ses bureaux y figurent), ou à la place de contours de 2022
+  // faux : il dessine le territoire, et ce qui manque se mesure sur lui.
   const corriges = new Set<string>()
-  for (const territoire of locaux) {
+  if (bureaux === null) {
+    // Carte à la commune : les numéros n'y comptent pas. Le découpage local dessine, à la couleur de leur commune, les
+    // territoires aux contours de 2022 faux et ceux qui n'en ont aucun (plus fidèlement que le contour simplifié).
+    for (const territoire of territoireDuCorrectif.values()) {
+      if (remplaces.has(territoire) || sansDessin.has(territoire)) corriges.add(territoire)
+    }
+  }
+  for (const territoire of bureaux === null ? [] : locaux) {
     const s = parTerritoire.get(territoire)
-    if (!s) continue
     const h = horsCorrectif.get(territoire) ?? { bureaux: 0, inscrits: 0 }
-    if (s.bureauxTotal - h.bureaux < SEUIL_CORRECTIF * s.bureauxTotal) continue
+    const auxNumeros = s !== undefined && s.bureauxTotal - h.bureaux >= SEUIL_CORRECTIF * s.bureauxTotal
+    if (!auxNumeros && !remplaces.has(territoire)) continue
     corriges.add(territoire)
-    s.bureaux = h.bureaux
-    s.inscrits = h.inscrits
+    if (s) {
+      s.bureaux = h.bureaux
+      s.inscrits = h.inscrits
+    }
   }
   const sansContour = new Map([...parTerritoire].filter(([, s]) => s.bureaux > 0))
   const aLaCommune = new Set([...sansContour]

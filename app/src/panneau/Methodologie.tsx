@@ -209,6 +209,23 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
             </span>
           </li>
           <li>
+            <a href="https://opendata.paris.fr/explore/dataset/secteurs-des-bureaux-de-vote-2024/" target="_blank" rel="noreferrer">Secteurs des bureaux de vote 2024</a>
+            <span>
+              Découpage de 2024 de la Ville de Paris (ODbL) : il dessine Paris Centre (1er au 4e arrondissements), dont les
+              bureaux ont changé de numéro en 2024, aux scrutins depuis cette année. L'atlas le publie dans un fichier à
+              part, sous la même licence.
+            </span>
+          </li>
+          <li>
+            <a href="https://www.data.gouv.fr/datasets/proposition-de-contours-des-bureaux-de-vote-selon-la-methode-de-linsee/" target="_blank" rel="noreferrer">Contours selon la méthode de l'Insee</a>
+            <span>
+              Découpage reconstitué par Cédric Rossi avec le code de l'Insee, à partir des adresses de 2022 (Licence
+              Ouverte) : il dessine Alès, absente des contours de 2022, et à tout scrutin les cinq communes dont le
+              contour de 2022 est faux (voir les limites). Pas Troyes, Belfort, Dieppe ni Aurillac : leurs polygones n'y
+              ont pas tous un numéro de bureau.
+            </span>
+          </li>
+          <li>
             <a href="https://geo.api.gouv.fr/decoupage-administratif" target="_blank" rel="noreferrer">Contour détaillé d'une commune</a>
             <span>API Découpage administratif (geo.api.gouv.fr), interrogée quand une commune ou un arrondissement est choisi.</span>
           </li>
@@ -326,7 +343,7 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
 
       <Section titre="Limites connues">
         <ul className="liste">
-          <li>Les contours des bureaux sont indicatifs : reconstitués en 2022 à partir des adresses, ils peuvent s'écarter du découpage réel, et les bureaux créés ou renumérotés depuis n'y figurent pas. Quelques villes en sont absentes (Troyes, Alès, Belfort, Dieppe, Aurillac). La carte montre alors la commune : à la place d'un contour sans résultat, et en entier quand plus de la moitié de ses inscrits votent dans un bureau sans contour. Il n'existe pas de contours nationaux plus récents ; à Bordeaux, le découpage en vigueur de Bordeaux Métropole dessine les scrutins de 2024 (il a pu être retouché depuis).</li>
+          <li>Les contours des bureaux sont indicatifs : reconstitués en 2022 à partir des adresses, ils peuvent s'écarter du découpage réel, et les bureaux créés ou renumérotés depuis n'y figurent pas. Quelques villes en sont absentes (Troyes, Alès, Belfort, Dieppe, Aurillac) : leur surface y est rattachée, à tort, au dernier bureau de la commune au code INSEE précédent (Trouans, Aimargues, Beaucourt, Déville-lès-Rouen, Auriac-l'Église), dont le contour déborde ainsi sur la ville. La carte montre alors la commune : à la place d'un contour sans résultat, et en entier quand plus de la moitié de ses inscrits votent dans un bureau sans contour. Il n'existe pas de contours nationaux plus récents ; des découpages locaux prennent le relais (voir les sources) : à Bordeaux (découpage en vigueur, qui a pu être retouché depuis 2024) et à Paris Centre pour les scrutins depuis 2024, à Alès et dans les cinq communes au contour faux à tout scrutin.</li>
           <li>Paris, Lyon et Marseille : les données ne descendent qu'à la ville ; les résultats par arrondissement sont calculés d'après le numéro des bureaux, qui commence par celui de l'arrondissement (règle vérifiée sur tous les scrutins, à un ou deux bureaux près, laissés à la ville). Jusqu'en 2020, les municipales s'y votaient par secteur : chaque arrondissement montre les listes du sien, et la ville n'a pas de liste « en tête ».</li>
           <li>Nouvelle-Calédonie, Polynésie française, Wallis-et-Futuna : pas de contours de bureaux, résultats à la commune.</li>
           <li>L'offre électorale change d'un scrutin à l'autre : une évolution de bloc peut tenir à l'absence d'une candidature.</li>
