@@ -30,7 +30,8 @@ from pathlib import Path
 import duckdb
 
 from .config import (CIRCONSCRIPTIONS_DES_DONNEES, CONTOURS_CODES, LIEN_PERENNE, PASSAGE_COMMUNES, PUBLICATION,
-                     REFERENTIELS, RESSOURCES, SCRUTINS, SEUIL_CARTE_BUREAUX, Scrutin)
+                     REFERENTIELS, RESSOURCES, SCRUTINS, SEUIL_CARTE_BUREAUX, SEUIL_CORRECTIF, Scrutin)
+from .correctifs import territoire_du_bureau
 from .sources import verrouiller
 
 EXPRESSION_PORTEE = {"national": "'FR'", "circonscription": "circonscription", "departement": "departement",
@@ -97,6 +98,21 @@ def charger_referentiels(con) -> bool:
     territoires = PUBLICATION / "geo" / "territoires.parquet"
     con.sql(f"CREATE OR REPLACE TABLE territoires AS SELECT * FROM {chemin_sql(territoires)}" if territoires.exists()
             else "CREATE OR REPLACE TABLE territoires (niveau VARCHAR, code VARCHAR, ouest FLOAT, sud FLOAT, est FLOAT, nord FLOAT)")
+    # Contours locaux des bureaux (python -m atlas_pipeline.correctifs) : bureau, territoire, année de la source, et
+    # si elle remplace des contours de 2022 faux.
+    con.sql("CREATE OR REPLACE TABLE locaux (code_bv VARCHAR, territoire VARCHAR, depuis INTEGER, remplace BOOLEAN)")
+    for nom in ("correctifs_bureaux.geojson", "correctifs_bureaux_odbl.geojson"):
+        chemin = PUBLICATION / "geo" / nom
+        if not chemin.exists():
+            continue
+        donnees = json.loads(chemin.read_text(encoding="utf-8"))
+        source = {t: s for s in donnees["sources"] for t in s["territoires"]}
+        lignes = []
+        for f in donnees["features"]:
+            code = f["properties"]["code_bv"]
+            s = source[territoire_du_bureau(code)]
+            lignes.append((code, territoire_du_bureau(code), s["depuis"], territoire_du_bureau(code) in s["remplace"]))
+        con.executemany("INSERT INTO locaux VALUES (?, ?, ?, ?)", lignes)
     if not CONTOURS_CODES.exists():
         return False
     con.sql(f"CREATE OR REPLACE TABLE contours AS SELECT code_bv FROM {chemin_sql(CONTOURS_CODES)}")
@@ -451,9 +467,20 @@ def construire_scrutin(con, scrutin: Scrutin, url_general: str, url_candidats: s
 
     jointure = None
     if contours:
+        # Même règle que la carte (repli.ts) : un territoire est dessiné par son découpage local, à partir de l'année de
+        # la source, s'il en porte presque tous les bureaux, et toujours s'il remplace des contours de 2022 faux.
         taux = con.sql(f"""
-            SELECT sum(inscrits) FILTER (WHERE code_bv IN (SELECT code_bv FROM contours)) / sum(inscrits)
-            FROM g WHERE {METROPOLE}""").fetchone()[0] or 0.0
+            WITH b AS (SELECT code_bv, inscrits, coalesce({ARRONDISSEMENT}, commune) AS territoire FROM g WHERE {METROPOLE}),
+                 l AS (SELECT * FROM locaux WHERE depuis <= {int(scrutin.date[:4])} OR remplace),
+                 t AS (SELECT b.territoire, count(*) AS n, count(l.code_bv) AS n_local
+                       FROM b LEFT JOIN l USING (code_bv) GROUP BY b.territoire),
+                 corriges AS (SELECT territoire FROM t
+                              WHERE territoire IN (SELECT territoire FROM l) AND n_local >= {SEUIL_CORRECTIF} * n
+                              UNION SELECT territoire FROM locaux WHERE remplace)
+            SELECT sum(inscrits) FILTER (WHERE CASE WHEN territoire IN (SELECT territoire FROM corriges)
+                                                    THEN code_bv IN (SELECT code_bv FROM l)
+                                                    ELSE code_bv IN (SELECT code_bv FROM contours) END) / sum(inscrits)
+            FROM b""").fetchone()[0] or 0.0
         jointure = {
             "millesime_contours": 2022,
             "taux_inscrits_metropole": round(taux, 4),

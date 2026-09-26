@@ -47,10 +47,10 @@ describe('repli à la commune', () => {
   })
 
   it("n'emploie pas un découpage local avant son année, même si les numéros concordent", () => {
-    // Paris Centre : découpage de 2024 ; le 1er arrondissement y a gardé ses numéros de 2022.
+    // Paris Centre : découpage employé depuis 2024 ; le 1er arrondissement y a gardé ses numéros de 2022.
     const paris: SourceCorrectif = {
-      territoires: ['75101', '75102'], remplace: [], lieu: 'Paris Centre', nom: 'Ville de Paris', titre: 'découpage de 2024',
-      annee: 2024, depuis: 2024, fiche: '', licence: 'ODbL', modifie: null, bureaux: 2,
+      territoires: ['75101', '75102'], remplace: [], nom: 'Ville de Paris', titre: 'découpage de 2026', annee: 2026,
+      depuis: 2024, fiche: '', licence: 'Licence Ouverte', modifie: null, bureaux: 2,
     }
     const correctifs = territoiresDesCorrectifs(['75056_0101', '75056_0211'])
     const bureaux = [bureau('75056_0101', 500), bureau('75056_0211', 500)]
@@ -64,9 +64,9 @@ describe('repli à la commune', () => {
     const correctifs = territoiresDesCorrectifs(['10001_0001', '10001_0002'])
     const remplaces = new Set(['10001'])
     expect([...repli(contours, sansDessin, null, communeDu, correctifs, new Set(), remplaces).corriges]).toEqual(['10001'])
-    // À la commune, un découpage local dessine aussi un territoire sans aucun contour, à la couleur de sa commune.
+    // À la commune, un territoire sans aucun contour garde son contour détaillé, même avec un découpage local.
     const avecSansDessin = territoiresDesCorrectifs(['10001_0001', '10387_0001'])
-    expect([...repli(contours, sansDessin, null, communeDu, avecSansDessin, new Set(), remplaces).corriges].sort()).toEqual(['10001', '10387'])
+    expect([...repli(contours, sansDessin, null, communeDu, avecSansDessin, new Set(), remplaces).corriges]).toEqual(['10001'])
     // Au bureau, même quand ses numéros ne suivent plus : ceux qui manquent sont comptés sans être dessinés.
     const r = repli(contours, sansDessin, [bureau('10001_0001', 100), bureau('10001_0009', 300)], communeDu, correctifs, new Set(), remplaces)
     expect([...r.corriges]).toEqual(['10001'])

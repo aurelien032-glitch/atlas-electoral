@@ -22,7 +22,7 @@ export interface SansContour {
 export interface Repli {
   /** Territoire de chaque contour de 2022 : l'arrondissement à Paris, Lyon et Marseille, sinon la commune. */
   territoireDuContour: ReadonlyMap<string, string>
-  /** Territoires sans aucun contour : au zoom des bureaux, c'est leur commune qui est dessinée. */
+  /** Territoires sans aucun contour : au zoom des bureaux, leur contour détaillé est dessiné (communes_sans_contour). */
   sansDessin: ReadonlySet<string>
   /** Carte au bureau : territoires aux bureaux renumérotés, montrés en entier à la commune. */
   aLaCommune: ReadonlySet<string>
@@ -30,8 +30,7 @@ export interface Repli {
   sansContour: ReadonlyMap<string, SansContour>
   /**
    * Territoires dessinés par leur découpage local, leurs contours de 2022 effacés : aux numéros du scrutin sur une
-   * carte au bureau (Bordeaux Métropole…), et à tout scrutin ceux dont les contours de 2022 sont faux ; sur une carte à
-   * la commune, aussi ceux qui n'en ont aucun (Alès).
+   * carte au bureau (Bordeaux Métropole…), et à tout scrutin ceux dont les contours de 2022 sont faux.
    */
   corriges: ReadonlySet<string>
   /** Territoire de chaque contour local. */
@@ -119,11 +118,9 @@ export function repli(
   // faux : il dessine le territoire, et ce qui manque se mesure sur lui.
   const corriges = new Set<string>()
   if (bureaux === null) {
-    // Carte à la commune : les numéros n'y comptent pas. Le découpage local dessine, à la couleur de leur commune, les
-    // territoires aux contours de 2022 faux et ceux qui n'en ont aucun (plus fidèlement que le contour simplifié).
-    for (const territoire of territoireDuCorrectif.values()) {
-      if (remplaces.has(territoire) || sansDessin.has(territoire)) corriges.add(territoire)
-    }
+    // Carte à la commune : les numéros n'y comptent pas ; seuls les contours de 2022 faux cèdent la place au découpage
+    // local, à la couleur de la commune.
+    for (const territoire of territoireDuCorrectif.values()) if (remplaces.has(territoire)) corriges.add(territoire)
   }
   for (const territoire of bureaux === null ? [] : locaux) {
     const s = parTerritoire.get(territoire)

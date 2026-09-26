@@ -28,11 +28,14 @@ cd pipeline && python -m atlas_pipeline.geo                              # conto
 cd pipeline && python -m atlas_pipeline.cog                              # passage des communes vers le COG 2026
 cd pipeline && python -m atlas_pipeline.circonscriptions --source <GeoJSON des bureaux>  # contours (≈ 4 min)
 cd pipeline && python -m atlas_pipeline.encarts                          # encarts petite couronne et outre-mer
-cd pipeline && python -m atlas_pipeline.correctifs                       # contours locaux (Bordeaux, Paris Centre, Alès…)
+cd pipeline && python -m atlas_pipeline.correctifs                       # contours locaux, communes sans contour (≈ 30 s)
 cd app && npm run dev        # sert aussi ../publication sous /data
 cd app && npx tsc -b && npm run lint && npm test && npm run build          # avant tout commit
 cd app && npm run preview    # build de production avec les en-têtes de public/_headers (CSP)
 ```
+
+En local, faute de DuckDB sous Python 3.12, `construire`, `correctifs` et les tests tournent sous Python 3.9
+(`from __future__ import annotations` dans `config.py` et `correctifs.py`), sauf `tests/test_fonctions.py` (`encarts.py`).
 
 Mise en ligne : [docs/mise-en-ligne.md](docs/mise-en-ligne.md). Workflows `Vérifications` (chaque envoi) et
 `Publier` (à la main : reconstruit tout depuis les sources, contrôle, déploie sur Cloudflare Pages). Tout
@@ -106,34 +109,41 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   la carte, qui s'ajoute à celle des `fitBounds` suivants (ils ne tiennent plus et échouent sans erreur) ; `offset`
   à la place.
 - Scrutins dont moins de 98 % des inscrits de métropole joignent les contours (`niveau_carte = commune`) :
-  chaque bureau prend la couleur de sa commune.
+  chaque bureau prend la couleur de sa commune. La jointure (`construire`) compte les contours locaux avec la règle
+  de la carte (Q29) : les municipales 2026 passent ainsi au bureau (98,2 % et 98,1 %).
 - Bureaux sans contour (décision Q25, `carte/repli.ts`, testé) : les contours de 2022 manquent pour quelques villes
   (Troyes, Alès, Belfort, Dieppe, Aurillac…) et ne suivent pas les bureaux créés ou renumérotés depuis (Bordeaux et
-  Paris Centre en 2024). Au zoom des bureaux, une commune sans aucun contour est dessinée par sa commune (couche
-  `communes-repli`, filtrée par code). Sur une carte au bureau, un contour sans résultat prend la couleur de sa
+  Paris Centre en 2024). Au zoom des bureaux, une commune sans aucun contour est dessinée par son contour détaillé
+  (couche `communes-repli`, source `communes-sans-contour` : `geo/communes_sans_contour.geojson`, API Découpage
+  administratif ; contour simplifié pour les collectivités d'outre-mer). Sur une carte au bureau, un contour sans résultat prend la couleur de sa
   commune (de son arrondissement à Paris, Lyon et Marseille), et tout le territoire quand plus de la moitié de ses
   inscrits votent dans un bureau sans contour ; ces contours perdent leur tracé (`commune` dans le feature-state) et
   désignent la commune au survol, au clic et pour une adresse. Note dans la légende et dans la fiche. Il n'existe
   pas de contours nationaux plus récents (Etalab ne mettra pas les siens à jour ; table de l'Insee quinquennale).
-- Contours locaux (`atlas_pipeline.correctifs`, décisions Q27, Q28) : `geo/correctifs_bureaux.geojson` (Licence
-  Ouverte : découpage en vigueur de Bordeaux Métropole, lu sans clé ; contours « méthode de l'Insee » de Cédric Rossi)
-  et `geo/correctifs_bureaux_odbl.geojson` (Paris Centre, découpage de 2024 de la Ville de Paris), à part pour que le
-  partage à l'identique de l'ODbL ne s'étende pas au reste ; l'application réunit les deux. Chaque source dit ses
-  `territoires`, son année (`depuis` : pas avant, même si les numéros concordent, comme le 1er arrondissement de
-  Paris) et comment la citer. Carte au bureau : un territoire dont au moins 90 % des bureaux du scrutin y figurent
-  (`SEUIL_CORRECTIF`) est dessiné par eux (source `correctifs`, par-dessus les contours de 2022, rendus transparents :
-  `CACHE`) ; légende, fiche et Méthodologie citent la source, la carte dans son attribution. Une ville dont un polygone
-  n'a pas de numéro n'est pas reprise (Troyes, Belfort, Dieppe, Aurillac) : pas de numéro inventé.
+- Contours locaux (`atlas_pipeline.correctifs`, décisions Q27 à Q29) : tous les découpages de bureaux publiés en open
+  data et trouvés le 26/09 (Bordeaux Métropole, Ville de Paris 2026, Toulouse Métropole 2024, Nantes, Strasbourg,
+  Lyon, La Tour-de-Salvagny, Caen 2026, Saint-Nazaire, Pornichet, Orléans, Brest 2026 ; contours « méthode de
+  l'Insee » de Cédric Rossi), dans `geo/correctifs_bureaux.geojson` (Licence Ouverte) ; Rennes Métropole (ODbL) dans
+  `geo/correctifs_bureaux_odbl.geojson`, à part pour que le partage à l'identique ne s'étende pas au reste ;
+  l'application réunit les deux. Numéros normalisés comme ceux des résultats (`numero` : « 0012 », « 601A »). Ne sont
+  gardés que les territoires où la source porte des numéros absents des contours de 2022 ; un territoire relève d'une
+  seule source (la première de `SOURCES`). Chaque source dit ses `territoires`, son année (`depuis` : pas avant, même si
+  les numéros concordent) et comment la citer. Carte au bureau : un territoire dont au moins 90 % des bureaux du
+  scrutin y figurent (`SEUIL_CORRECTIF`, aussi dans `config.py`) est dessiné par eux (source `correctifs`, par-dessus
+  les contours de 2022, rendus transparents : `CACHE`) ; fiche et Méthodologie (liste lue dans les fichiers) citent
+  la source, la carte dans son attribution. Une ville dont un polygone n'a pas de numéro n'est pas reprise (Troyes,
+  Belfort, Dieppe, Aurillac) : pas de numéro inventé. Tracés simplifiés (Douglas-Peucker, 1 m ; 3 m pour les
+  communes) : 380 Ko compressés, demandés à l'approche du zoom des bureaux (`onApprocheBureaux`), pas en vue nationale.
 - Contours de 2022 faux (Q28) : Troyes, Alès, Belfort, Dieppe et Aurillac y sont rattachées, à tort, au dernier bureau
   de la commune au code INSEE précédent (Trouans, Aimargues, Beaucourt, Déville-lès-Rouen, Auriac-l'Église), qui
-  déborde ainsi sur elles. Ces cinq communes (`remplace`) sont dessinées à tout scrutin par la méthode de l'Insee,
-  leurs contours de 2022 effacés. Sur une carte à la commune, les numéros ne comptant pas, un découpage local dessine
-  aussi une commune sans contour (Alès), à sa couleur, plus fidèlement que le contour simplifié (7 points).
+  déborde ainsi sur elles (les bureaux des communes voisines, découpés selon leur commune, n'y débordent pas : vérifié
+  le 26/09). Ces cinq communes (`remplace`) sont dessinées à tout scrutin par la méthode de l'Insee, leurs contours de
+  2022 effacés, même sur une carte à la commune (à la couleur de la commune).
 - Couches des contours locaux filtrées sur les territoires qu'elles dessinent au scrutin (`bureauxParmi`) : invisibles,
   les autres répondraient au survol. Survol et clic : un seul écouteur, qui retient l'élément le plus haut sous le
   pointeur (`COUCHES_ACTIVES`), en passant les contours de 2022 effacés (`efface`) ; la sélection d'un bureau se trace
-  sur la source qui le dessine (`cible`). Une commune sans contour dessinée par son découpage local n'est pas peinte
-  dessous (`locale` dans le feature-state des communes).
+  sur la source qui le dessine (`cible`). Une commune sans contour dessinée par son découpage local (Alès) n'est pas
+  peinte dessous (`locale` dans le feature-state de `communes-sans-contour`).
 - MapLibre 6 est en ESM seul : garder `optimizeDeps.exclude: ['maplibre-gl']`, `worker.format: 'es'` et
   `setWorkerUrl(urlWorker)` (import `?worker&url`), sinon le worker ne se charge pas.
 - La carte (et la feuille de style de MapLibre) est chargée en différé (`React.lazy`) : le panneau s'affiche
@@ -141,8 +151,9 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   `.zone-carte` pour l'emporter. Elle est protégée par `GardeCarte` : si elle échoue, le panneau reste.
 - Ordre des téléchargements (`App.tsx`) : les chiffres du panneau (catalogue, agrégats, candidats, petit index
   des départements) ; puis la carte ; puis, une fois les contours des communes chargés (`onPrete`), l'index
-  complet des territoires, l'historique, les bureaux et les contours locaux. Un lien vers un territoire, la recherche ou la fiche
-  d'un bureau demandent tout de suite ce dont ils ont besoin.
+  complet des territoires, l'historique et les bureaux ; à l'approche du zoom des bureaux (zoom 7), les contours
+  locaux et ceux des communes sans contour. Un lien vers un territoire, la recherche ou la fiche d'un bureau
+  demandent tout de suite ce dont ils ont besoin.
 - Ne jamais passer à la carte un tableau ou un objet recréé à chaque rendu (`?? []`) : son effet de coloriage
   se relancerait à chaque mise à jour (plusieurs secondes sur un téléphone). Les états ne sont posés que
   s'ils changent ; ceux des bureaux, pour les seuls départements à l'écran et autour (`departementsEnVue`), dès le

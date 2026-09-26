@@ -29,8 +29,10 @@ cd ../app && npm install && npm run dev
 
 - Résultats : ministère de l'Intérieur, jeu « Données des élections agrégées » sur data.gouv.fr
 - Contours des bureaux de vote : « Proposition de contours des bureaux de vote », data.gouv.fr (2022, indicatifs) ;
-  découpages locaux : Bordeaux Métropole, Ville de Paris (Paris Centre, ODbL), contours « selon la méthode de l'Insee »
-  de Cédric Rossi (Alès et cinq communes aux contours de 2022 erronés)
+  découpages locaux publiés par les collectivités (Bordeaux Métropole, Ville de Paris, Toulouse Métropole, Nantes,
+  Strasbourg, Lyon, Caen, Saint-Nazaire agglo, Orléans Métropole, Brest métropole, Rennes Métropole) et contours « selon
+  la méthode de l'Insee » de Cédric Rossi (Alès et cinq communes aux contours de 2022 erronés) ; contour détaillé des
+  communes sans contour de bureau : API Découpage administratif (geo.api.gouv.fr)
 - Contours administratifs : IGN (ADMIN EXPRESS), versions simplifiées publiées par Etalab
 - Blocs politiques : circulaire du ministère de l'Intérieur de février 2026 (INTP2602966C)
 
@@ -39,5 +41,5 @@ cd ../app && npm install && npm run dev
 [GNU AGPL v3.0](LICENSE) — toute version modifiée mise à disposition en ligne doit publier son code source.
 
 Les données électorales proviennent de sources publiques sous [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence/).
-Seul fichier publié sous une autre licence : `geo/correctifs_bureaux_odbl.geojson`, tiré des « Secteurs des bureaux de
-vote 2024 » de la Ville de Paris, sous [ODbL](https://opendatacommons.org/licenses/odbl/1-0/), comme sa source.
+Seul fichier publié sous une autre licence : `geo/correctifs_bureaux_odbl.geojson`, tiré des « Périmètres des bureaux
+de vote » de Rennes Métropole, sous [ODbL](https://opendatacommons.org/licenses/odbl/1-0/), comme sa source.

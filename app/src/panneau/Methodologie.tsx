@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { LIBELLE_BLOC } from '../carte/couleurs'
-import { RACINE_DONNEES, useManifeste, useReferentiel } from '../donnees/requetes'
+import { RACINE_DONNEES, useCorrectifs, useManifeste, useReferentiel } from '../donnees/requetes'
 import { grouper } from '../donnees/scrutins'
 import type { Bloc, Catalogue, Manifeste, ScrutinCatalogue } from '../donnees/types'
 import { formatNombre, formatPart } from '../format'
@@ -173,6 +173,12 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
   const officiel = totaux.data?.find((l) => l.id_election === scrutin.id)
   const variantes = (toutesVariantes.data ?? []).filter((l) => l.id_election === scrutin.id)
   const releve = dateLisible(catalogue.genere_le)
+  // Découpages locaux des bureaux : leurs sources sont dans les fichiers publiés.
+  const correctifs = useCorrectifs(true)
+  const lieux = (codes: readonly string[]) => {
+    const n = codes.map((c) => noms.get(c) ?? c)
+    return n.length > 1 ? `${n.slice(0, -1).join(', ')} et ${n[n.length - 1]}` : n.join('')
+  }
 
   return (
     <article className="methodologie">
@@ -202,32 +208,35 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
             <span>Contours de l'IGN simplifiés par Etalab (découpage au 1er janvier 2026).</span>
           </li>
           <li>
-            <a href="https://opendata.bordeaux-metropole.fr/explore/dataset/el_bureauvote_s/" target="_blank" rel="noreferrer">Bureaux de vote de Bordeaux</a>
+            <span className="fort">Découpages locaux des bureaux</span>
             <span>
-              Découpage en vigueur de Bordeaux Métropole (Licence Ouverte), aux numéros des scrutins de 2024 : il dessine
-              Bordeaux, dont les bureaux ont changé de numéro depuis les contours de 2022.
+              Publiés par les collectivités, ou reconstitués, là où les contours de 2022 manquent, sont faux ou ne suivent
+              plus les bureaux : chacun dessine ses territoires aux scrutins dont il porte les numéros.
+              {correctifs.isError && ' Leur liste est indisponible pour le moment.'}
             </span>
           </li>
-          <li>
-            <a href="https://opendata.paris.fr/explore/dataset/secteurs-des-bureaux-de-vote-2024/" target="_blank" rel="noreferrer">Secteurs des bureaux de vote 2024</a>
-            <span>
-              Découpage de 2024 de la Ville de Paris (ODbL) : il dessine Paris Centre (1er au 4e arrondissements), dont les
-              bureaux ont changé de numéro en 2024, aux scrutins depuis cette année. L'atlas le publie dans un fichier à
-              part, sous la même licence.
-            </span>
-          </li>
-          <li>
-            <a href="https://www.data.gouv.fr/datasets/proposition-de-contours-des-bureaux-de-vote-selon-la-methode-de-linsee/" target="_blank" rel="noreferrer">Contours selon la méthode de l'Insee</a>
-            <span>
-              Découpage reconstitué par Cédric Rossi avec le code de l'Insee, à partir des adresses de 2022 (Licence
-              Ouverte) : il dessine Alès, absente des contours de 2022, et à tout scrutin les cinq communes dont le
-              contour de 2022 est faux (voir les limites). Pas Troyes, Belfort, Dieppe ni Aurillac : leurs polygones n'y
-              ont pas tous un numéro de bureau.
-            </span>
-          </li>
+          {(correctifs.data?.sources ?? []).map((source) => {
+            const dessines = source.territoires.filter((t) => !source.remplace.includes(t))
+            return (
+              <li key={source.fiche}>
+                <a href={source.fiche} target="_blank" rel="noreferrer">{source.nom}</a>
+                <span>
+                  {source.titre.charAt(0).toUpperCase() + source.titre.slice(1)} ({source.licence}
+                  {source.licence === 'ODbL' && ", publié par l'atlas dans un fichier à part, sous la même licence"})
+                  {dessines.length > 0 && ` : ${lieux(dessines)}, aux scrutins depuis ${source.depuis}`}
+                  {source.remplace.length > 0
+                    && `${dessines.length > 0 ? ' ;' : ' :'} à tout scrutin, à la place des contours de 2022 erronés, ${
+                      source.remplace.length > 6 ? `${source.remplace.length} communes (voir les limites connues)` : lieux(source.remplace)}`}.
+                </span>
+              </li>
+            )
+          })}
           <li>
             <a href="https://geo.api.gouv.fr/decoupage-administratif" target="_blank" rel="noreferrer">Contour détaillé d'une commune</a>
-            <span>API Découpage administratif (geo.api.gouv.fr), interrogée quand une commune ou un arrondissement est choisi.</span>
+            <span>
+              API Découpage administratif (geo.api.gouv.fr) : commune ou arrondissement choisi, et, au zoom des bureaux, les
+              communes sans aucun contour de bureau.
+            </span>
           </li>
           <li>
             <a href="https://geoservices.ign.fr/planign" target="_blank" rel="noreferrer">Fond de plan au zoom des bureaux</a>
@@ -241,8 +250,9 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
             <span>
               Géocodeur de la Géoplateforme (IGN), d'après la Base adresse nationale : le texte tapé lui est envoyé
               quand il contient un chiffre ou un type de voie (rue, avenue, place…) ; un nom de commune ou un code
-              postal ne quitte pas votre navigateur. La fiche montre la commune, puis le bureau dont le contour de 2022
-              (indicatif) contient l'adresse ; quand la carte du scrutin s'arrête à la commune, la commune.
+              postal ne quitte pas votre navigateur. La fiche montre la commune, puis le bureau dont le contour (de 2022,
+              indicatif, ou d'un découpage local) contient l'adresse ; quand la carte du scrutin s'arrête à la commune, la
+              commune.
             </span>
           </li>
         </ul>
@@ -253,7 +263,7 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
         <ul className="liste">
           <li>Le site ne publie que des comptes (inscrits, votants, voix) ; les pourcentages se calculent à l'affichage, sur les suffrages exprimés, et la participation sur les inscrits.</li>
           <li>Les communes sont celles du 1er janvier 2026 : les résultats d'une commune fusionnée depuis un scrutin sont additionnés dans sa commune actuelle.</li>
-          <li>Les contours des bureaux datent de 2022. Avant 2022, la carte s'arrête toujours à la commune : un bureau a pu garder son numéro sans garder son périmètre. Depuis, elle descend au bureau quand au moins 98 % des inscrits de métropole y trouvent leur bureau (ce n'est pas le cas des municipales 2026).</li>
+          <li>Les contours des bureaux datent de 2022. Avant 2022, la carte s'arrête toujours à la commune : un bureau a pu garder son numéro sans garder son périmètre. Depuis, elle descend au bureau quand au moins 98 % des inscrits de métropole y trouvent le contour de leur bureau, de 2022 ou d'un découpage local (la légende donne la part de chaque scrutin).</li>
           <li>Jusqu'en 2015, les données comptent ensemble les bulletins blancs et nuls ; le site ne les sépare pas.</li>
           <li>Municipales 2014 et 2020 : dans les communes de moins de 1 000 habitants, on vote pour des personnes (panachage) ; leurs voix, multiples, n'entrent pas dans les parts des blocs.</li>
           <li>Législatives : la circonscription vient des données de 2012 à 2022, et des fichiers officiels par circonscription en 2024.</li>
@@ -343,7 +353,7 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
 
       <Section titre="Limites connues">
         <ul className="liste">
-          <li>Les contours des bureaux sont indicatifs : reconstitués en 2022 à partir des adresses, ils peuvent s'écarter du découpage réel, et les bureaux créés ou renumérotés depuis n'y figurent pas. Quelques villes en sont absentes (Troyes, Alès, Belfort, Dieppe, Aurillac) : leur surface y est rattachée, à tort, au dernier bureau de la commune au code INSEE précédent (Trouans, Aimargues, Beaucourt, Déville-lès-Rouen, Auriac-l'Église), dont le contour déborde ainsi sur la ville. La carte montre alors la commune : à la place d'un contour sans résultat, et en entier quand plus de la moitié de ses inscrits votent dans un bureau sans contour. Il n'existe pas de contours nationaux plus récents ; des découpages locaux prennent le relais (voir les sources) : à Bordeaux (découpage en vigueur, qui a pu être retouché depuis 2024) et à Paris Centre pour les scrutins depuis 2024, à Alès et dans les cinq communes au contour faux à tout scrutin.</li>
+          <li>Les contours des bureaux sont indicatifs : reconstitués en 2022 à partir des adresses, ils peuvent s'écarter du découpage réel, et les bureaux créés ou renumérotés depuis n'y figurent pas. Quelques villes en sont absentes (Troyes, Alès, Belfort, Dieppe, Aurillac) : leur surface y est rattachée, à tort, au dernier bureau de la commune au code INSEE précédent (Trouans, Aimargues, Beaucourt, Déville-lès-Rouen, Auriac-l'Église), dont le contour déborde ainsi sur la ville : ces cinq communes sont dessinées par les contours reconstitués selon la méthode de l'Insee. La carte montre alors la commune : à la place d'un contour sans résultat, et en entier quand plus de la moitié de ses inscrits votent dans un bureau sans contour. Il n'existe pas de contours nationaux plus récents ; là où une collectivité publie son découpage, il prend le relais aux scrutins dont il porte les numéros (voir les sources) : un découpage en vigueur, ou plus récent que le scrutin, a pu être retouché entre-temps. Troyes, Belfort, Dieppe et Aurillac restent montrées en entier : les contours reconstitués selon la méthode de l'Insee n'y ont pas tous un numéro de bureau.</li>
           <li>Paris, Lyon et Marseille : les données ne descendent qu'à la ville ; les résultats par arrondissement sont calculés d'après le numéro des bureaux, qui commence par celui de l'arrondissement (règle vérifiée sur tous les scrutins, à un ou deux bureaux près, laissés à la ville). Jusqu'en 2020, les municipales s'y votaient par secteur : chaque arrondissement montre les listes du sien, et la ville n'a pas de liste « en tête ».</li>
           <li>Nouvelle-Calédonie, Polynésie française, Wallis-et-Futuna : pas de contours de bureaux, résultats à la commune.</li>
           <li>L'offre électorale change d'un scrutin à l'autre : une évolution de bloc peut tenir à l'absence d'une candidature.</li>

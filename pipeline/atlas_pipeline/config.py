@@ -1,4 +1,6 @@
 """Configuration : sources officielles, scrutins de la v1, chemins."""
+from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -27,8 +29,10 @@ RESSOURCES = {
 }
 
 # Seuil au-delà duquel un scrutin est cartographié au bureau de vote (part des inscrits de
-# métropole rattachés à un contour) ; en dessous, la carte s'arrête à la commune.
+# métropole rattachés à un contour, de 2022 ou local) ; en dessous, la carte s'arrête à la commune.
 SEUIL_CARTE_BUREAUX = 0.98
+# Part des bureaux d'un territoire que son découpage local doit porter pour le dessiner à un scrutin (repli.ts).
+SEUIL_CORRECTIF = 0.9
 
 
 # Les données agrégées donnent le code de circonscription des législatives de 2012 à 2022 : valeur

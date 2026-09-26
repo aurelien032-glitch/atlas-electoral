@@ -219,6 +219,11 @@ flowchart TB
 | `?scrutin=2024_legi_t1&sel=commune:30007`, puis `2022_pres_t1`, puis `2026_muni_t1` | Alès au bureau (méthode de l'Insee), sans couleur d'Aimargues dessous ; en 2022, pas de « limites ont pu changer » ; à la commune (2026), son tracé entier à sa couleur |
 | `?scrutin=2022_pres_t1&sel=commune:10387`, puis `2017_pres_t1` | Survol dans Troyes : « Troyes », jamais « Trouans, bureau 0001 » (contour de 2022 faux, effacé) |
 | `?scrutin=2024_legi_t1&sel=commune:30006` | Aimargues par ses 4 bureaux « méthode de l'Insee » ; fiche : « Il remplace ici les contours de 2022, erronés. » |
+| `?scrutin=2026_muni_t1&sel=commune:14118` | Municipales 2026 au bureau ; Caen par son découpage de 2026 (bureaux 0801, 1901…), fiche : « un bureau n'y figure pas » |
+| `?scrutin=2024_legi_t1&sel=commune:31555`, puis `35238` | Toulouse par son découpage de 2024 (bureaux à lettre, « 190A ») ; Rennes : fiche « découpage en vigueur (Rennes Métropole, ODbL) », attribution « Rennes Métropole (ODbL) » |
+| `?scrutin=2024_legi_t1&sel=commune:10387` | Troyes peinte par son contour détaillé (et non plus un polygone de dix points) ; survol au centre : « Troyes » |
+| `?scrutin=2026_muni_t1` (vue nationale), puis zoom au-delà de 7 | Aucun contour local ni de commune téléchargé avant le zoom 7 ; ensuite `correctifs_bureaux.geojson`, `correctifs_bureaux_odbl.geojson` et `communes_sans_contour.geojson` |
+| `?page=methodologie` | Sources : les quatorze découpages locaux, lus dans les fichiers publiés (auteur, découpage, licence, territoires, année) |
 | Légende en 2022 (au bureau), en 2017 (à la commune), en Évolution | « il en manque pour 0,4 % des inscrits de métropole » ; « ne couvrent que 98,9 % » ; pas de note |
 | `?scrutin=2020_muni_t1&sel=arrondissement:13207`, puis `75102` | Colonne « 1er secteur » (1er et 7e arrondissements), puis « Paris Centre » ; une note nomme les arrondissements du secteur |
 

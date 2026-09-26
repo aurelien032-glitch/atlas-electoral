@@ -1,6 +1,7 @@
 """Contrôles sur les fichiers publiés. Lancer d'abord : python -m atlas_pipeline.construire"""
 import csv
 import json
+import re
 from pathlib import Path
 
 import duckdb
@@ -377,33 +378,62 @@ def test_couverture_de_la_source():
 
 
 def territoire_du_bureau(code_bv: str) -> str:
-    # À Paris, l'arrondissement, tiré du numéro du bureau (« 75056_0211 » → 75102).
-    commune, numero = code_bv.split("_")
-    return f"751{numero[:2]}" if commune == "75056" else commune
+    # À Paris, Lyon et Marseille, l'arrondissement, tiré du numéro du bureau (« 75056_0211 » → 75102).
+    commune, numero = code_bv.split("_", 1)
+    if commune == "75056" and re.match(r"(0[1-9]|1[0-9]|20)", numero):
+        return "751" + numero[:2]
+    if commune == "69123" and re.match(r"0[1-9]", numero):
+        return "6938" + numero[1]
+    if commune == "13055" and re.match(r"(0[1-9]|1[0-6])", numero):
+        return "132" + numero[:2]
+    return commune
+
+
+def commune_du_territoire(territoire: str) -> str:
+    # Les arrondissements votent sous le code de leur ville.
+    for prefixe, ville in (("751", "75056"), ("6938", "69123"), ("132", "13055")):
+        if territoire.startswith(prefixe):
+            return ville
+    return territoire
 
 
 @pytest.mark.parametrize("nom, licence", [("correctifs_bureaux.geojson", "Licence Ouverte"),
                                           ("correctifs_bureaux_odbl.geojson", "ODbL")])
 def test_contours_locaux(con, nom, licence):
-    # Découpages locaux (atlas_pipeline.correctifs), l'ODbL dans son propre fichier : chaque source porte les numéros
-    # de presque tous les bureaux de ses territoires, à chaque scrutin au bureau depuis son année (Bordeaux, renumérotée
-    # en 2024 : 152 bureaux sur 153 ; Paris Centre, renumérotée en 2024 ; Alès, absente des contours de 2022 ; les cinq
-    # communes dont le contour de 2022 déborde sur une ville absente, remplacées à tout scrutin).
+    # Découpages locaux (atlas_pipeline.correctifs), l'ODbL dans son propre fichier. Chaque territoire relève d'une
+    # seule source, qui porte les numéros d'au moins 90 % de ses bureaux à chaque scrutin au bureau depuis son année
+    # (sinon l'application ne l'emploie pas) : Bordeaux et Paris Centre renumérotées en 2024, Caen en 2026, Toulouse,
+    # Nantes, Rennes… aux bureaux créés depuis 2022 ; Alès, absente des contours de 2022 ; les cinq communes dont le
+    # contour de 2022 déborde sur une ville absente, remplacées à tout scrutin.
     correctifs = json.loads((PUBLICATION / "geo" / nom).read_text(encoding="utf-8"))
     codes = {f["properties"]["code_bv"] for f in correctifs["features"]}
     assert len(codes) == len(correctifs["features"])
-    assert {territoire_du_bureau(c) for c in codes} == {t for s in correctifs["sources"] for t in s["territoires"]}
+    territoires = [t for s in correctifs["sources"] for t in s["territoires"]]
+    assert len(territoires) == len(set(territoires)), "un territoire relève de deux sources"
+    assert {territoire_du_bureau(c) for c in codes} == set(territoires)
     catalogue = json.loads(CATALOGUE.read_text(encoding="utf-8"))["scrutins"]
     for source in correctifs["sources"]:
         assert source["licence"] == licence and set(source["remplace"]) <= set(source["territoires"])
-        communes = ", ".join(sorted({"'75056'" if t.startswith("751") else f"'{t}'" for t in source["territoires"]}))
-        verifies = 0
+        assert source["bureaux"] == sum(territoire_du_bureau(c) in source["territoires"] for c in codes)
+        communes = ", ".join(sorted({f"'{commune_du_territoire(t)}'" for t in source["territoires"]}))
         for scrutin in catalogue:
             if int(scrutin["date"][:4]) < source["depuis"] or (scrutin["jointure_contours"] or {}).get("niveau_carte") != "bureau":
                 continue
-            bureaux = {c for (c,) in con.sql(f"SELECT code_bv FROM {fichier(scrutin['id'], 'bureaux.parquet')} "
-                                             f"WHERE split_part(code_bv, '_', 1) IN ({communes})").fetchall()
-                       if territoire_du_bureau(c) in source["territoires"]}
-            assert len(bureaux & codes) >= 0.95 * len(bureaux), (source["nom"], scrutin["id"])
-            verifies += len(bureaux) > 0
-        assert verifies >= 3, source["nom"]
+            resultats = [c for (c,) in con.sql(f"SELECT code_bv FROM {fichier(scrutin['id'], 'bureaux.parquet')} "
+                                               f"WHERE split_part(code_bv, '_', 1) IN ({communes})").fetchall()]
+            for territoire in source["territoires"]:
+                bureaux = {c for c in resultats if territoire_du_bureau(c) == territoire}
+                assert len(bureaux & codes) >= 0.9 * len(bureaux), (source["nom"], territoire, scrutin["id"])
+
+
+def test_communes_sans_contour(con):
+    # Contour détaillé des communes sans aucun contour de bureau (atlas_pipeline.correctifs) : aucune qui en ait un ;
+    # Troyes, Belfort, Dieppe et Aurillac en sont.
+    donnees = json.loads((PUBLICATION / "geo" / "communes_sans_contour.geojson").read_text(encoding="utf-8"))
+    codes = [f["properties"]["code"] for f in donnees["features"]]
+    assert len(codes) == len(set(codes)) and all(f["geometry"]["coordinates"] for f in donnees["features"])
+    contours = con.sql(f"SELECT code_bv, code_commune FROM "
+                       f"'{(PUBLICATION / 'geo' / 'bureaux_contours_2022.parquet').as_posix()}'").fetchall()
+    dessines = {territoire_du_bureau(c) for c, _ in contours} | {commune for _, commune in contours}
+    assert not set(codes) & dessines
+    assert {"10387", "90010", "76217", "15014"} <= set(codes)

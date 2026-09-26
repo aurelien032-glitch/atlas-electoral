@@ -57,7 +57,7 @@ const HACHURES = {
 const saufLocale = (opacite: ExpressionSpecification): ExpressionSpecification =>
   ['case', ['boolean', ['feature-state', 'locale'], false], 0, opacite]
 const opaciteRepli = (opacite: number) => saufLocale(opaciteSurPlan(opacite))
-// Communes à dessiner au zoom des bureaux, faute de contour de bureau (quelques dizaines au plus).
+// Commune sélectionnée, faute de contour détaillé.
 const communesParmi = (codes: Iterable<string>): FilterSpecification => ['in', ['get', 'code'], ['literal', [...codes]]]
 // Contours locaux des territoires qu'ils dessinent à ce scrutin (quelques centaines au plus).
 const bureauxParmi = (codes: Iterable<string>): FilterSpecification => ['in', ['get', 'code_bv'], ['literal', [...codes]]]
@@ -94,10 +94,12 @@ const STYLE: StyleSpecification = {
     // Chargée seulement pour les législatives (setData), par fusion des contours des bureaux.
     circonscriptions: { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, promoteId: 'code' },
     repere: { type: 'geojson', data: VIDE },
-    // Contours locaux des bureaux, là où ceux de 2022 manquent ou ne suivent plus : chargés au besoin.
+    // Contours locaux des bureaux, là où ceux de 2022 manquent, sont faux ou ne suivent plus : chargés au besoin.
     correctifs: {
-      type: 'geojson', data: VIDE, promoteId: 'code_bv', attribution: 'Bureaux locaux : Bordeaux Métropole, Ville de Paris (ODbL), C. Rossi',
+      type: 'geojson', data: VIDE, promoteId: 'code_bv', attribution: 'Bureaux locaux : collectivités, C. Rossi ; Rennes Métropole (ODbL)',
     },
+    // Contour détaillé des communes sans aucun contour de bureau (Troyes, Belfort…), chargé au besoin.
+    'communes-sans-contour': { type: 'geojson', data: VIDE, promoteId: 'code' },
     // Tuiles demandées à partir du zoom des bureaux seulement : sans ce plancher, MapLibre précharge les niveaux
     // parents (zooms 2 à 8), qu'on n'affiche pas.
     plan: { type: 'raster', tiles: [PLAN_IGN], tileSize: 256, minzoom: ZOOM_BUREAUX, maxzoom: 19, attribution: 'Plan IGN' },
@@ -108,13 +110,14 @@ const STYLE: StyleSpecification = {
       id: 'plan', type: 'raster', source: 'plan', minzoom: ZOOM_BUREAUX,
       paint: { 'raster-saturation': -1, 'raster-brightness-min': 0.3, 'raster-contrast': -0.1, 'raster-fade-duration': 0 },
     },
-    // Au zoom des bureaux, une commune qui n'a aucun contour de bureau (Troyes, Belfort…) reste dessinée, à sa couleur.
+    // Au zoom des bureaux, une commune qui n'a aucun contour de bureau (Troyes, Belfort…) reste dessinée, à sa couleur,
+    // par son contour détaillé (le contour simplifié de la vue nationale n'a parfois que sept points).
     {
-      id: 'communes-repli', type: 'fill', source: 'communes', minzoom: ZOOM_BUREAUX, filter: communesParmi([]),
+      id: 'communes-repli', type: 'fill', source: 'communes-sans-contour', minzoom: ZOOM_BUREAUX,
       paint: { ...REMPLISSAGE, 'fill-opacity': opaciteRepli(OPACITE_SUR_PLAN) },
     },
     {
-      id: 'communes-repli-hachures', type: 'fill', source: 'communes', minzoom: ZOOM_BUREAUX, filter: communesParmi([]),
+      id: 'communes-repli-hachures', type: 'fill', source: 'communes-sans-contour', minzoom: ZOOM_BUREAUX,
       paint: { ...HACHURES, 'fill-opacity': saufLocale(HACHURES['fill-opacity']) }, layout: { visibility: 'none' },
     },
     { id: 'communes', type: 'fill', source: 'communes', maxzoom: ZOOM_BUREAUX, paint: REMPLISSAGE },
@@ -202,6 +205,8 @@ interface Props {
   correctifs: Correctifs | null
   /** Emprise de chaque département : les états des bureaux ne sont posés que pour ceux à l'écran. */
   emprisesDepartements: Emprises
+  /** Première approche du zoom des bureaux : ce qui ne se voit qu'à ce zoom peut se télécharger. */
+  onApprocheBureaux: () => void
   /** Scrutin législatif : charge et montre la couche des circonscriptions. */
   circonscriptions: boolean
   selection: Selection | undefined
@@ -322,7 +327,7 @@ function motifHachures(pas = 8, ratio = 2) {
 }
 
 export function Carte({
-  coloriage, contours, auBureau, repli, correctifs, emprisesDepartements, circonscriptions, selection, contour, contourIndisponible, cadrage, libelle, onSurvol, onClic, onPrete,
+  coloriage, contours, auBureau, repli, correctifs, emprisesDepartements, onApprocheBureaux, circonscriptions, selection, contour, contourIndisponible, cadrage, libelle, onSurvol, onClic, onPrete,
   onEnsemble, onPlan, opacite, repere, visite, onBureauAdresse, legendeRepliee, encartsDeplies, voletReplie,
 }: Props) {
   const conteneur = useRef<HTMLDivElement>(null)
@@ -351,7 +356,7 @@ export function Carte({
    * seconde (plusieurs sur un téléphone) à poser 35 000 états, souvent identiques d'un coloriage à l'autre
    * (les bureaux qui arrivent après les communes, par exemple).
    */
-  function poser(carte: CarteMapLibre, source: 'communes' | 'circonscriptions', etats: ReadonlyMap<string, Etat>) {
+  function poser(carte: CarteMapLibre, source: 'communes' | 'circonscriptions' | 'communes-sans-contour', etats: ReadonlyMap<string, Etat>) {
     const avant = refPoses.current.get(source) ?? new Map<string, Etat>()
     for (const code of avant.keys()) if (!etats.has(code)) carte.removeFeatureState({ source, id: code })
     for (const [code, etat] of etats) {
@@ -491,12 +496,24 @@ export function Carte({
     carte.setPaintProperty('communes-repli', 'fill-opacity', opaciteRepli(opacite))
   }, [prete, opacite])
 
-  // Communes sans aucun contour de bureau : dessinées au zoom des bureaux.
+  // À l'approche du zoom des bureaux, le seul où ils se voient : contours détaillés des communes sans contour de
+  // bureau, et (par l'application) contours locaux. Une seule fois.
+  const refApproche = useRef(false)
   useEffect(() => {
     const carte = refCarte.current
     if (!carte || !prete) return
-    for (const couche of ['communes-repli', 'communes-repli-hachures']) carte.setFilter(couche, communesParmi(repli?.sansDessin ?? []))
-  }, [prete, repli])
+    const approcher = () => {
+      if (refApproche.current || carte.getZoom() < ZOOM_BUREAUX - 2) return
+      refApproche.current = true
+      carte.getSource<GeoJSONSource>('communes-sans-contour')?.setData(`${RACINE_DONNEES}/geo/communes_sans_contour.geojson`)
+      onApprocheBureaux()
+    }
+    approcher()
+    carte.on('zoom', approcher)
+    return () => {
+      carte.off('zoom', approcher)
+    }
+  }, [prete, onApprocheBureaux])
 
   useEffect(() => {
     const carte = refCarte.current
@@ -580,12 +597,15 @@ export function Carte({
     const decoupees = new Set<string>([...(coloriage.arrondissements?.keys() ?? [])].map(villeDe))
     const communes = new Map([...coloriage.communes].filter(([code]) => !decoupees.has(code)))
     for (const [code, etat] of coloriage.arrondissements ?? []) communes.set(code, etat)
-    // Au zoom des bureaux, une commune sans contour de 2022 que dessine son découpage local n'est pas peinte dessous.
-    for (const territoire of repli?.corriges ?? []) {
-      const etat = communes.get(territoire)
-      if (etat && repli?.sansDessin.has(territoire)) communes.set(territoire, { ...etat, locale: true })
-    }
     poser(carte, 'communes', communes)
+    // Communes sans aucun contour de bureau : leur contour détaillé, à leur couleur ; pas peint sous le découpage local
+    // qui en dessine les bureaux (Alès).
+    const sansContour = new Map<string, Etat>()
+    for (const code of repli?.sansDessin ?? []) {
+      const etat = communes.get(code)
+      if (etat) sansContour.set(code, repli?.corriges.has(code) ? { ...etat, locale: true } : etat)
+    }
+    poser(carte, 'communes-sans-contour', sansContour)
     // Aux législatives, la vue nationale montre les circonscriptions à la place des communes.
     const parCirconscription = (coloriage.circonscriptions?.size ?? 0) > 0
     poser(carte, 'circonscriptions', coloriage.circonscriptions ?? new Map())

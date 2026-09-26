@@ -194,11 +194,9 @@ export interface SourceCorrectif {
    * scrutin, même à la commune, leurs contours de 2022 effacés.
    */
   remplace: string[]
-  /** Ces territoires, tels que la légende les nomme (« Paris Centre »). */
-  lieu: string
   /** Auteur du jeu, cité avec un lien vers sa fiche. */
   nom: string
-  /** Ce qu'il publie (« découpage de 2024 »). */
+  /** Ce qu'il publie (« découpage de 2026 », « découpage en vigueur »…). */
   titre: string
   /** Année du découpage ; null pour un découpage « en vigueur », sans date. */
   annee: number | null

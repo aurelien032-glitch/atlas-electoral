@@ -123,6 +123,7 @@ interface PropsZone {
   repli: Repli | null
   correctifs: Correctifs | null
   emprisesDepartements: Emprises
+  onApprocheBureaux: () => void
   circonscriptions: boolean
   selection: Selection | undefined
   contour: Feature | undefined
@@ -273,9 +274,11 @@ export default function App() {
   // Contours de 2022 (bureau → commune) : une carte à la commune en colore les bureaux ; une carte au bureau y lit,
   // une fois prête, où montrer la commune faute de contour.
   const contours = useContours(chiffresPrets && (!carteAuBureau || carteChargee))
-  // Contours locaux des bureaux (Bordeaux, Paris Centre, Alès…), une fois la carte prête : certains remplacent des
-  // contours de 2022 faux, à tout scrutin.
-  const correctifs = useCorrectifs(chiffresPrets && carteChargee)
+  // Contours locaux des bureaux (Bordeaux, Paris, Toulouse…) : quelques centaines de kilo-octets, demandés à l'approche
+  // du zoom des bureaux, le seul où ils se voient.
+  const [versBureaux, setVersBureaux] = useState(false)
+  const approcheBureaux = useCallback(() => setVersBureaux(true), [])
+  const correctifs = useCorrectifs(chiffresPrets && carteChargee && versBureaux)
   const encarts = useEncarts(chiffresPrets)
   // Recherche, préparée à la première utilisation du champ (normaliser 35 000 noms prend du temps) : à
   // pertinence égale, les communes qui comptent le plus d'inscrits passent devant.
@@ -464,10 +467,9 @@ export default function App() {
     if (!j || vue.mode === 'evolution') return undefined
     const part = (x: number) => `${(100 * x).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
     return j.niveau_carte === 'commune'
-      ? `Carte à la commune : les contours de bureaux datent de 2022 et ne couvrent que ${part(j.taux_inscrits_metropole)} des inscrits de métropole à ce scrutin.`
-      : `Contours des bureaux de 2022 : il en manque pour ${part(1 - j.taux_inscrits_metropole)} des inscrits de métropole ; la carte montre alors leur commune.${
-        sourcesLocales.map((s) => ` ${s.lieu} : ${s.titre} (${s.nom}).`).join('')}`
-  }, [scrutin, vue.mode, sourcesLocales])
+      ? `Carte à la commune : les contours de bureaux (2022, et découpages locaux) ne couvrent que ${part(j.taux_inscrits_metropole)} des inscrits de métropole à ce scrutin.`
+      : `Contours des bureaux de 2022, et découpages locaux publiés par les villes : il en manque pour ${part(1 - j.taux_inscrits_metropole)} des inscrits de métropole ; la carte montre alors leur commune.`
+  }, [scrutin, vue.mode])
 
   const apercuEvolution = useMemo((): ApercuEvolution | undefined => {
     if (vue.mode !== 'evolution' || !evolution || !scrutinDe || !etatCarte?.valeurs) return undefined
@@ -639,15 +641,16 @@ export default function App() {
     let suite = ''
     if (!scrutin) suite = ''
     else if (s.niveau === 'bureau') {
+      const local = repliCarte?.corriges.has(arrondissementDu(s.code) ?? communeDu(s.code, index.passage))
       suite = !auBureau
         ? "Bureau trouvé d'après les contours de 2022 : pour ce scrutin, ce numéro a pu désigner un autre bureau."
-        : `Bureau dont le contour de 2022 (indicatif) la contient.${adresse.type === 'housenumber' ? ''
+        : `Bureau dont le contour${local ? ', tiré du découpage local,' : ' de 2022 (indicatif)'} la contient.${adresse.type === 'housenumber' ? ''
           : " Sans numéro, le repère marque un point de la voie : le bureau peut changer d'un numéro à l'autre."}`
     } else if (!auBureau) suite = `Pour ce scrutin, la carte s'arrête à ${lieu}.`
     else if (etat === 'recherche') suite = 'Recherche de son bureau de vote…'
-    else if (etat === 'faite' && bureau === null) suite = `Aucun contour de bureau de 2022 ne la relie à un bureau de ce scrutin : résultats de ${lieu}.`
+    else if (etat === 'faite' && bureau === null) suite = `Aucun contour de bureau ne la relie à un bureau de ce scrutin : résultats de ${lieu}.`
     return `Adresse recherchée : ${adresse.libelle}.${suite && ` ${suite}`}`
-  }, [adresseAffichee, scrutin, auBureau])
+  }, [adresseAffichee, scrutin, auBureau, repliCarte, index.passage])
 
   const lienMethodologie = useMemo(() => {
     const p = new URLSearchParams(parametres)
@@ -932,6 +935,7 @@ export default function App() {
           repli={repliCarte}
           correctifs={correctifs.data ?? null}
           emprisesDepartements={emprisesDepartements}
+          onApprocheBureaux={approcheBureaux}
           circonscriptions={scrutin?.portee === 'circonscription'}
           selection={selection}
           contour={contourCommune.data}

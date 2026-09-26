@@ -3,6 +3,8 @@ import duckdb
 
 from atlas_pipeline.circonscriptions import DEPARTEMENTS_DU_MINISTERE
 from atlas_pipeline.construire import departement_de
+from atlas_pipeline.correctifs import numero, territoire_du_bureau
+from atlas_pipeline.correctifs import simplifier as simplifier_anneau
 from atlas_pipeline.encarts import chemin, simplifier
 from atlas_pipeline.geo import arrondissement_municipal
 
@@ -33,3 +35,17 @@ def test_simplification_garde_les_extremites_et_les_angles():
 def test_chemin_svg_d_un_carre():
     carre = {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]}
     assert chemin(carre, lambda lon, lat: (10 * lon, 10 * (1 - lat))) == "M0.0,10.0L10.0,10.0L10.0,0.0L0.0,0.0Z"
+
+
+def test_numero_d_un_bureau_local_comme_dans_les_resultats():
+    # Quatre chiffres, ou trois chiffres et une lettre (« 601A » à Strasbourg, « 001A » à Toulouse).
+    assert [numero(v) for v in ("12", "0012", 12, "601A", "0001A", "1a")] == ["0012", "0012", "0012", "601A", "001A", "001A"]
+
+
+def test_territoire_d_un_bureau_local():
+    assert [territoire_du_bureau(c) for c in ("75056_0211", "69123_0356", "13055_0901", "33063_1001", "75056_JUS1")]         == ["75102", "69383", "13209", "33063", "75056"]
+
+
+def test_simplification_d_un_anneau_ferme():
+    carre = [[0, 0], [0.5, 0.000001], [1, 0], [1, 1], [0, 1], [0, 0]]
+    assert simplifier_anneau(carre, 0.00001) == [[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]
