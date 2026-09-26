@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { arrondissementDu, estArrondissement, selectionDeCommune, titreDe, villeDe } from './territoires'
+import {
+  arrondissementDu, estArrondissement, lesArrondissements, secteurDe, selectionDeCommune, titreDe, villeDe,
+} from './territoires'
 
 describe('territoire d’une adresse', () => {
   it('choisit l’arrondissement à Paris, Lyon et Marseille, la commune ailleurs', () => {
@@ -39,5 +41,29 @@ describe('arrondissements de Paris, Lyon et Marseille', () => {
     expect(['75101', '75120', '69389', '13216', '75056', '69380'].map(estArrondissement))
       .toEqual([true, true, true, true, false, false])
     expect(['75115', '69383', '13216'].map(villeDe)).toEqual(['75056', '69123', '13055'])
+  })
+})
+
+describe('secteurs des municipales', () => {
+  it('réunit deux arrondissements par secteur à Marseille, numérotés dans l’ordre officiel', () => {
+    expect(secteurDe('13207', 2014)).toEqual({ nom: '1er secteur', arrondissements: ['13201', '13207'] })
+    expect(secteurDe('13208', 2008)?.nom).toBe('4e secteur')
+    expect(secteurDe('13216', 2020)?.nom).toBe('8e secteur')
+  })
+
+  it('ne réunit les quatre premiers arrondissements de Paris qu’en 2020, jamais ceux de Lyon', () => {
+    expect(secteurDe('75103', 2020)?.nom).toBe('Paris Centre')
+    expect(secteurDe('75103', 2014)).toBeUndefined()
+    expect(secteurDe('75105', 2020)).toBeUndefined()
+    expect(secteurDe('69381', 2020)).toBeUndefined()
+  })
+
+  it('n’existe plus en 2026, où chaque ville vote pour une seule liste', () => {
+    expect(secteurDe('13201', 2026)).toBeUndefined()
+  })
+
+  it('nomme les arrondissements d’un secteur', () => {
+    expect(lesArrondissements(['13201', '13207'])).toBe('les 1er et 7e arrondissements')
+    expect(lesArrondissements(['75101', '75102', '75103', '75104'])).toBe('les 1er, 2e, 3e et 4e arrondissements')
   })
 })

@@ -12,6 +12,8 @@ export interface Etat {
   couleur: string
   opacite: number
   hachure: boolean
+  /** Contour de bureau peint à la couleur de sa commune, faute de bureau de ce scrutin : son tracé s'efface. */
+  commune?: boolean
 }
 
 const HACHURE: Etat = { couleur: FOND_CARTE, opacite: 1, hachure: false }

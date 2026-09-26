@@ -82,6 +82,43 @@ export function arrondissementDu(codeBureau: string): string | undefined {
   return undefined
 }
 
+/**
+ * Municipales par secteur (jusqu'en 2020) : secteurs de plusieurs arrondissements, où chaque liste se présentait dans
+ * tous (loi PLM). Marseille en compte huit de deux arrondissements, numérotés dans cet ordre ; à Paris, Paris Centre
+ * réunit les quatre premiers en 2020. Ailleurs, et à Lyon, un arrondissement forme son secteur. Composition vérifiée
+ * dans les résultats de 2008, 2014 et 2020 : les arrondissements d'un même secteur y ont les mêmes listes.
+ */
+const SECTEURS_MARSEILLE = [
+  ['13201', '13207'], ['13202', '13203'], ['13204', '13205'], ['13206', '13208'],
+  ['13209', '13210'], ['13211', '13212'], ['13213', '13214'], ['13215', '13216'],
+]
+const PARIS_CENTRE = ['75101', '75102', '75103', '75104']
+
+const ordinal = (n: number) => `${n}${n === 1 ? 'er' : 'e'}`
+/** Rang d'un arrondissement dans sa ville : « 75115 » → 15, « 69383 » → 3. */
+const rangArrondissement = (code: string) => Number(code.startsWith('6938') ? code.slice(4) : code.slice(3))
+
+export interface Secteur {
+  /** Nom court, pour un intitulé de colonne : « 1er secteur », « Paris Centre ». */
+  nom: string
+  arrondissements: readonly string[]
+}
+
+/** Secteur de plusieurs arrondissements auquel appartient un arrondissement, aux municipales de cette année-là. */
+export function secteurDe(arrondissement: string, annee: number): Secteur | undefined {
+  if (annee > 2020) return undefined
+  const i = SECTEURS_MARSEILLE.findIndex((s) => s.includes(arrondissement))
+  if (i >= 0) return { nom: `${ordinal(i + 1)} secteur`, arrondissements: SECTEURS_MARSEILLE[i] }
+  if (annee === 2020 && PARIS_CENTRE.includes(arrondissement)) return { nom: 'Paris Centre', arrondissements: PARIS_CENTRE }
+  return undefined
+}
+
+/** « les 1er et 7e arrondissements », « les 1er, 2e, 3e et 4e arrondissements ». */
+export function lesArrondissements(codes: readonly string[]): string {
+  const rangs = codes.map((c) => ordinal(rangArrondissement(c)))
+  return `les ${rangs.slice(0, -1).join(', ')} et ${rangs[rangs.length - 1]} arrondissements`
+}
+
 /** Nom affiché d'un territoire sélectionné : « Lyon, bureau 0816 », « Lyon », « Rhône, 2e circonscription ». */
 export function titreDe(selection: Selection, index: Pick<Index, 'noms' | 'passage'>): string {
   if (selection.niveau === 'bureau') {

@@ -148,6 +148,14 @@ flowchart TB
     qui est déplié (légende à gauche, encarts à droite, volet et sources en bas) ; faute de place, légende et
     encarts sont repliés au premier passage. Panneau à gauche sur ordinateur et à l'horizontale (dès 568 px de
     large), volet en bas sur téléphone et tablette tenus verticalement.
+13. **Là où un bureau n'a pas de contour, la carte montre sa commune** (décision Q25) : au zoom des bureaux, une
+    commune sans aucun contour (Troyes…) est dessinée par sa commune ; sur une carte au bureau, un contour de 2022
+    sans résultat prend la couleur de sa commune, et tout un territoire aux bureaux renumérotés (plus de la moitié
+    de ses inscrits sans contour) est montré en entier, sans tracé de bureau. Survol, clic et adresse y désignent la
+    commune (ou l'arrondissement) ; la légende donne la part des inscrits concernés, la fiche le nombre de bureaux.
+14. **Aux municipales par secteur (2008-2020), un arrondissement se compare à son secteur**, là où se jouait
+    l'élection : à Marseille (deux arrondissements par secteur) et à Paris Centre en 2020, la colonne de
+    comparaison est le secteur entier (« 1er secteur », « Paris Centre ») et la fiche nomme ses arrondissements.
 
 ## Comportements assumés
 
@@ -187,6 +195,16 @@ flowchart TB
 | Vue nationale, zoom avant puis arrière | Encarts masqués au-delà d'un niveau de zoom, puis de retour |
 | Fiche, ×, Méthodologie, Précédent | Vue nationale ; Méthodologie sans réglages ; retour à la vue nationale |
 | Mobile, `?mode=evolution&sel=commune:69123` | Volet déplié : fil d'Ariane, réglages, puis « Lyon » et l'écart du bloc |
+
+## Repli à la commune et secteurs (26/09, 1 280 × 800)
+
+| Parcours | Attendu |
+|---|---|
+| `?scrutin=2024_legi_t1&sel=commune:10387` | Troyes dessinée au zoom des bureaux (aucun contour), à la couleur de sa commune ; fiche : « Aucun de ses 30 bureaux n'a de contour de 2022 » |
+| `?scrutin=2024_legi_t1&sel=commune:33063` | Bordeaux peinte en entier (135 bureaux sur 153 sans contour), sans tracé de bureau ; survol : « Bordeaux », bloc le plus voté |
+| `?scrutin=2024_legi_t1&sel=arrondissement:75103` | 2e, 3e et 4e arrondissements montrés en entier (bureaux renumérotés), leurs voisins au bureau |
+| Légende en 2022 (au bureau), en 2017 (à la commune), en Évolution | « il en manque pour 0,4 % des inscrits de métropole » ; « ne couvrent que 98,9 % » ; pas de note |
+| `?scrutin=2020_muni_t1&sel=arrondissement:13207`, puis `75102` | Colonne « 1er secteur » (1er et 7e arrondissements), puis « Paris Centre » ; une note nomme les arrondissements du secteur |
 
 ## Tailles d'écran vérifiées (26/09, premier passage)
 

@@ -319,7 +319,7 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
 
       <Section titre="Limites connues">
         <ul className="liste">
-          <li>Les contours des bureaux sont indicatifs : reconstitués en 2022 à partir des adresses, ils peuvent s'écarter du découpage réel, et les bureaux créés depuis n'y figurent pas.</li>
+          <li>Les contours des bureaux sont indicatifs : reconstitués en 2022 à partir des adresses, ils peuvent s'écarter du découpage réel, et les bureaux créés ou renumérotés depuis n'y figurent pas. Quelques villes en sont absentes (Troyes, Alès, Belfort, Dieppe, Aurillac). La carte montre alors la commune : à la place d'un contour sans résultat, et en entier quand plus de la moitié de ses inscrits votent dans un bureau sans contour. Il n'existe pas de contours nationaux plus récents.</li>
           <li>Paris, Lyon et Marseille : les données ne descendent qu'à la ville ; les résultats par arrondissement sont calculés d'après le numéro des bureaux, qui commence par celui de l'arrondissement (règle vérifiée sur tous les scrutins, à un ou deux bureaux près, laissés à la ville). Jusqu'en 2020, les municipales s'y votaient par secteur : chaque arrondissement montre les listes du sien, et la ville n'a pas de liste « en tête ».</li>
           <li>Nouvelle-Calédonie, Polynésie française, Wallis-et-Futuna : pas de contours de bureaux, résultats à la commune.</li>
           <li>L'offre électorale change d'un scrutin à l'autre : une évolution de bloc peut tenir à l'absence d'une candidature.</li>

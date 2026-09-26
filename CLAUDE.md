@@ -72,6 +72,8 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   → 75115, `construire.ARRONDISSEMENT`, `arrondissementDu` côté client). Sur la carte, les arrondissements
   sont dessinés par-dessus leur ville dans la couche des communes ; la ville n'est alors pas peinte (un
   arrondissement sans résultat reste vide), et un bureau prend la couleur de son arrondissement, jamais de la ville.
+  Municipales par secteur (2008-2020) : un arrondissement de Marseille, ou de Paris Centre en 2020, se compare à son
+  secteur entier (`secteurDe` de `territoires.ts`, colonne « 1er secteur », « Paris Centre »).
 - Les agrégats par commune sont au **COG 2026** (`referentiels/passage_communes_2026.csv`) ; les bureaux gardent
   le code de commune de l'année du vote (le client passe par `communeDu(code, passage)`).
 
@@ -104,6 +106,15 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   à la place.
 - Scrutins dont moins de 98 % des inscrits de métropole joignent les contours (`niveau_carte = commune`) :
   chaque bureau prend la couleur de sa commune.
+- Bureaux sans contour (décision Q25, `carte/repli.ts`, testé) : les contours de 2022 manquent pour quelques villes
+  (Troyes, Alès, Belfort, Dieppe, Aurillac…) et ne suivent pas les bureaux créés ou renumérotés depuis (Bordeaux et
+  Paris Centre en 2024). Au zoom des bureaux, une commune sans aucun contour est dessinée par sa commune (couche
+  `communes-repli`, filtrée par code). Sur une carte au bureau, un contour sans résultat prend la couleur de sa
+  commune (de son arrondissement à Paris, Lyon et Marseille), et tout le territoire quand plus de la moitié de ses
+  inscrits votent dans un bureau sans contour ; ces contours perdent leur tracé (`commune` dans le feature-state) et
+  désignent la commune au survol, au clic et pour une adresse. Note dans la légende et dans la fiche. Il n'existe
+  pas de contours nationaux plus récents (Etalab ne mettra pas les siens à jour ; table de l'Insee quinquennale) :
+  compléments locaux en P1.
 - MapLibre 6 est en ESM seul : garder `optimizeDeps.exclude: ['maplibre-gl']`, `worker.format: 'es'` et
   `setWorkerUrl(urlWorker)` (import `?worker&url`), sinon le worker ne se charge pas.
 - La carte (et la feuille de style de MapLibre) est chargée en différé (`React.lazy`) : le panneau s'affiche

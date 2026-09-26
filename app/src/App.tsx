@@ -10,6 +10,7 @@ import { Legende, type DescriptionLegende } from './carte/Legende'
 import { ReglageOpacite } from './carte/Opacite'
 import { Onglets } from './carte/Onglets'
 import { enVolet, FRANCE_METROPOLITAINE, repliParDefaut } from './carte/place'
+import { repli, territoiresDesContours, type Repli } from './carte/repli'
 
 import { blocEnTete, optionsCibles, retenueDuBloc } from './cibles'
 import { nomCandidature } from './donnees/libelles'
@@ -19,7 +20,8 @@ import {
   useTerritoires, useVoix,
 } from './donnees/requetes'
 import {
-  arrondissementDu, communeDu, departementDe, emprise, indexer, selectionDeCommune, titreDe, villeDe,
+  arrondissementDu, communeDu, departementDe, emprise, indexer, lesArrondissements, secteurDe, selectionDeCommune, titreDe,
+  villeDe,
 } from './donnees/territoires'
 import {
   plusieursElections, raisonPlusieursElections, scrutinParDefaut, scrutinPrecedent, scrutinsAnterieurs, voteParSecteur,
@@ -115,6 +117,7 @@ interface PropsZone {
   coloriage: Coloriage | null
   contours: BureauContour[]
   auBureau: boolean
+  repli: Repli | null
   circonscriptions: boolean
   selection: Selection | undefined
   contour: Feature | undefined
@@ -256,8 +259,9 @@ export default function App() {
   const bureaux = useBureaux((selection?.niveau === 'bureau' ? chiffresPrets : carteChargee && auBureau) ? id : undefined)
   const agregatsVoix = useAgregatsVoix(vue.mode === 'score' || vue.mode === 'evolution' || selection ? id : undefined)
   const voix = useVoix((vue.mode === 'score' && carteAuBureau) || selection?.niveau === 'bureau' ? id : undefined)
-  // Correspondance bureau → commune : seulement pour les cartes à la commune.
-  const contours = useContours(chiffresPrets && !carteAuBureau)
+  // Contours de 2022 (bureau → commune) : une carte à la commune en colore les bureaux ; une carte au bureau y lit,
+  // une fois prête, où montrer la commune faute de contour.
+  const contours = useContours(chiffresPrets && (!carteAuBureau || carteChargee))
   const encarts = useEncarts(chiffresPrets)
   // Recherche, préparée à la première utilisation du champ (normaliser 35 000 noms prend du temps) : à
   // pertinence égale, les communes qui comptent le plus d'inscrits passent devant.
@@ -287,6 +291,15 @@ export default function App() {
   const index = useMemo(
     () => indexer(territoires.data ?? departements.data ?? [], passage.data, circonscriptions.data),
     [territoires.data, departements.data, passage.data, circonscriptions.data],
+  )
+  // Faute de contour de bureau, la carte montre la commune : villes absentes des contours de 2022, bureaux créés ou
+  // renumérotés depuis (décision du 26/09).
+  const territoireDuContour = useMemo(() => contours.data && territoiresDesContours(contours.data), [contours.data])
+  const repliCarte = useMemo(
+    () => territoireDuContour && agregats.data
+      ? repli(territoireDuContour, agregats.data, carteAuBureau ? bureaux.data ?? null : null, (code) => communeDu(code, index.passage))
+      : null,
+    [territoireDuContour, agregats.data, carteAuBureau, bureaux.data, index.passage],
   )
   // Municipales jusqu'en 2020 : dans les petites communes, on vote pour des personnes (panachage). Leurs
   // candidats sont publiés à part, un fichier par département, chargé à l'ouverture de la fiche.
@@ -352,8 +365,7 @@ export default function App() {
     switch (vue.mode) {
       case 'tete': {
         const blocDe = (cand: number) => parCand.get(cand)?.bloc ?? 'NC'
-        const couverture = auBureau ? null : scrutin.jointure_contours?.taux_inscrits_metropole ?? null
-        return { coloriage: coloriageTete(agregats.data, listeBureaux, blocDe), valeurs: null, legende: { type: 'tete', couvertureCommune: couverture } }
+        return { coloriage: coloriageTete(agregats.data, listeBureaux, blocDe), valeurs: null, legende: { type: 'tete' } }
       }
       case 'participation': {
         const valeurs = valeursParticipation(agregats.data, listeBureaux)
@@ -400,7 +412,17 @@ export default function App() {
         }
       }
     }
-  }, [scrutin, agregats.data, candidats.data, bureaux.data, agregatsVoix.data, voix.data, carteAuBureau, auBureau, vue.mode, cible, evolution, scrutinDe, bloc, parCand])
+  }, [scrutin, agregats.data, candidats.data, bureaux.data, agregatsVoix.data, voix.data, carteAuBureau, vue.mode, cible, evolution, scrutinDe, bloc, parCand])
+
+  // Sous la légende : jusqu'où la carte descend, et ce qu'elle montre là où les contours de bureaux manquent.
+  const noteContours = useMemo(() => {
+    const j = scrutin?.jointure_contours
+    if (!j || vue.mode === 'evolution') return undefined
+    const part = (x: number) => `${(100 * x).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`
+    return j.niveau_carte === 'commune'
+      ? `Carte à la commune : les contours de bureaux datent de 2022 et ne couvrent que ${part(j.taux_inscrits_metropole)} des inscrits de métropole à ce scrutin.`
+      : `Contours des bureaux de 2022 : il en manque pour ${part(1 - j.taux_inscrits_metropole)} des inscrits de métropole ; la carte montre alors leur commune.`
+  }, [scrutin, vue.mode])
 
   const apercuEvolution = useMemo((): ApercuEvolution | undefined => {
     if (vue.mode !== 'evolution' || !evolution || !scrutinDe || !etatCarte?.valeurs) return undefined
@@ -578,7 +600,7 @@ export default function App() {
           : " Sans numéro, le repère marque un point de la voie : le bureau peut changer d'un numéro à l'autre."}`
     } else if (!auBureau) suite = `Pour ce scrutin, la carte s'arrête à ${lieu}.`
     else if (etat === 'recherche') suite = 'Recherche de son bureau de vote…'
-    else if (etat === 'faite' && bureau === null) suite = `Aucun contour de bureau (2022) ne la contient : résultats de ${lieu}.`
+    else if (etat === 'faite' && bureau === null) suite = `Aucun contour de bureau de 2022 ne la relie à un bureau de ce scrutin : résultats de ${lieu}.`
     return `Adresse recherchée : ${adresse.libelle}.${suite && ` ${suite}`}`
   }, [adresseAffichee, scrutin, auBureau])
 
@@ -626,7 +648,7 @@ export default function App() {
   }, [vue.page, vue.mode, selection, scrutin, index])
 
   const ctx: Contexte | null = scrutin && agregats.data && candidats.data
-    ? { scrutin, scrutins, agregats: agregats.data, candidats: candidats.data, parCand, agregatsVoix: agregatsVoix.data, index }
+    ? { scrutin, scrutins, agregats: agregats.data, candidats: candidats.data, parCand, agregatsVoix: agregatsVoix.data, index, repli: repliCarte }
     : null
 
   const detail = useMemo(() => {
@@ -700,6 +722,20 @@ export default function App() {
       let comparaison: Parent | undefined
       if (portee === 'circonscription') comparaison = circos.length === 1 ? parent('circonscription', circos[0], nom(circos[0])) : undefined
       else comparaison = memesCandidatures(lignes, parent('commune', ville, nom(ville)))
+      // Municipales par secteur : un arrondissement se compare à son secteur, quand celui-ci en réunit plusieurs (c'est
+      // là que se jouait l'élection).
+      const secteur = scrutin && voteParSecteur(scrutin, ville) ? secteurDe(selection.code, Number(scrutin.date.slice(0, 4))) : undefined
+      if (secteur) {
+        const membres = secteur.arrondissements.map((code) => parent('arrondissement', code, nom(code)))
+        if (membres.every((m) => m !== undefined)) {
+          const voix = new Map<number, number>()
+          for (const m of membres) for (const [cand, v] of m.voix) voix.set(cand, (voix.get(cand) ?? 0) + v)
+          comparaison = {
+            nom: secteur.nom, exprimes: membres.reduce((s, m) => s + m.exprimes, 0), voix,
+            secteur: lesArrondissements(secteur.arrondissements),
+          }
+        }
+      }
       return { resultat: trouver('arrondissement', selection.code), lignes, circonscriptions: circos, parent: comparaison }
     }
     if (selection.niveau === 'circonscription') {
@@ -837,6 +873,7 @@ export default function App() {
           coloriage={etatCarte?.coloriage ?? null}
           contours={contours.data ?? AUCUN_CONTOUR}
           auBureau={carteAuBureau}
+          repli={repliCarte}
           circonscriptions={scrutin?.portee === 'circonscription'}
           selection={selection}
           contour={contourCommune.data}
@@ -858,7 +895,7 @@ export default function App() {
         />
         <Onglets mode={vue.mode} onMode={changerMode} />
         {etatCarte?.legende && (
-          <Legende description={etatCarte.legende} className="legende-carte" replie={legendeRepliee} onBasculer={basculerLegende} />
+          <Legende description={etatCarte.legende} note={noteContours} className="legende-carte" replie={legendeRepliee} onBasculer={basculerLegende} />
         )}
       </main>
     </div>

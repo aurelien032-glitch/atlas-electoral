@@ -3,7 +3,8 @@ import type { Cible } from '../cibles'
 import { nomCandidature, nuanceCourte } from '../donnees/libelles'
 import { plusieursElections, raisonPlusieursElections, tourDe, typeDe, voteParSecteur } from '../donnees/scrutins'
 import {
-  arrondissementDu, communeDu, departementDe, departementDeCirconscription, numeroDu, titreDe, villeDe, type Index,
+  arrondissementDu, communeDu, departementDe, departementDeCirconscription, estArrondissement, numeroDu, titreDe, villeDe,
+  type Index,
 } from '../donnees/territoires'
 import { exprimesPourParts, type Bloc, type Candidature, type Resultat } from '../donnees/types'
 import { formatNombre, formatPart, unitePoints } from '../format'
@@ -17,6 +18,8 @@ export interface Parent {
   nom: string
   exprimes: number
   voix: ReadonlyMap<number, number>
+  /** Secteur de plusieurs arrondissements, aux municipales par secteur : ses arrondissements (« les 1er et 7e arrondissements »). */
+  secteur?: string
 }
 
 interface Props {
@@ -147,6 +150,38 @@ function SansResultat({ ctx, selection, actions }: Pick<Props, 'ctx' | 'selectio
         : "Pas de résultat pour ce territoire à ce scrutin : il n'y votait pas, ou la source ne le contient pas."}
     </p>
   )
+}
+
+/**
+ * Carte au bureau : ce qu'elle montre ici faute de contour de bureau de 2022 (ville absente des contours, bureaux
+ * créés ou renumérotés depuis). Les résultats, eux, comptent tous les bureaux.
+ */
+function NoteContours({ ctx, selection }: Pick<Props, 'ctx' | 'selection'>) {
+  const repli = ctx.repli
+  if (!repli || ctx.scrutin.jointure_contours?.niveau_carte !== 'bureau') return null
+  const territoire = selection.niveau === 'bureau'
+    ? arrondissementDu(selection.code) ?? communeDu(selection.code, ctx.index.passage)
+    : selection.code
+  const lieu = estArrondissement(territoire) ? "l'arrondissement entier" : 'la commune entière'
+  const s = repli.sansContour.get(territoire)
+  let texte: string | undefined
+  if (selection.niveau === 'bureau') {
+    const dessine = repli.territoireDuContour.has(selection.code)
+    if (repli.aLaCommune.has(territoire)) {
+      texte = `${dessine ? 'La plupart des' : 'Ce bureau, comme la plupart des'} bureaux ${estArrondissement(territoire) ? "de l'arrondissement" : 'de la commune'} n'${dessine ? 'ont' : 'a'} pas de contour de 2022 : au zoom des bureaux, la carte montre ${lieu}.`
+    } else if (!dessine) {
+      texte = "Ce bureau n'a pas de contour de 2022 : la carte ne peut pas le dessiner."
+    }
+  } else if (s && repli.aLaCommune.has(territoire)) {
+    texte = s.bureaux === s.bureauxTotal
+      ? `Aucun de ses ${s.bureauxTotal} bureaux n'a de contour de 2022 : au zoom des bureaux, la carte montre ${lieu}.`
+      : `${s.bureaux} de ses ${s.bureauxTotal} bureaux n'ont pas de contour de 2022 : au zoom des bureaux, la carte montre ${lieu}.`
+  } else if (s) {
+    texte = s.bureaux === 1
+      ? `Un de ses ${s.bureauxTotal} bureaux (${formatNombre(s.inscrits)} inscrits) n'a pas de contour de 2022 : la carte ne peut pas le dessiner, ses voix sont comptées ici.`
+      : `${s.bureaux} de ses ${s.bureauxTotal} bureaux (${formatNombre(s.inscrits)} inscrits) n'ont pas de contour de 2022 : la carte ne peut pas les dessiner, leurs voix sont comptées ici.`
+  }
+  return texte ? <p className="note-bas">{texte}</p> : null
 }
 
 /** Fiche d'un territoire, sous son en-tête (EnteteFiche) et les réglages. */
@@ -288,6 +323,13 @@ export function Detail({
           montre le bloc qui totalise le plus de voix.
         </p>
       )}
+      {parent?.secteur && (
+        <p className="note-bas">
+          Municipales par secteur : {parent.secteur} votaient pour les mêmes listes. La colonne « {parent.nom} » donne
+          les résultats du secteur entier.
+        </p>
+      )}
+      <NoteContours ctx={ctx} selection={selection} />
       {!parBloc && !panachage && <TableNuances candidatures={presentes} />}
       {panachage && (
         <p className="note-bas">

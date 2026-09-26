@@ -1,4 +1,5 @@
 import { COULEUR_BLOC, GRIS, estColore, type BlocColore } from '../carte/couleurs'
+import type { Repli } from '../carte/repli'
 import type { Index } from '../donnees/territoires'
 import type { Agregat, Bloc, Candidature, ScrutinCatalogue, VoixAgregat } from '../donnees/types'
 import type { Selection } from '../vue'
@@ -12,6 +13,8 @@ export interface Contexte {
   parCand: Map<number, Candidature>
   agregatsVoix: VoixAgregat[] | undefined
   index: Index
+  /** Ce que la carte montre à la commune faute de contour de bureau (null tant que les contours n'ont pas été lus). */
+  repli: Repli | null
 }
 
 /** Ce que l'utilisateur peut changer depuis le panneau. */

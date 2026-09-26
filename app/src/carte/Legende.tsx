@@ -5,11 +5,7 @@ import { formatNombre } from '../format'
 import { BLOCS_COLORES, COULEUR_BLOC, GRIS, LIBELLE_BLOC } from './couleurs'
 
 export type DescriptionLegende =
-  | {
-      type: 'tete'
-      /** Part des inscrits couverte par les contours, quand la carte s'arrête à la commune. */
-      couvertureCommune: number | null
-    }
+  | { type: 'tete' }
   | {
       type: 'classes'
       titre: string
@@ -21,6 +17,8 @@ export type DescriptionLegende =
 
 interface Props {
   description: DescriptionLegende
+  /** Jusqu'où descend la carte, et ce qu'elle montre là où manquent les contours de bureaux. */
+  note?: string
   className: string
   /** Repliée sur son titre : la carte se lit en plus grand, le titre dit encore ce qu'elle montre. */
   replie: boolean
@@ -51,12 +49,6 @@ function Corps({ description }: { description: DescriptionLegende }) {
           <li><SansResultat />Pas de résultat</li>
         </ul>
         <p className="legende-note">L'avance sur le suivant (serrée, nette, large) est donnée au survol et dans la fiche.</p>
-        {description.couvertureCommune !== null && (
-          <p className="legende-note">
-            Carte à la commune : les contours de bureaux datent de 2022 et ne couvrent que{' '}
-            {(100 * description.couvertureCommune).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} % des inscrits de ce scrutin.
-          </p>
-        )}
       </>
     )
   }
@@ -84,7 +76,7 @@ function Corps({ description }: { description: DescriptionLegende }) {
   )
 }
 
-export function Legende({ description, className, replie, onBasculer }: Props) {
+export function Legende({ description, note, className, replie, onBasculer }: Props) {
   const id = useId()
   return (
     <section className={`legende ${className}`} data-replie={replie} aria-label="Légende de la carte">
@@ -94,7 +86,12 @@ export function Legende({ description, className, replie, onBasculer }: Props) {
           <Chevron ouvert={!replie} />
         </button>
       </h2>
-      {!replie && <div id={id} className="legende-corps"><Corps description={description} /></div>}
+      {!replie && (
+        <div id={id} className="legende-corps">
+          <Corps description={description} />
+          {note && <p className="legende-note">{note}</p>}
+        </div>
+      )}
     </section>
   )
 }

@@ -3,7 +3,10 @@
 > **Statut : étude du 24 septembre 2026, demandée le même jour** (revue des exigences P0 avant la bêta :
 > « Municipales : résultats par liste et par commune ; secteurs de Paris, Lyon et Marseille »).
 > **Décision (Q15, 24/09) : arrondissements et secteurs traités avant l'ouverture de la bêta. Réalisé le
-> 24/09 : points 1, 2 et 4 du § 3, et le point 3 sans le nom des secteurs de plusieurs arrondissements.**
+> 24/09 : points 1, 2 et 4 du § 3, et le point 3 sans le nom des secteurs de plusieurs arrondissements, ajouté
+> le 26/09 : un arrondissement se compare à son secteur entier (colonne « 1er secteur », « Paris Centre »). La
+> table secteur → arrondissements est dans le code du site (`secteurDe`), vérifiée sur les résultats de 2008, 2014
+> et 2020 : les arrondissements d'un même secteur y ont exactement les mêmes listes.**
 
 ## 1. Constats dans les données
 

@@ -1,4 +1,4 @@
-import type { ExpressionSpecification, StyleSpecification } from '@maplibre/maplibre-gl-style-spec'
+import type { ExpressionSpecification, FilterSpecification, StyleSpecification } from '@maplibre/maplibre-gl-style-spec'
 import {
   Map as CarteMapLibre, NavigationControl, addProtocol, removeProtocol, setWorkerUrl,
   type FeatureIdentifier, type GeoJSONSource, type MapLayerMouseEvent, type MapSourceDataEvent,
@@ -17,6 +17,7 @@ import type { Etat } from './etats'
 import { ecrireCadre, lireCadre, type Selection } from '../vue'
 import { FOND_CARTE, OPACITE_SUR_PLAN, TRAIT_HACHURES } from './couleurs'
 import { enVolet, estFrance, FRANCE_METROPOLITAINE, marges, memesMarges, type Ecran, type Place } from './place'
+import type { Repli } from './repli'
 
 // Contours des bureaux de vote : fichier officiel de data.gouv.fr (millésime 2022), lu directement.
 const TUILES_BUREAUX = 'https://data-pipeline-open.s3.sbg.io.cloud.ovh.net/reu/reu-france-entiere-2022-06-01-v2.pmtiles'
@@ -52,6 +53,8 @@ const HACHURES = {
   'fill-pattern': 'hachures',
   'fill-opacity': ['case', ['boolean', ['feature-state', 'hachure'], false], 1, 0] as ExpressionSpecification,
 }
+// Communes à dessiner au zoom des bureaux, faute de contour de bureau (quelques dizaines au plus).
+const communesParmi = (codes: Iterable<string>): FilterSpecification => ['in', ['get', 'code'], ['literal', [...codes]]]
 const siSelection = (largeur: number) => ({
   'line-color': ENCRE,
   'line-width': largeur,
@@ -91,6 +94,9 @@ const STYLE: StyleSpecification = {
       id: 'plan', type: 'raster', source: 'plan', minzoom: ZOOM_BUREAUX,
       paint: { 'raster-saturation': -1, 'raster-brightness-min': 0.3, 'raster-contrast': -0.1, 'raster-fade-duration': 0 },
     },
+    // Au zoom des bureaux, une commune qui n'a aucun contour de bureau (Troyes, Belfort…) reste dessinée, à sa couleur.
+    { id: 'communes-repli', type: 'fill', source: 'communes', minzoom: ZOOM_BUREAUX, filter: communesParmi([]), paint: REMPLISSAGE_SUR_PLAN },
+    { id: 'communes-repli-hachures', type: 'fill', source: 'communes', minzoom: ZOOM_BUREAUX, filter: communesParmi([]), paint: HACHURES },
     { id: 'communes', type: 'fill', source: 'communes', maxzoom: ZOOM_BUREAUX, paint: REMPLISSAGE },
     { id: 'communes-hachures', type: 'fill', source: 'communes', maxzoom: ZOOM_BUREAUX, paint: HACHURES },
     { id: 'circonscriptions', type: 'fill', source: 'circonscriptions', maxzoom: ZOOM_BUREAUX, paint: REMPLISSAGE, layout: { visibility: 'none' } },
@@ -99,7 +105,10 @@ const STYLE: StyleSpecification = {
     { id: 'bureaux-hachures', type: 'fill', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: ZOOM_BUREAUX, paint: HACHURES },
     {
       id: 'bureaux-contours', type: 'line', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: 10,
-      paint: { 'line-color': '#ffffff', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.2, 14, 1] },
+      paint: {
+        'line-color': '#ffffff', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.2, 14, 1],
+        'line-opacity': ['case', ['boolean', ['feature-state', 'commune'], false], 0, 1],
+      },
     },
     {
       id: 'circonscriptions-contours', type: 'line', source: 'circonscriptions',
@@ -150,6 +159,8 @@ interface Props {
   contours: BureauContour[]
   /** Carte au bureau de vote ; sinon chaque bureau prend la couleur de sa commune. */
   auBureau: boolean
+  /** Ce qui se montre à la commune faute de contour de bureau (null tant que les contours n'ont pas été lus). */
+  repli: Repli | null
   /** Scrutin législatif : charge et montre la couche des circonscriptions. */
   circonscriptions: boolean
   selection: Selection | undefined
@@ -196,6 +207,25 @@ function cible(selection: Selection): FeatureIdentifier | null {
   return { source, id: selection.code }
 }
 
+// Couches que l'on survole et que l'on clique.
+const COUCHES_ACTIVES = ['bureaux', 'communes', 'communes-repli', 'circonscriptions']
+
+interface RepliCourant {
+  repli: Repli | null
+  /** États des bureaux de la carte au bureau ; null pour une carte à la commune. */
+  bureaux: ReadonlyMap<string, Etat> | null
+}
+
+/**
+ * Carte au bureau : territoire (commune ou arrondissement) que désigne un contour de 2022 montré à sa commune, parce
+ * que ce numéro n'a pas de résultat à ce scrutin ou que le territoire a renuméroté ses bureaux ; undefined sinon.
+ */
+function territoireAuLieuDuBureau({ repli, bureaux }: RepliCourant, code: string) {
+  const territoire = repli?.territoireDuContour.get(code)
+  if (!repli || !territoire || !bureaux) return undefined
+  return repli.aLaCommune.has(territoire) || !bureaux.has(code) ? territoire : undefined
+}
+
 // Hachures à 45°, dessinées une fois : une texture qui se lit sans la couleur.
 function motifHachures(pas = 8, ratio = 2) {
   const n = pas * ratio
@@ -211,8 +241,8 @@ function motifHachures(pas = 8, ratio = 2) {
 }
 
 export function Carte({
-  coloriage, contours, auBureau, circonscriptions, selection, contour, cadrage, libelle, onSurvol, onClic, onPrete, onEnsemble,
-  onPlan, opacite, repere, visite, onBureauAdresse, legendeRepliee, encartsDeplies, voletReplie,
+  coloriage, contours, auBureau, repli, circonscriptions, selection, contour, cadrage, libelle, onSurvol, onClic, onPrete,
+  onEnsemble, onPlan, opacite, repere, visite, onBureauAdresse, legendeRepliee, encartsDeplies, voletReplie,
 }: Props) {
   const conteneur = useRef<HTMLDivElement>(null)
   // Lue par les cadrages, dont ceux des écouteurs posés une fois pour toutes.
@@ -224,6 +254,11 @@ export function Carte({
   const refPoses = useRef(new Map<string, ReadonlyMap<string, Etat>>())
   // États posés sur les bureaux, pour ne reposer que ceux qui changent.
   const refBureaux = useRef(new Map<string, Etat>())
+  // Lus par le survol et la recherche d'adresse, dont les écouteurs sont posés une fois pour toutes.
+  const refRepli = useRef<RepliCourant>({ repli: null, bureaux: null })
+  useEffect(() => {
+    refRepli.current = { repli, bureaux: coloriage?.bureaux ?? null }
+  }, [repli, coloriage])
 
   /**
    * États d'une source, posés en ne touchant qu'aux territoires qui changent : MapLibre met près d'une
@@ -366,8 +401,15 @@ export function Carte({
   useEffect(() => {
     const carte = refCarte.current
     if (!carte || !prete) return
-    carte.setPaintProperty('bureaux', 'fill-opacity', opaciteSurPlan(opacite))
+    for (const couche of ['bureaux', 'communes-repli']) carte.setPaintProperty(couche, 'fill-opacity', opaciteSurPlan(opacite))
   }, [prete, opacite])
+
+  // Communes sans aucun contour de bureau : dessinées au zoom des bureaux.
+  useEffect(() => {
+    const carte = refCarte.current
+    if (!carte || !prete) return
+    for (const couche of ['communes-repli', 'communes-repli-hachures']) carte.setFilter(couche, communesParmi(repli?.sansDessin ?? []))
+  }, [prete, repli])
 
   useEffect(() => {
     const carte = refCarte.current
@@ -402,7 +444,8 @@ export function Carte({
       }
       const [trouve] = carte.queryRenderedFeatures(carte.project([visite.lon, visite.lat]), { layers: ['bureaux'] })
       const code = trouve?.properties?.codeBureauVote
-      onBureauAdresse(visite.jeton, typeof code === 'string' ? code : null)
+      // Un contour montré à sa commune ne désigne pas un bureau de ce scrutin.
+      onBureauAdresse(visite.jeton, typeof code === 'string' && !territoireAuLieuDuBureau(refRepli.current, code) ? code : null)
     }
     carte.once('idle', lire)
     refAttente.current = () => carte.off('idle', lire)
@@ -447,7 +490,16 @@ export function Carte({
       if (lance || carte.getZoom() < ZOOM_BUREAUX - 1) return
       lance = true
       const voulus = new Map<string, Etat>()
-      if (coloriage.bureaux) {
+      if (coloriage.bureaux && repli && repli.territoireDuContour.size > 0) {
+        // Un contour sans résultat à ce scrutin (bureau supprimé ou renuméroté depuis 2022), ou d'un territoire aux
+        // bureaux renumérotés, prend la couleur de sa commune (de son arrondissement à Paris, Lyon et Marseille).
+        for (const [code, territoire] of repli.territoireDuContour) {
+          const propre = repli.aLaCommune.has(territoire) ? undefined : coloriage.bureaux.get(code)
+          const duTerritoire = estArrondissement(territoire) ? coloriage.arrondissements?.get(territoire) : coloriage.communes.get(territoire)
+          const etat = propre ?? (duTerritoire && { ...duTerritoire, commune: true })
+          if (etat) voulus.set(code, etat)
+        }
+      } else if (coloriage.bureaux) {
         for (const [code, etat] of coloriage.bureaux) voulus.set(code, etat)
       } else {
         for (const { code_bv, code_commune } of contours) {
@@ -462,7 +514,7 @@ export function Carte({
       const aRetirer = [...poses.keys()].filter((code) => !voulus.has(code))
       const aPoser = [...voulus].filter(([code, etat]) => {
         const a = poses.get(code)
-        return !a || a.couleur !== etat.couleur || a.opacite !== etat.opacite || a.hachure !== etat.hachure
+        return !a || a.couleur !== etat.couleur || a.opacite !== etat.opacite || a.hachure !== etat.hachure || a.commune !== etat.commune
       })
       const lot = () => {
         let n = 0
@@ -474,7 +526,8 @@ export function Carte({
         }
         while (n < 5000 && aPoser.length > 0) {
           const [code, etat] = aPoser.pop() as [string, Etat]
-          carte.setFeatureState(id(code), { ...etat })
+          // setFeatureState complète l'état : le repli d'un coloriage précédent doit être levé explicitement.
+          carte.setFeatureState(id(code), { ...etat, commune: etat.commune ?? false })
           poses.set(code, etat)
           n++
         }
@@ -492,7 +545,7 @@ export function Carte({
       carte.off('zoom', poserBureaux)
       cancelAnimationFrame(image)
     }
-  }, [prete, coloriage, contours, auBureau])
+  }, [prete, coloriage, contours, auBureau, repli])
 
   useEffect(() => {
     const carte = refCarte.current
@@ -530,9 +583,13 @@ export function Carte({
       if (!p) return null
       const position = { x: e.point.x, y: e.point.y, largeur: carte.getContainer().clientWidth }
       const couche = e.features?.[0]?.layer.id
-      if (couche === 'communes') return { niveau: estArrondissement(p.code) ? 'arrondissement' : 'commune', code: p.code, ...position }
+      const aLaCommune = (code: string) => ({ niveau: estArrondissement(code) ? 'arrondissement' : 'commune', code, ...position } as const)
+      if (couche === 'communes' || couche === 'communes-repli') return aLaCommune(p.code)
       if (couche === 'circonscriptions') return { niveau: 'circonscription', code: p.code, ...position }
-      if (auBureau) return { niveau: 'bureau', code: p.codeBureauVote, ...position }
+      if (auBureau) {
+        const territoire = territoireAuLieuDuBureau(refRepli.current, p.codeBureauVote)
+        return territoire ? aLaCommune(territoire) : { niveau: 'bureau', code: p.codeBureauVote, ...position }
+      }
       // Carte à la commune : un bureau de Paris, Lyon ou Marseille désigne son arrondissement.
       const arrondissement = arrondissementDu(p.codeBureauVote)
       return arrondissement
@@ -549,14 +606,14 @@ export function Carte({
       onSurvol(null)
     }
     const entrer = () => { carte.getCanvas().style.cursor = 'pointer' }
-    for (const couche of ['bureaux', 'communes', 'circonscriptions']) {
+    for (const couche of COUCHES_ACTIVES) {
       carte.on('mousemove', couche, survol)
       carte.on('mouseenter', couche, entrer)
       carte.on('mouseleave', couche, quitter)
       carte.on('click', couche, clic)
     }
     return () => {
-      for (const couche of ['bureaux', 'communes', 'circonscriptions']) {
+      for (const couche of COUCHES_ACTIVES) {
         carte.off('mousemove', couche, survol)
         carte.off('mouseenter', couche, entrer)
         carte.off('mouseleave', couche, quitter)
