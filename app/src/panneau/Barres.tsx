@@ -33,7 +33,7 @@ export function Barres({ lignes, legende, entete = 'Candidature', parent }: Prop
       <thead>
         <tr>
           <th scope="col">{entete}</th>
-          <th scope="col"><span className="visuellement-cache">Barre</span></th>
+          <th scope="col" aria-hidden="true" />
           <th scope="col" className="nombre">Ici</th>
           {parent && <th scope="col" className="nombre">{parent}</th>}
         </tr>

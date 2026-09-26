@@ -225,7 +225,11 @@ export function Detail({
       </div>
     </>
   )
-  if (!resultat && enChargement) return <>{entete}<p className="note">Chargement des résultats du bureau…</p></>
+  // Tant que manquent les résultats du bureau ou les voix, rien que l'en-tête : la fiche s'affiche d'un bloc, sans
+  // repousser ce qu'on lit déjà.
+  if (enChargement) {
+    return <>{entete}<p className="note">{selection.niveau === 'bureau' ? 'Chargement des résultats du bureau…' : 'Chargement des résultats…'}</p></>
+  }
   if (!resultat) return <>{entete}<SansResultat ctx={ctx} selection={selection} actions={actions} /></>
   if (resultat.exprimes === 0) return <>{entete}<p className="note">Aucun suffrage exprimé.</p></>
 

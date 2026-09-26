@@ -144,6 +144,15 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   pointeur (`COUCHES_ACTIVES`), en passant les contours de 2022 effacés (`efface`) ; la sélection d'un bureau se trace
   sur la source qui le dessine (`cible`). Une commune sans contour dessinée par son découpage local (Alès) n'est pas
   peinte dessous (`locale` dans le feature-state de `communes-sans-contour`).
+- Accessibilité (décision Q30) : le panneau des résultats est le `main` (un lecteur d'écran y saute), la carte une
+  région ; les onglets précèdent la carte dans le DOM (ordre de tabulation = ordre de lecture). Carte au clavier :
+  canevas en rôle `application` (le lecteur d'écran lui laisse les flèches), libellés de MapLibre en français
+  (`LIBELLES_MAPLIBRE`), flèches et plus ou moins de MapLibre, rotation coupée ; au focus clavier, un réticule
+  (`.reticule-carte`) marque le centre de la partie visible (`marges`), le territoire dessous s'affiche et s'annonce
+  (`Survol.clavier`, région `aria-live` de `ZoneCarte`), Entrée le choisit. Le territoire choisi, d'où que ce soit, est
+  annoncé (`annonceSelection`, `role="status"`). Pas de décalage de mise en page : tant que la fiche attend ses
+  chiffres (`ficheEnAttente`), elle n'affiche que son en-tête, et chronologie et sources attendent ; place de la barre
+  de défilement réservée (`scrollbar-gutter`). Lighthouse : 100 en accessibilité sur les vues principales.
 - MapLibre 6 est en ESM seul : garder `optimizeDeps.exclude: ['maplibre-gl']`, `worker.format: 'es'` et
   `setWorkerUrl(urlWorker)` (import `?worker&url`), sinon le worker ne se charge pas.
 - La carte (et la feuille de style de MapLibre) est chargée en différé (`React.lazy`) : le panneau s'affiche

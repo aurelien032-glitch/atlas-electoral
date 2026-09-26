@@ -207,6 +207,17 @@ flowchart TB
 | Zoom, ◐, encarts, croix de la fiche | Même famille : 44 px, arrondi 6 px, même bord, survol et état ouvert à la même teinte ; + et − au trait des autres icônes |
 | Tableaux dépliables (nuances, données des courbes) | Même chevron que la légende et les encarts |
 
+## Clavier et lecteur d'écran (26/09, 1 280 × 800 et 390 × 844)
+
+| Parcours | Attendu |
+|---|---|
+| Tab depuis le panneau | Languette, onglets de mode, carte, zoom (« Zoomer », « Dézoomer »), sources, encarts, opacité, légende |
+| Carte au clavier (focus par Tab) | Contour d'encre et réticule au centre de la partie visible ; infobulle et annonce du territoire dessous (« Bonnetan, bureau 0001. En tête : … ») ; flèches, plus et moins la déplacent (pas de rotation) |
+| Entrée sur la carte | Le territoire du réticule est choisi ; annonce « Sainte-Terre, bureau 0002 : fiche ouverte dans le panneau des résultats » ; le focus reste sur la carte |
+| Recherche : « Rennes », flèche bas, Entrée | « 7 suggestions » annoncé, puis « Rennes : fiche ouverte dans le panneau des résultats » |
+| Lecteur d'écran : saut au contenu principal | Le panneau des résultats (`main`), pas la carte ; la carte est la région « Carte : bloc en tête, … » |
+| `?scrutin=2024_legi_t1&sel=bureau:33063_2002` au téléphone | La fiche s'affiche d'un bloc ; « Au fil des scrutins » n'apparaît qu'après, dessous (décalage 0,02) |
+
 ## Repli à la commune et secteurs (26/09, 1 280 × 800)
 
 | Parcours | Attendu |

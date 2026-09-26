@@ -152,9 +152,10 @@ interface PropsZone {
 
 // Le survol change à chaque mouvement de souris : son état vit ici, pour ne pas recalculer les panneaux.
 function ZoneCarte({
-  lancee, contenu, encarts, onChoisirEncart, onCadrer, encartsReplies, onBoutonEncarts, onPrete, ...props
+  lancee, contenu, encarts, onChoisirEncart, onCadrer, encartsReplies, onBoutonEncarts, onPrete, onClic, ...props
 }: PropsZone) {
   const [survol, setSurvol] = useState<Survol | null>(null)
+
   // Encarts dépliés : seulement dans la vue d'ensemble. Une fois la carte zoomée sur une région, ils la
   // masqueraient sans rien lui apprendre ; leur bouton, lui, reste, pour revenir à la France entière.
   const [ensemble, setEnsemble] = useState(true)
@@ -169,12 +170,14 @@ function ZoneCarte({
   const bulle = survol && contenu(survol)
   return (
     <div className="zone-carte-fond">
+      {/* Clavier : le territoire au réticule, annoncé au lecteur d'écran. */}
+      <p className="visuellement-cache" aria-live="polite">{survol?.clavier && bulle ? [bulle.titre, ...bulle.lignes].join('. ') : ''}</p>
       {lancee && (
         <GardeCarte onEchec={onPrete}>
           <Suspense fallback={null}>
             <Carte
-              {...props} onSurvol={setSurvol} onPrete={onPrete} onEnsemble={setEnsemble} onPlan={setPlan} opacite={opacite}
-              encartsDeplies={!encartsReplies}
+              {...props} onSurvol={setSurvol} onClic={onClic} onPrete={onPrete} onEnsemble={setEnsemble} onPlan={setPlan}
+              opacite={opacite} encartsDeplies={!encartsReplies}
             />
           </Suspense>
         </GardeCarte>
@@ -835,12 +838,22 @@ export default function App() {
 
   const chargement = catalogue.isPending || agregats.isPending || candidats.isPending
     || (selection ? territoires.isPending : territoires.isPending && departements.isPending)
+  // Fiche qui attend encore ses chiffres (résultats du bureau, voix) : ce qui la suit (chronologie, sources) attend
+  // aussi, pour ne pas être repoussé d'un coup quand ils arrivent (décalage de mise en page).
+  const ficheEnAttente = selection !== undefined && detail !== null && (
+    ('enChargement' in detail && detail.enChargement === true)
+    || (detail.lignes === undefined && (agregatsVoix.isLoading || voix.isLoading || panachage.isLoading)))
+  // Lecteur d'écran : le territoire choisi (recherche, carte, fil d'Ariane, Précédent) est annoncé, une fois son nom
+  // connu (les communes arrivent avec l'index complet).
+  const annonceSelection = selection && (communesNommees || selection.niveau === 'departement' || selection.niveau === 'circonscription')
+    ? `${titreDe(selection, index)} : fiche ouverte dans le panneau des résultats.` : ''
   const erreur = catalogue.error ?? agregats.error ?? candidats.error ?? bureaux.error ?? agregatsVoix.error ?? voix.error ?? panachage.error
     ?? contours.error ?? territoires.error ?? departements.error ?? agregatsDe.error ?? agregatsVoixDe.error ?? candidatsDe.error
 
   return (
     <div className="atlas" data-panneau-replie={voletReplie}>
-      <aside id="panneau" className="panneau" data-deplie={deplie} data-replie={voletReplie}>
+      <main id="panneau" className="panneau" data-deplie={deplie} data-replie={voletReplie}>
+        <p className="visuellement-cache" role="status">{annonceSelection}</p>
         <button
           type="button" className="poignee" aria-expanded={!voletReplie && deplie} aria-controls="panneau-corps"
           onClick={() => (voletReplie ? replierPanneau(false) : setDeplie(!deplie))}
@@ -883,7 +896,7 @@ export default function App() {
             />
           )}
           {vue.page !== 'methodologie' && ctx && (selection
-            ? <Detail ctx={ctx} selection={selection} resultat={detail?.resultat} enChargement={detail !== null && 'enChargement' in detail && detail.enChargement}
+            ? <Detail ctx={ctx} selection={selection} resultat={detail?.resultat} enChargement={ficheEnAttente}
                 lignes={detail?.lignes} parent={detail?.parent}
                 circonscriptions={detail?.circonscriptions ?? []} supplementaires={detail?.supplementaires} panachage={auPanachage}
                 cible={vue.mode === 'score' ? cible : undefined} complement={complement} adresse={noteAdresse} actions={actions} />
@@ -902,21 +915,22 @@ export default function App() {
               </ul>
             </nav>
           )}
-          {vue.page !== 'methodologie' && ctx && (
+          {vue.page !== 'methodologie' && ctx && !ficheEnAttente && (
             <Chronologie
               lignes={lignesSerie} erreur={serie.isError} scrutins={scrutins} courant={ctx.scrutin} niveau={niveauSerie}
               precision={selection?.niveau === 'bureau' ? (arrondissementDuBureau ? "à l'arrondissement" : 'à la commune') : undefined}
               fusion={niveauSerie === 'commune' && index.fusionnees.has(codeSerie)}
             />
           )}
-          {!chargement && <p className="sources">
+          {!chargement && !ficheEnAttente && <p className="sources">
             Résultats : ministère de l'Intérieur, via data.gouv.fr. Contours des bureaux : data.gouv.fr (répertoire
-            électoral de 2022, indicatifs). Limites administratives : IGN, simplifiées par Etalab (communes au 1er janvier
+            électoral de 2022, indicatifs) et découpages publiés par les villes (voir la Méthodologie). Limites
+            administratives : IGN, simplifiées par Etalab (communes au 1er janvier
             2026). Blocs : circulaire du ministère de l'Intérieur de février 2026, appliquée à tous les scrutins.
           </p>}
         </div>
-      </aside>
-      <main className="zone-carte">
+      </main>
+      <div className="zone-carte">
         {/* Ordinateur : languette au bord du panneau, qui le replie (la carte prend toute la largeur) ou le rouvre. */}
         <button type="button" className="languette" aria-expanded={!voletReplie} aria-controls="panneau"
           title={voletReplie ? 'Déplier le panneau' : 'Replier le panneau'} onClick={() => replierPanneau(!voletReplie)}>
@@ -926,6 +940,8 @@ export default function App() {
               strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
+        {/* Avant la carte : l'ordre de tabulation suit celui de la lecture (les onglets sont en haut). */}
+        <Onglets mode={vue.mode} onMode={changerMode} />
         <ZoneCarte
           lancee={carteLancee}
           onPrete={signalerCarte}
@@ -956,11 +972,10 @@ export default function App() {
           legendeRepliee={legendeRepliee}
           voletReplie={voletReplie}
         />
-        <Onglets mode={vue.mode} onMode={changerMode} />
         {etatCarte?.legende && (
           <Legende description={etatCarte.legende} note={noteContours} className="legende-carte" replie={legendeRepliee} onBasculer={basculerLegende} />
         )}
-      </main>
+      </div>
     </div>
   )
 }

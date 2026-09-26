@@ -1,6 +1,6 @@
 import type { ExpressionSpecification, FilterSpecification, StyleSpecification } from '@maplibre/maplibre-gl-style-spec'
 import {
-  Map as CarteMapLibre, NavigationControl, addProtocol, removeProtocol, setWorkerUrl,
+  Map as CarteMapLibre, NavigationControl, Point, addProtocol, removeProtocol, setWorkerUrl,
   type FeatureIdentifier, type GeoJSONSource, type MapMouseEvent, type MapSourceDataEvent, type PointLike,
 } from 'maplibre-gl'
 import urlWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
@@ -35,6 +35,15 @@ const PLAN_IGN = 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSIO
   + '&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}'
 // Adresse choisie dans la recherche : la carte s'approche jusqu'à la rue.
 const ZOOM_ADRESSE = 15
+// Libellés des contrôles de MapLibre, lus par les lecteurs d'écran et affichés au survol : en français.
+const LIBELLES_MAPLIBRE = {
+  'Map.Title': 'Carte : flèches pour se déplacer, plus et moins pour zoomer, Entrée pour choisir le territoire au centre',
+  'NavigationControl.ZoomIn': 'Zoomer',
+  'NavigationControl.ZoomOut': 'Dézoomer',
+  'NavigationControl.ResetBearing': 'Remettre le nord en haut',
+  'AttributionControl.ToggleAttribution': 'Afficher ou masquer les sources',
+  'AttributionControl.MapFeedback': 'Signaler une erreur de la carte',
+}
 const VIDE: FeatureCollection = { type: 'FeatureCollection', features: [] }
 
 // MapLibre 6 cherche son worker à côté de son propre module, ce que le pré-bundling de Vite casse :
@@ -179,6 +188,8 @@ export interface Survol {
   y: number
   /** Largeur de la carte, pour garder l'infobulle dans le cadre. */
   largeur: number
+  /** Désigné au clavier (réticule au centre de la carte) : annoncé au lecteur d'écran. */
+  clavier?: boolean
 }
 
 /** Emprise à cadrer ([ouest, sud, est, nord]) ; le jeton change à chaque demande. */
@@ -387,7 +398,13 @@ export function Carte({
         : { bounds: FRANCE, fitBoundsOptions: { padding: marges(refPlace.current, ecranDe(conteneur.current), 'france') } }),
       minZoom: 3,
       maxZoom: 16,
+      locale: LIBELLES_MAPLIBRE,
     })
+    // Au clavier, la carte se parcourt comme une application : le lecteur d'écran lui laisse les flèches. Pas de
+    // rotation (Maj et flèches) : la carte reste le nord en haut.
+    carte.getCanvas().setAttribute('role', 'application')
+    carte.getCanvas().setAttribute('aria-roledescription', 'carte')
+    carte.keyboard.disableRotation()
     // Le cadrage vit dans le fragment de l'URL : noté à chaque fin de mouvement, sans créer d'entrée
     // d'historique ; Précédent et Suivant ramènent la carte à celui de leur vue. (L'option `hash` de MapLibre
     // efface le fragment quand la carte est détruite, ce que fait le double montage de StrictMode.)
@@ -822,13 +839,57 @@ export function Carte({
       const t = territoire(e.point)
       if (t) onClic(t)
     }
+    // Clavier (flèches, plus et moins, ceux de MapLibre) : un réticule marque le centre de la partie visible de la
+    // carte ; le territoire dessous s'affiche et s'annonce, Entrée le choisit. Rien pour une carte prise à la souris.
+    const canvas = carte.getCanvas()
+    const reticule = document.createElement('div')
+    reticule.className = 'reticule-carte'
+    reticule.hidden = true
+    carte.getContainer().appendChild(reticule)
+    const centre = () => {
+      const m = margesDe(carte, refPlace.current, 'territoire')
+      const { clientWidth: l, clientHeight: h } = carte.getContainer()
+      return new Point(m.left + Math.max(0, l - m.left - m.right) / 2, m.top + Math.max(0, h - m.top - m.bottom) / 2)
+    }
+    const suivreCentre = () => {
+      reticule.hidden = !canvas.matches(':focus-visible')
+      if (reticule.hidden) return
+      const c = centre()
+      reticule.style.left = `${c.x}px`
+      reticule.style.top = `${c.y}px`
+      const t = territoire(c)
+      onSurvol(t && { ...t, clavier: true })
+    }
+    const quitterClavier = () => {
+      if (reticule.hidden) return
+      reticule.hidden = true
+      onSurvol(null)
+    }
+    const touche = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return
+      const t = territoire(centre())
+      if (!t) return
+      e.preventDefault()
+      onClic({ ...t, clavier: true })
+    }
     carte.on('mousemove', survol)
     carte.on('mouseout', quitter)
     carte.on('click', clic)
+    canvas.addEventListener('focus', suivreCentre)
+    canvas.addEventListener('blur', quitterClavier)
+    canvas.addEventListener('keydown', touche)
+    carte.on('moveend', suivreCentre)
+    carte.on('resize', suivreCentre)
     return () => {
       carte.off('mousemove', survol)
       carte.off('mouseout', quitter)
       carte.off('click', clic)
+      canvas.removeEventListener('focus', suivreCentre)
+      canvas.removeEventListener('blur', quitterClavier)
+      canvas.removeEventListener('keydown', touche)
+      carte.off('moveend', suivreCentre)
+      carte.off('resize', suivreCentre)
+      reticule.remove()
     }
   }, [prete, auBureau, onSurvol, onClic])
 

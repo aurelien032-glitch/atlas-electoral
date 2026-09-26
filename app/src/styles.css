@@ -72,6 +72,8 @@ a:hover, .lien:hover { color: var(--encre-2); }
 .panneau-entete a { display: inline-flex; align-items: center; min-height: 24px; }
 .panneau-corps {
   flex: 1; min-height: 0; overflow-y: auto;
+  /* Place de la barre de défilement réservée : son apparition ne décale pas la fiche. */
+  scrollbar-gutter: stable;
   display: flex; flex-direction: column; gap: var(--ecart-sections);
   padding: var(--ecart-sections) var(--marge-panneau) 32px;
 }
@@ -225,6 +227,16 @@ p, li { text-wrap: pretty; }
 .zone-carte-fond, .zone-carte .carte { position: absolute; inset: 0; }
 .carte-indisponible { position: absolute; top: 40%; left: 16px; right: 16px; text-align: center; }
 
+/* Carte au clavier : réticule au centre de la partie visible, sur toutes les couleurs (encre cerclée de blanc). */
+.zone-carte .maplibregl-canvas:focus-visible { outline: 3px solid var(--encre); outline-offset: -3px; }
+.reticule-carte {
+  position: absolute; z-index: 1; width: 32px; height: 32px; margin: -16px 0 0 -16px; pointer-events: none;
+  border: 2px solid var(--encre); border-radius: 50%; box-shadow: 0 0 0 2px var(--surface), inset 0 0 0 2px var(--surface);
+}
+.reticule-carte::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px;
+  border-radius: 50%; background: var(--encre); box-shadow: 0 0 0 2px var(--surface);
+}
 .onglets {
   position: absolute; top: var(--cadre-carte); left: var(--cadre-carte); z-index: 2;
   display: flex; gap: 4px; padding: 4px; background: var(--piste); border-radius: 999px;
