@@ -30,11 +30,10 @@ describe('marges du cadrage', () => {
     expect(marges({ ...tout, voletReplie: true }, telephone, 'france').bottom).toBe(73 + 36)
   })
 
-  it('décale la métropole pour les encarts dépliés dans le volet d\'une tablette, pas d\'un téléphone', () => {
+  it('ne réserve rien aux encarts dans le volet : ils s\'ouvrent dans le panneau', () => {
     const tablette = { largeur: 768, hauteur: 1024, volet: true, retrait: 12 }
-    expect(marges(tout, tablette, 'france').right).toBe(332)
-    expect(marges(tout, tablette, 'territoire').right).toBe(32)
-    expect(marges(tout, { largeur: 390, hauteur: 844, volet: true, retrait: 12 }, 'france').right).toBe(32)
+    expect(marges(tout, tablette, 'france').right).toBe(32)
+    expect(marges({ ...tout, encartsDeplies: false }, tablette, 'france')).toEqual(marges(tout, tablette, 'france'))
   })
 
   it('renonce à la place des sources quand l\'écran est trop bas', () => {

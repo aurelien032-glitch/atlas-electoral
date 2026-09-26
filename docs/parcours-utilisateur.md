@@ -89,11 +89,12 @@ flowchart TB
 | Régler l'opacité des couleurs | Bouton sous le zoom | aucun : préférence gardée par le navigateur | Couleurs des bureaux de 10 à 100 % sur le plan (70 % par défaut) |
 | Replier ou rouvrir le panneau | Languette au bord (panneau à gauche), bouton ▾ du volet ou poignée (volet en bas) | aucun : préférence gardée par le navigateur | Toute la largeur, ou tout l'écran moins la barre du volet ; en vue d'ensemble, la métropole se recadre |
 | Replier la légende | Son titre | aucun : préférence gardée par le navigateur (repliée d'office sous 1 280 px) | En vue d'ensemble, la métropole se recadre dans la place libérée ; repliée, la légende se réduit à son titre |
-| Déplier ou replier les encarts | Bouton sous ◐ (icône d'encart, nommé au survol), puis leur titre | aucun : préférence gardée par le navigateur (dépliés d'office dès 1 500 px, jamais dans le volet) | En vue d'ensemble, la métropole se décale pour leur laisser la place ; dans le volet, ils s'ouvrent à gauche du zoom : la métropole se décale sur une tablette, ils se posent sur elle sur un téléphone, trop étroit |
+| Déplier ou replier les encarts | Bouton sous ◐ (icône d'encart, nommé au survol), puis leur titre | aucun : préférence gardée par le navigateur (dépliés d'office dès 1 500 px, jamais dans le volet) | En vue d'ensemble, la métropole se décale pour leur laisser la place ; dans le volet, ils s'ouvrent dans le panneau, sous les réglages (le volet monte jusqu'à eux), et la carte garde la France entière |
+| Revenir à la France entière | Bouton des encarts, hors de la vue d'ensemble (« Revenir à la France entière ») | aucun | Métropole entière ; encarts dépliés sur ordinateur ; le volet ne bouge pas |
 | Cliquer un département extrême, un raccourci | Vue nationale | `sel` | Cadrée sur le territoire |
 | Cliquer un territoire | Carte | `sel` ; efface `page` | Immobile (le territoire est à l'écran) |
 | Cliquer un territoire dans un encart | Encarts | `sel` | Cadrée sur le territoire |
-| Cliquer le nom d'un encart | Encarts | aucun | Cadrée sur l'encart |
+| Cliquer le nom d'un encart | Encarts | aucun | Cadrée sur l'encart ; dans le volet, celui-ci redescend pour la montrer |
 | Remonter le fil d'Ariane | Fiche | `sel` | Cadrée sur l'étape |
 | Fermer la fiche (×) | Fiche | efface `sel` | Cadrée sur la France |
 | Méthodologie, Retour aux résultats | En-tête, Méthodologie | `page` | Inchangée |
@@ -127,7 +128,9 @@ flowchart TB
 7. **Les encarts appartiennent à la vue d'ensemble** : au plus un niveau de zoom au-delà de la métropole
    entière, dont le zoom dépend de l'écran. Zoomée sur une région, la carte n'en a plus besoin. Ils montrent la
    petite couronne, les cinq départements et les six collectivités d'outre-mer (la Polynésie par Tahiti et Moorea,
-   dit sous les encarts), défilent dans une fenêtre basse et se replient sur un bouton sous ◐.
+   dit sous les encarts), défilent dans une fenêtre basse et se replient sur un bouton sous ◐. Ce bouton reste
+   quand la carte est zoomée, pour revenir à la France entière. Dans le volet, les encarts s'ouvrent dans le
+   panneau : sur la carte d'un téléphone, ils cacheraient la France.
 8. **Choisir un territoire montre sa fiche** : sur mobile, le volet se déplie (par la carte, la recherche ou un
    lien partagé) ; replié, le panneau se rouvre (ordinateur comme téléphone). Dans le volet, activer la recherche
    le déplie aussi : le champ monte en haut de l'écran, ses suggestions tiennent au-dessus du clavier.
@@ -174,6 +177,8 @@ flowchart TB
 | `?sel=commune:69123#12.5/45.764/4.836`, légende repliée | Cadrage du lien conservé (zoom 12,5), pas de recadrage sur la France |
 | Téléphone, premier passage | Encarts repliés sur leur bouton ; bouton ▾ : volet réduit à une fine barre, métropole recentrée, sources posées sur la barre ; la poignée le rouvre |
 | Encarts dépliés | Collectivités coloriées : Wallis-et-Futuna en deux moitiés (un seul résultat, 98601), Polynésie par Tahiti et Moorea |
+| Fenêtre de 465 × 468 (volet) : bouton des encarts, « Martinique », puis le bouton de retour | Encarts dans le volet (Paris en grand, 4 vignettes de 92 px par rangée) ; carte sur la Martinique, volet redescendu ; retour à la France entière, volet immobile |
+| 1 280 × 720 : encarts dépliés, « Martinique », puis le bouton de retour | Fenêtre des encarts masquée au zoom, bouton gardé ; retour : France entre la légende et les encarts rouverts, focus sur le bouton |
 | `?scrutin=2022_pres_t1&sel=bureau:75056_2099` | Aucun bureau n° 2099 ; lien vers Paris 20e |
 | `?scrutin=2017_pres_t1&mode=evolution&de=2022_pres_t1` | Départ ramené à 2012 ; aucun départ postérieur proposé |
 | `?scrutin=1999_euro_t1&mode=evolution` | Pas de « De », message, carte vide, pas de légende |

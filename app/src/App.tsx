@@ -1,5 +1,5 @@
 import type { Feature } from 'geojson'
-import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import type { Cadrage, Survol, VisiteAdresse } from './carte/Carte'
 import { Encarts } from './carte/Encarts'
 import {
@@ -9,7 +9,7 @@ import { Infobulle } from './carte/Infobulle'
 import { Legende, type DescriptionLegende } from './carte/Legende'
 import { ReglageOpacite } from './carte/Opacite'
 import { Onglets } from './carte/Onglets'
-import { enVolet, FRANCE_METROPOLITAINE, repliParDefaut } from './carte/place'
+import { enVolet, FRANCE_METROPOLITAINE, REQUETE_VOLET, repliParDefaut } from './carte/place'
 
 import { blocEnTete, optionsCibles, retenueDuBloc } from './cibles'
 import { nomCandidature } from './donnees/libelles'
@@ -67,6 +67,16 @@ function voixDuPanachage(lignes: readonly VoixPanachage[]) {
 const Carte = lazy(() => import('./carte/Carte').then((m) => ({ default: m.Carte })))
 // Référence stable : un tableau vide recréé à chaque rendu relancerait tout le coloriage de la carte.
 const AUCUN_CONTOUR: BureauContour[] = []
+const RIEN = () => {}
+const ID_ENCARTS_VOLET = 'encarts-volet'
+
+// Mise en page en volet (téléphone, tablette tenue verticalement) : suivie quand l'écran tourne ou la fenêtre change.
+const suivreVolet = (rappel: () => void) => {
+  const requete = window.matchMedia(REQUETE_VOLET)
+  requete.addEventListener('change', rappel)
+  return () => requete.removeEventListener('change', rappel)
+}
+const useVolet = () => useSyncExternalStore(suivreVolet, enVolet)
 /** Territoires hors de la métropole, accessibles depuis l'aperçu : départements et collectivités d'outre-mer,
  * Français établis hors de France (« ZZ »). */
 const HORS_METROPOLE = ['971', '972', '973', '974', '976', '975', '977', '978', '986', '987', '988', 'ZZ']
@@ -124,6 +134,11 @@ interface PropsZone {
   encarts: Encart[] | undefined
   onChoisirEncart: (selection: Selection) => void
   onCadrer: (emprise: [number, number, number, number]) => void
+  encartsReplies: boolean
+  /** Bouton des encarts, sous ◐ : hors de la vue d'ensemble, il ramène à la France entière. */
+  onBoutonEncarts: (ensemble: boolean) => void
+  /** Volet en bas : les encarts s'y ouvrent, la carte n'en garde que le bouton. */
+  volet: boolean
   /** Carte prête, ou en échec : ce qui attendait la carte peut se télécharger. */
   onPrete: () => void
   /** Légende repliée, volet du téléphone réduit à sa barre : la carte cadre dans la place laissée. */
@@ -136,10 +151,12 @@ interface PropsZone {
 }
 
 // Le survol change à chaque mouvement de souris : son état vit ici, pour ne pas recalculer les panneaux.
-function ZoneCarte({ lancee, contenu, encarts, onChoisirEncart, onCadrer, onPrete, ...props }: PropsZone) {
+function ZoneCarte({
+  lancee, contenu, encarts, onChoisirEncart, onCadrer, encartsReplies, onBoutonEncarts, volet, onPrete, ...props
+}: PropsZone) {
   const [survol, setSurvol] = useState<Survol | null>(null)
-  // Encarts : seulement dans la vue d'ensemble. Une fois la carte zoomée sur une région, ils la masqueraient
-  // sans rien lui apprendre.
+  // Encarts dépliés : seulement dans la vue d'ensemble. Une fois la carte zoomée sur une région, ils la
+  // masqueraient sans rien lui apprendre ; leur bouton, lui, reste, pour revenir à la France entière.
   const [ensemble, setEnsemble] = useState(true)
   // Opacité des couleurs sur le plan IGN : préférence gardée par le navigateur. Le curseur n'agit qu'au zoom des
   // bureaux, là où le plan est dessous.
@@ -149,12 +166,6 @@ function ZoneCarte({ lancee, contenu, encarts, onChoisirEncart, onCadrer, onPret
     setOpacite(valeur)
     garderOpacite(valeur)
   }, [])
-  // Encarts repliés sur leur bouton, sauf sur grand écran : dépliés, ils prennent à la métropole 300 px de large.
-  const [encartsReplies, setEncartsReplies] = useState(() => repliGarde('encarts', repliParDefaut('encarts', window.innerWidth, enVolet())))
-  const basculerEncarts = useCallback(() => {
-    setEncartsReplies(!encartsReplies)
-    garderRepli('encarts', !encartsReplies)
-  }, [encartsReplies])
   const bulle = survol && contenu(survol)
   return (
     <div className="zone-carte-fond">
@@ -168,11 +179,14 @@ function ZoneCarte({ lancee, contenu, encarts, onChoisirEncart, onCadrer, onPret
           </Suspense>
         </GardeCarte>
       )}
-      {encarts && ensemble && (
+      {encarts && (
         <Encarts
           encarts={encarts} coloriage={props.coloriage} onSurvol={setSurvol} onChoisir={onChoisirEncart} onCadrer={onCadrer}
           parCirconscription={props.circonscriptions && (props.coloriage?.circonscriptions?.size ?? 0) > 0}
-          replies={encartsReplies} onBasculer={basculerEncarts}
+          replies={volet || !ensemble || encartsReplies} ouvert={volet ? !encartsReplies : ensemble && !encartsReplies}
+          controle={volet && !encartsReplies ? ID_ENCARTS_VOLET : undefined}
+          libelle={ensemble ? undefined : "Revenir à la France entière, avec la petite couronne et l'outre-mer"}
+          onBasculer={() => onBoutonEncarts(ensemble)}
         />
       )}
       {lancee && <ReglageOpacite valeur={opacite} actif={plan} onChange={changerOpacite} />}
@@ -200,6 +214,20 @@ export default function App() {
     setLegendeRepliee(!legendeRepliee)
     garderRepli('legende', !legendeRepliee)
   }, [legendeRepliee])
+  const volet = useVolet()
+  // Encarts repliés sur leur bouton, sauf sur grand écran : dépliés, ils prennent à la métropole 300 px de large.
+  // Dans le volet, ils s'ouvrent dans le panneau, sur toute sa largeur : sur la carte, ils cacheraient la France.
+  const [encartsReplies, setEncartsReplies] = useState(() => repliGarde('encarts', repliParDefaut('encarts', window.innerWidth, enVolet())))
+  const replierEncarts = useCallback((replies: boolean) => {
+    setEncartsReplies(replies)
+    garderRepli('encarts', replies)
+  }, [])
+  // Demande d'amener les encarts à l'écran, dans le volet : leur section défile jusqu'en haut du panneau.
+  const [demandeEncarts, setDemandeEncarts] = useState(0)
+  const refEncartsVolet = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (demandeEncarts > 0) refEncartsVolet.current?.scrollIntoView({ block: 'start' })
+  }, [demandeEncarts])
 
   const catalogue = useCatalogue()
   const scrutins = useMemo(() => catalogue.data?.scrutins ?? [], [catalogue.data])
@@ -556,6 +584,32 @@ export default function App() {
   }, [parametres])
 
   const cadrer = useCallback((emprise: [number, number, number, number]) => setCadrage({ emprise, jeton: Date.now() }), [])
+  // Bouton des encarts : hors de la vue d'ensemble (zoomée sur la Martinique, une commune…), il ramène à la France
+  // entière, encarts dépliés sur la carte ; le volet, lui, ne monte pas : la France doit se voir. Dans la vue
+  // d'ensemble, il déplie ou replie les encarts ; dans le volet, il le déplie jusqu'à eux.
+  const boutonEncarts = useCallback((ensemble: boolean) => {
+    if (!ensemble) {
+      cadrer(FRANCE_METROPOLITAINE)
+      if (!enVolet()) replierEncarts(false)
+      return
+    }
+    replierEncarts(!encartsReplies)
+    if (encartsReplies && enVolet()) {
+      setDeplie(true)
+      replierPanneau(false)
+      setDemandeEncarts((n) => n + 1)
+    }
+  }, [encartsReplies, cadrer, replierEncarts, replierPanneau])
+  // Nom d'un encart, dans le volet : le volet redescend, pour montrer le territoire sur la carte.
+  const cadrerDepuisVolet = useCallback((emprise: [number, number, number, number]) => {
+    cadrer(emprise)
+    setDeplie(false)
+  }, [cadrer])
+  // Territoire choisi dans les encarts du volet : ils se replient, sa fiche vient en haut du panneau.
+  const choisirDepuisVolet = useCallback((s: Selection) => {
+    actions.territoire(s)
+    replierEncarts(true)
+  }, [actions, replierEncarts])
 
   const changerMode = useCallback((mode: Mode) => modifierUrl({ mode: mode === 'tete' ? null : mode }), [modifierUrl])
 
@@ -722,6 +776,15 @@ export default function App() {
           {vue.page !== 'methodologie' && scrutin && (
             <Reglages scrutin={scrutin} scrutins={scrutins} mode={vue.mode} cibles={cibles} cible={cible} bloc={bloc} de={scrutinDe} actions={actions} />
           )}
+          {vue.page !== 'methodologie' && volet && !encartsReplies && encarts.data && (
+            <div ref={refEncartsVolet}>
+              <Encarts
+                dansLeVolet id={ID_ENCARTS_VOLET} replies={false} onBasculer={() => replierEncarts(true)}
+                encarts={encarts.data} coloriage={etatCarte?.coloriage ?? null} onSurvol={RIEN} onChoisir={choisirDepuisVolet}
+                onCadrer={cadrerDepuisVolet} parCirconscription={scrutin?.portee === 'circonscription' && (etatCarte?.coloriage?.circonscriptions?.size ?? 0) > 0}
+              />
+            </div>
+          )}
           {chargement && !erreur && <p className="note">Chargement des résultats…</p>}
           {vue.page === 'methodologie' && catalogue.data && scrutin && (
             <Methodologie
@@ -792,6 +855,9 @@ export default function App() {
           onClic={choisirSurCarte}
           encarts={encarts.data}
           onChoisirEncart={actions.territoire}
+          encartsReplies={encartsReplies}
+          onBoutonEncarts={boutonEncarts}
+          volet={volet}
           onCadrer={cadrer}
           repere={repere}
           visite={visite}

@@ -126,7 +126,10 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
 - Encarts de la vue nationale (petite couronne, départements et collectivités d'outre-mer) : chemins SVG
   précalculés (`geo/encarts.json`), colorés avec les mêmes états que la carte, affichés dans la vue d'ensemble
   seulement (au plus un niveau de zoom au-delà de la métropole entière, signalé par `onEnsemble`), repliés sur
-  un bouton de 44 px sous ◐ (le même bouton, replié ou déplié : le focus reste dessus).
+  un bouton de 44 px sous ◐ (le même bouton, replié ou déplié : le focus reste dessus). Ce bouton reste hors de la
+  vue d'ensemble et ramène alors à la France entière (Q23). Dans le volet, les encarts s'ouvrent dans le panneau,
+  sous les réglages, en grande grille (`dansLeVolet`) ; la carte n'en garde que le bouton, et le nom d'un encart
+  fait redescendre le volet pour montrer le territoire.
   Collectivités sans contour de circonscription (977, 978, 986, 987, 988) : leurs encarts gardent les communes aux
   législatives. Polynésie : Tahiti et Moorea seulement (note sous les encarts). Wallis-et-Futuna : un seul code de
   résultats (98601) ; carte et index fusionnent ses trois circonscriptions territoriales (`geo.py`), l'encart

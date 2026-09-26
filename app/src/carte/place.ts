@@ -50,24 +50,19 @@ const SOURCES_VOLET = 36       // mention des sources, posée sur le haut du vol
 // Dans le volet, la colonne du zoom ne descend pas jusqu'à la Corse : il suffit de dégager la pointe nord de
 // l'Alsace (Lauterbourg), plutôt que de réserver toute la colonne (la métropole perdrait 14 % de sa largeur).
 const COLONNE_VOLET = 32
-const ENCARTS_VOLET = 332      // encarts dépliés dans le volet, à gauche de la colonne du zoom : 12 + 45 + 8 + 259, et 8
 // En deçà, la métropole serait illisible : les encarts, puis la légende, se posent alors sur la carte.
 const MINIMUM = 160
 
 /**
  * Marges du cadrage : ce qui est posé sur la carte ne recouvre pas le territoire cadré. Les encarts ne
- * comptent que pour la métropole entière : zoomée sur un territoire, la carte les masque.
+ * comptent que pour la métropole entière (zoomée sur un territoire, la carte les masque), et pas dans le volet,
+ * où ils s'ouvrent dans le panneau.
  */
 export function marges(place: Place, ecran: Ecran, cadre: 'france' | 'territoire'): Marges {
   if (ecran.volet) {
     const volet = place.voletReplie ? VOLET_REPLIE : Math.round(ecran.hauteur * 0.42)
-    const m = {
-      top: ecran.retrait + ONGLETS, bottom: volet + SOURCES_VOLET, left: 16,
-      right: cadre === 'france' && place.encartsDeplies ? ENCARTS_VOLET : COLONNE_VOLET,
-    }
+    const m = { top: ecran.retrait + ONGLETS, bottom: volet + SOURCES_VOLET, left: 16, right: COLONNE_VOLET }
     if (ecran.hauteur - m.top - m.bottom < MINIMUM) m.bottom = volet
-    // Tablette : la métropole se décale pour les encarts ; sur un téléphone, trop étroit, ils se posent sur la carte.
-    if (ecran.largeur - m.left - m.right < MINIMUM) m.right = COLONNE_VOLET
     return m
   }
   const r = ecran.retrait
