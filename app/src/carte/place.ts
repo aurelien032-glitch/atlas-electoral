@@ -56,7 +56,7 @@ const MINIMUM = 160
 /**
  * Marges du cadrage : ce qui est posé sur la carte ne recouvre pas le territoire cadré. Les encarts ne
  * comptent que pour la métropole entière (zoomée sur un territoire, la carte les masque), et pas dans le volet,
- * où ils s'ouvrent dans le panneau.
+ * où ils s'ouvrent en plein cadre, par-dessus la carte.
  */
 export function marges(place: Place, ecran: Ecran, cadre: 'france' | 'territoire'): Marges {
   if (ecran.volet) {

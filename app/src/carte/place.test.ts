@@ -30,7 +30,7 @@ describe('marges du cadrage', () => {
     expect(marges({ ...tout, voletReplie: true }, telephone, 'france').bottom).toBe(73 + 36)
   })
 
-  it('ne réserve rien aux encarts dans le volet : ils s\'ouvrent dans le panneau', () => {
+  it('ne réserve rien aux encarts dans le volet : ils s\'ouvrent en plein cadre, par-dessus la carte', () => {
     const tablette = { largeur: 768, hauteur: 1024, volet: true, retrait: 12 }
     expect(marges(tout, tablette, 'france').right).toBe(32)
     expect(marges({ ...tout, encartsDeplies: false }, tablette, 'france')).toEqual(marges(tout, tablette, 'france'))

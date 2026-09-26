@@ -14,13 +14,8 @@ interface Props {
   parCirconscription: boolean
   /** Repliés sur un bouton sous celui de l'opacité : la carte principale se lit en entier. */
   replies: boolean
-  /** Section du volet (téléphone, tablette tenue verticalement) plutôt que fenêtre posée sur la carte. */
-  dansLeVolet?: boolean
-  id?: string
-  /** Bouton replié : ce qu'il fait (hors de la vue d'ensemble, il ramène à la France entière) et ce qu'il ouvre. */
+  /** Bouton replié : ce qu'il fait (hors de la vue d'ensemble, il ramène à la France entière). */
   libelle?: string
-  ouvert?: boolean
-  controle?: string
   onBasculer: () => void
   onSurvol: (survol: Survol | null) => void
   onChoisir: (selection: Selection) => void
@@ -35,18 +30,17 @@ const TITRE = 'Petite couronne et outre-mer'
  * carte sur le territoire. Chemins SVG précalculés par le pipeline (geo/encarts.json).
  */
 export function Encarts({
-  encarts, coloriage, parCirconscription, replies, dansLeVolet = false, id, libelle = TITRE, ouvert = !replies, controle,
-  onBasculer, onSurvol, onChoisir, onCadrer,
+  encarts, coloriage, parCirconscription, replies, libelle = TITRE, onBasculer, onSurvol, onChoisir, onCadrer,
 }: Props) {
   const motif = useId()
   const idGrille = useId()
   const notes = encarts.filter((e) => e.note)
   return (
-    <section id={id} className={dansLeVolet ? 'encarts-volet' : 'encarts'} data-replies={replies} aria-label="Encarts : Paris et petite couronne, outre-mer">
+    <section className="encarts" data-replies={replies} aria-label="Encarts : Paris et petite couronne, outre-mer">
       {/* Un seul bouton, replié ou déplié : le focus reste dessus quand il bascule. Replié, il tient dans la colonne
           du zoom (44 px) et son nom est dit par l'infobulle et les lecteurs d'écran. */}
       <button
-        type="button" className="encarts-titre surtitre" aria-expanded={ouvert} aria-controls={controle ?? (replies ? undefined : idGrille)}
+        type="button" className="encarts-titre surtitre" aria-expanded={!replies} aria-controls={replies ? undefined : idGrille}
         aria-label={replies ? libelle : undefined} title={replies ? libelle : undefined} onClick={onBasculer}
       >
         {replies ? (
