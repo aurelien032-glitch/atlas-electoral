@@ -10,7 +10,7 @@ import type { Feature, FeatureCollection } from 'geojson'
 import { Protocol } from 'pmtiles'
 import { useEffect, useRef, useState } from 'react'
 import { RACINE_DONNEES } from '../donnees/requetes'
-import { arrondissementDu, estArrondissement, villeDe } from '../donnees/territoires'
+import { arrondissementDu, departementDe, estArrondissement, villeDe } from '../donnees/territoires'
 import type { BureauContour, Correctifs } from '../donnees/types'
 import type { Coloriage } from '../modes'
 import type { Etat } from './etats'
@@ -178,6 +178,8 @@ interface Props {
   repli: Repli | null
   /** Contours locaux des bureaux (Bordeaux Métropole), pour les territoires que le repli leur confie. */
   correctifs: Correctifs | null
+  /** Emprise de chaque département : les états des bureaux ne sont posés que pour ceux à l'écran. */
+  emprisesDepartements: Emprises
   /** Scrutin législatif : charge et montre la couche des circonscriptions. */
   circonscriptions: boolean
   selection: Selection | undefined
@@ -237,6 +239,27 @@ const aDesHachures = (etats: ReadonlyMap<string, Etat> | null | undefined) => {
   return false
 }
 
+/** Emprise d'un département : [ouest, sud, est, nord]. */
+export type Emprises = ReadonlyMap<string, readonly [number, number, number, number]>
+
+/**
+ * Départements à l'écran, marge d'un quart de l'écran comprise, parmi ceux qui ont des bureaux ; sans emprise
+ * connue (index pas encore arrivé), un département est compté d'office.
+ */
+function departementsEnVue(carte: CarteMapLibre, emprises: Emprises, candidats: Iterable<string>): Set<string> {
+  const b = carte.getBounds()
+  const dx = (b.getEast() - b.getWest()) / 4
+  const dy = (b.getNorth() - b.getSouth()) / 4
+  const enVue = new Set<string>()
+  for (const departement of candidats) {
+    const e = emprises.get(departement)
+    if (!e || (e[2] >= b.getWest() - dx && e[0] <= b.getEast() + dx && e[3] >= b.getSouth() - dy && e[1] <= b.getNorth() + dy)) {
+      enVue.add(departement)
+    }
+  }
+  return enVue
+}
+
 // Couches que l'on survole et que l'on clique ; sous le pointeur, la plus haute l'emporte.
 const COUCHES_ACTIVES = ['correctifs', 'bureaux', 'communes-repli', 'communes', 'circonscriptions']
 // Contour de 2022 d'un territoire que dessine son découpage local : transparent, sans tracé.
@@ -273,7 +296,7 @@ function motifHachures(pas = 8, ratio = 2) {
 }
 
 export function Carte({
-  coloriage, contours, auBureau, repli, correctifs, circonscriptions, selection, contour, contourIndisponible, cadrage, libelle, onSurvol, onClic, onPrete,
+  coloriage, contours, auBureau, repli, correctifs, emprisesDepartements, circonscriptions, selection, contour, contourIndisponible, cadrage, libelle, onSurvol, onClic, onPrete,
   onEnsemble, onPlan, opacite, repere, visite, onBureauAdresse, legendeRepliee, encartsDeplies, voletReplie,
 }: Props) {
   const conteneur = useRef<HTMLDivElement>(null)
@@ -289,6 +312,10 @@ export function Carte({
   const refBureaux = useRef(new Map<string, Etat>())
   // Lus par le survol et la recherche d'adresse, dont les écouteurs sont posés une fois pour toutes.
   const refRepli = useRef<RepliCourant>({ repli: null, bureaux: null })
+  const refEmprises = useRef<Emprises>(new Map())
+  useEffect(() => {
+    refEmprises.current = emprisesDepartements
+  }, [emprisesDepartements])
   useEffect(() => {
     refRepli.current = { repli, bureaux: coloriage?.bureaux ?? null }
   }, [repli, coloriage])
@@ -538,14 +565,13 @@ export function Carte({
     // Retirer des états a pu effacer la sélection : on la remet.
     if (refCible.current) carte.setFeatureState(refCible.current, { selection: true })
 
-    // Les 70 000 bureaux ne se voient qu'à partir du zoom des bureaux : leurs états ne sont posés qu'à
-    // l'approche de ce zoom (dès le début de l'animation), par lots d'une image à l'autre pour ne pas figer
-    // la page, et seulement pour les bureaux qui changent.
-    let lance = false
-    let image = 0
-    const poserBureaux = () => {
-      if (lance || carte.getZoom() < ZOOM_BUREAUX - 1) return
-      lance = true
+    // Les 70 000 bureaux ne se voient qu'à partir du zoom des bureaux. Leurs états ne sont posés que pour les
+    // départements à l'écran et autour, à l'approche de ce zoom (dès le début de l'animation), puis au fil des
+    // déplacements : MapLibre confronte chaque état posé à chaque tuile chargée, et 70 000 états figeaient un
+    // téléphone plusieurs secondes à chaque coloriage. Par lots d'une image à l'autre, seulement ceux qui changent.
+    const poses = refBureaux.current
+    const id = (code: string) => ({ source: 'bureaux', sourceLayer: COUCHE_BUREAUX, id: code })
+    const calculerVoulus = () => {
       const voulus = new Map<string, Etat>()
       if (coloriage.bureaux && repli && repli.territoireDuContour.size > 0) {
         // Un contour sans résultat à ce scrutin (bureau supprimé ou renuméroté depuis 2022), ou d'un territoire aux
@@ -562,10 +588,10 @@ export function Carte({
         }
         // Découpage local : ses bureaux d'après leurs résultats (la commune pour un numéro sans résultat).
         for (const [code, territoire] of repli.territoireDuCorrectif) {
-          const id = { source: 'correctifs', id: code }
+          const local = { source: 'correctifs', id: code }
           const etat = repli.corriges.has(territoire) ? coloriage.bureaux.get(code) ?? coloriage.communes.get(territoire) : undefined
-          if (etat) carte.setFeatureState(id, { ...etat, commune: false, selection: false })
-          else carte.removeFeatureState(id)
+          if (etat) carte.setFeatureState(local, { ...etat, commune: false, selection: false })
+          else carte.removeFeatureState(local)
         }
         if (refCible.current?.source === 'correctifs') carte.setFeatureState(refCible.current, { selection: true })
       } else if (coloriage.bureaux) {
@@ -578,40 +604,73 @@ export function Carte({
           if (etat) voulus.set(code_bv, etat)
         }
       }
-      const poses = refBureaux.current
-      const id = (code: string) => ({ source: 'bureaux', sourceLayer: COUCHE_BUREAUX, id: code })
-      const aRetirer = [...poses.keys()].filter((code) => !voulus.has(code))
-      const aPoser = [...voulus].filter(([code, etat]) => {
-        const a = poses.get(code)
-        return !a || a.couleur !== etat.couleur || a.opacite !== etat.opacite || a.hachure !== etat.hachure || a.commune !== etat.commune
-      })
-      const lot = () => {
-        let n = 0
-        while (n < 5000 && aRetirer.length > 0) {
-          const code = aRetirer.pop() as string
-          carte.removeFeatureState(id(code))
-          poses.delete(code)
-          n++
-        }
-        while (n < 5000 && aPoser.length > 0) {
-          const [code, etat] = aPoser.pop() as [string, Etat]
-          // setFeatureState complète l'état : le repli d'un coloriage précédent doit être levé explicitement.
-          carte.setFeatureState(id(code), { ...etat, commune: etat.commune ?? false })
-          poses.set(code, etat)
-          n++
-        }
-        if (aRetirer.length > 0 || aPoser.length > 0) {
-          image = requestAnimationFrame(lot)
-        } else if (refCible.current?.source === 'bureaux') {
-          carte.setFeatureState(refCible.current, { selection: true })
+      return voulus
+    }
+    let parDepartement: Map<string, [string, Etat][]> | null = null
+    const departementsPoses = new Set<string>()
+    let premier = true
+    let image = 0
+    const aRetirer: string[] = []
+    const aPoser: [string, Etat][] = []
+    const lot = () => {
+      let n = 0
+      while (n < 5000 && aRetirer.length > 0) {
+        const code = aRetirer.pop() as string
+        carte.removeFeatureState(id(code))
+        poses.delete(code)
+        n++
+      }
+      while (n < 5000 && aPoser.length > 0) {
+        const [code, etat] = aPoser.pop() as [string, Etat]
+        // setFeatureState complète l'état : le repli d'un coloriage précédent doit être levé explicitement.
+        carte.setFeatureState(id(code), { ...etat, commune: etat.commune ?? false })
+        poses.set(code, etat)
+        n++
+      }
+      if (aRetirer.length > 0 || aPoser.length > 0) {
+        image = requestAnimationFrame(lot)
+      } else if (refCible.current?.source === 'bureaux') {
+        carte.setFeatureState(refCible.current, { selection: true })
+      }
+    }
+    const poserBureaux = () => {
+      if (carte.getZoom() < ZOOM_BUREAUX - 1) return
+      if (!parDepartement) {
+        parDepartement = new Map()
+        for (const entree of calculerVoulus()) {
+          const departement = departementDe(entree[0].split('_')[0])
+          const liste = parDepartement.get(departement)
+          if (liste) liste.push(entree)
+          else parDepartement.set(departement, [entree])
         }
       }
+      const nouveaux = [...departementsEnVue(carte, refEmprises.current, parDepartement.keys())].filter((d) => !departementsPoses.has(d))
+      if (!premier && nouveaux.length === 0) return
+      const voulus = new Map<string, Etat>()
+      for (const departement of nouveaux) {
+        departementsPoses.add(departement)
+        for (const [code, etat] of parDepartement.get(departement) ?? []) voulus.set(code, etat)
+      }
+      if (premier) {
+        premier = false
+        // États d'un coloriage précédent hors de l'écran : retirés, reposés quand on y va.
+        for (const code of poses.keys()) if (!voulus.has(code)) aRetirer.push(code)
+      }
+      for (const [code, etat] of voulus) {
+        const a = poses.get(code)
+        if (!a || a.couleur !== etat.couleur || a.opacite !== etat.opacite || a.hachure !== etat.hachure || a.commune !== etat.commune) {
+          aPoser.push([code, etat])
+        }
+      }
+      cancelAnimationFrame(image)
       lot()
     }
     poserBureaux()
     carte.on('zoom', poserBureaux)
+    carte.on('moveend', poserBureaux)
     return () => {
       carte.off('zoom', poserBureaux)
+      carte.off('moveend', poserBureaux)
       cancelAnimationFrame(image)
     }
   }, [prete, coloriage, contours, auBureau, repli])

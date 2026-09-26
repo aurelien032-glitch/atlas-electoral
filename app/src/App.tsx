@@ -1,6 +1,6 @@
 import type { Feature } from 'geojson'
 import { Component, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { Cadrage, Survol, VisiteAdresse } from './carte/Carte'
+import type { Cadrage, Emprises, Survol, VisiteAdresse } from './carte/Carte'
 import { Encarts } from './carte/Encarts'
 import {
   LIBELLE_BLOC, PALETTE_EVOLUTION, RAMPE_PARTICIPATION, RAMPE_SCORE, SEUILS_EVOLUTION, palier, type BlocColore,
@@ -120,6 +120,7 @@ interface PropsZone {
   auBureau: boolean
   repli: Repli | null
   correctifs: Correctifs | null
+  emprisesDepartements: Emprises
   circonscriptions: boolean
   selection: Selection | undefined
   contour: Feature | undefined
@@ -320,6 +321,13 @@ export default function App() {
       : null,
     [territoireDuContour, sansDessin, carteAuBureau, bureaux.data, index.passage, territoireDuCorrectif],
   )
+  // Emprise de chaque département : au zoom des bureaux, la carte ne pose les états que de ceux à l'écran.
+  const emprisesDepartements = useMemo((): Emprises => new Map([...index.territoires.values()]
+    .filter((t) => t.niveau === 'departement')
+    .flatMap((t) => {
+      const e = emprise(t)
+      return e ? [[t.code, e] as const] : []
+    })), [index.territoires])
   // Découpages locaux employés à ce scrutin, cités dans la légende et la fiche.
   const sourcesLocales = useMemo(
     () => (correctifs.data?.sources ?? []).filter((s) => repliCarte?.corriges.has(s.commune)),
@@ -912,6 +920,7 @@ export default function App() {
           auBureau={carteAuBureau}
           repli={repliCarte}
           correctifs={correctifs.data ?? null}
+          emprisesDepartements={emprisesDepartements}
           circonscriptions={scrutin?.portee === 'circonscription'}
           selection={selection}
           contour={contourCommune.data}

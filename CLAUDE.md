@@ -133,7 +133,9 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   d'un bureau demandent tout de suite ce dont ils ont besoin.
 - Ne jamais passer à la carte un tableau ou un objet recréé à chaque rendu (`?? []`) : son effet de coloriage
   se relancerait à chaque mise à jour (plusieurs secondes sur un téléphone). Les états ne sont posés que
-  s'ils changent ; ceux des bureaux, dès le début d'un zoom qui s'en approche, par lots d'une image à l'autre.
+  s'ils changent ; ceux des bureaux, pour les seuls départements à l'écran et autour (`departementsEnVue`), dès le
+  début d'un zoom qui s'en approche puis au fil des déplacements, par lots d'une image à l'autre : MapLibre confronte
+  chaque état posé à chaque tuile chargée (70 000 états figeaient un téléphone de 2 à 3 s, Q28).
 - Recoloriage (décisions Q26, Q27) : toute couche qui lit l'état de ses territoires se recalcule, pour chacun, à
   chaque coloriage, même vide ou transparente. N'en ajouter qu'à bon escient : hachures masquées quand le coloriage
   n'en a pas, sélection des communes par leur contour détaillé. Changer le filtre ou la visibilité d'une couche
