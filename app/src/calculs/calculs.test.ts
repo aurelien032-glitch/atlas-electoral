@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { classeDe, seuilsLisibles } from './classes'
+import { classeDe, quantilesPonderes, seuilsLisibles } from './classes'
 import { ecartsEnPoints, parts, voixParTerritoire } from './parts'
 
 describe('seuilsLisibles', () => {
@@ -25,6 +25,39 @@ describe('seuilsLisibles', () => {
   it('réduit le nombre de classes plutôt que de laisser une classe vide', () => {
     expect(seuilsLisibles([0, 0, 0, 0, 5], [1, 1, 1, 1, 1])).toEqual([5])
     expect(seuilsLisibles([], [])).toEqual([])
+  })
+})
+
+/** Ancien calcul, par tri complet : la référence du calcul par histogramme. */
+function quantilesParTri(valeurs: number[], poids: number[], classes: number) {
+  const ordre = valeurs.map((_, i) => i).filter((i) => poids[i] > 0).sort((a, b) => valeurs[a] - valeurs[b])
+  const total = ordre.reduce((somme, i) => somme + poids[i], 0)
+  if (total === 0) return null
+  const bruts: number[] = []
+  let cumul = 0
+  let k = 1
+  for (const i of ordre) {
+    while (k < classes && cumul >= (k * total) / classes) {
+      bruts.push(valeurs[i])
+      k++
+    }
+    cumul += poids[i]
+  }
+  return { bruts, minimum: valeurs[ordre[0]] }
+}
+
+describe('quantilesPonderes', () => {
+  it('donne exactement les quantiles du tri complet, égalités et poids nuls compris', () => {
+    let graine = 42
+    const hasard = () => (graine = (graine * 1103515245 + 12345) % 2147483648) / 2147483648
+    for (let essai = 0; essai < 200; essai++) {
+      const n = 1 + Math.floor(hasard() * 3000)
+      // Valeurs arrondies au dixième (nombreuses égalités), quelques valeurs aberrantes ; poids entiers, parfois nuls.
+      const valeurs = Array.from({ length: n }, () => (hasard() < 0.01 ? 150 + hasard() * 50 : Math.round(hasard() * 1000) / 10))
+      const poids = Array.from({ length: n }, () => (hasard() < 0.05 ? 0 : 1 + Math.floor(hasard() * 2000)))
+      const classes = 2 + Math.floor(hasard() * 6)
+      expect(quantilesPonderes(valeurs, poids, classes)).toEqual(quantilesParTri(valeurs, poids, classes))
+    }
   })
 })
 

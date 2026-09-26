@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import type { Feature } from 'geojson'
 import { lireCsv } from './csv'
 import { lireParquet } from './parquet'
+import { estArrondissement } from './territoires'
 import type {
   Agregat, Bureau, BureauContour, Candidature, Catalogue, Circonscription, CodePostal, Encart, LigneSerie, Manifeste, Passage, Territoire,
   VoixAgregat, VoixBureau, VoixPanachage,
@@ -144,7 +145,9 @@ export function useContourCommune(code: string | undefined) {
     enabled: code !== undefined,
     retry: 0,
     queryFn: async ({ signal }) => {
-      const reponse = await fetch(`https://geo.api.gouv.fr/communes/${code}?format=geojson&geometry=contour&fields=code`, { signal })
+      // Paris, Lyon et Marseille : l'arrondissement, que l'API range à part.
+      const type = code && estArrondissement(code) ? '&type=arrondissement-municipal' : ''
+      const reponse = await fetch(`https://geo.api.gouv.fr/communes/${code}?format=geojson&geometry=contour&fields=code${type}`, { signal })
       if (!reponse.ok) throw new Error(`contour indisponible (HTTP ${reponse.status})`)
       return (await reponse.json()) as Feature
     },

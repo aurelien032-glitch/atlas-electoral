@@ -1,4 +1,4 @@
-import { seuilsLisibles } from './calculs/classes'
+import { classeDe, seuilsLisibles } from './calculs/classes'
 import { ecartsEnPoints, parts, voixParTerritoire, type Mesure } from './calculs/parts'
 import { etatClasse, etatTete, type Etat } from './carte/etats'
 import { exprimesPourParts, type Agregat, type Bloc, type Bureau, type Resultat, type VoixAgregat, type VoixBureau } from './donnees/types'
@@ -129,14 +129,23 @@ export function valeursEvolution(avant: DonneesEvolution, apres: DonneesEvolutio
   }
 }
 
-/** Seuils lisibles d'une carte en classes, pondérés par les électeurs de chaque territoire. */
-export function seuilsDe(valeurs: ReadonlyMap<string, Mesure>, poids: ReadonlyMap<string, number>): number[] {
+/**
+ * Seuils lisibles d'une carte en classes, pondérés par les électeurs de chaque territoire (inscrits ou exprimés),
+ * lus sur la liste des territoires : pas de table des poids à bâtir (70 000 bureaux).
+ */
+export function seuilsDe<T>(
+  valeurs: ReadonlyMap<string, Mesure>,
+  territoires: readonly T[],
+  code: (t: T) => string,
+  poids: (t: T) => number,
+): number[] {
   const v: number[] = []
   const p: number[] = []
-  for (const [code, x] of valeurs) {
-    if (x === null) continue
+  for (const t of territoires) {
+    const x = valeurs.get(code(t))
+    if (x === null || x === undefined) continue
     v.push(x)
-    p.push(poids.get(code) ?? 0)
+    p.push(poids(t))
   }
   return seuilsLisibles(v, p)
 }
@@ -149,7 +158,14 @@ export function couleursPour(rampe: readonly string[], classes: number): string[
 }
 
 export function coloriageClasses(valeurs: Valeurs, seuils: readonly number[], couleurs: readonly string[]): Coloriage {
-  const etats = (m: Map<string, Mesure>) => new Map([...m].map(([code, v]) => [code, etatClasse(v, seuils, couleurs)]))
+  // Un état par classe, partagé par tous ses territoires : autant d'objets de moins à chaque coloriage.
+  const parClasse: Etat[] = couleurs.map((couleur) => ({ couleur, opacite: 1, hachure: false }))
+  const sansObjet = etatClasse(null, seuils, couleurs)
+  const etats = (m: Map<string, Mesure>) => {
+    const r = new Map<string, Etat>()
+    for (const [code, v] of m) r.set(code, v === null ? sansObjet : parClasse[classeDe(v, seuils)])
+    return r
+  }
   return {
     communes: etats(valeurs.communes),
     bureaux: valeurs.bureaux && etats(valeurs.bureaux),
@@ -192,7 +208,7 @@ export function classesLegende(
   let sansObjet = 0
   for (const v of valeurs.values()) {
     if (v === null) sansObjet++
-    else nombres[seuils.filter((s) => v >= s).length]++
+    else nombres[classeDe(v, seuils)]++
   }
   const classes = couleurs.map((couleur, i) => ({ couleur, libelle: libelles[i], nombre: nombres[i] }))
   return { classes: classes.reverse(), sansObjet }

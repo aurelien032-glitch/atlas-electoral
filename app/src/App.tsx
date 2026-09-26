@@ -30,6 +30,7 @@ import {
   exprimesPourParts, type Agregat, type BureauContour, type Candidature, type Encart, type Resultat, type Territoire,
   type VoixPanachage,
 } from './donnees/types'
+import type { Mesure } from './calculs/parts'
 import { formatEcart, formatPart, formatPourcent, unitePoints } from './format'
 import {
   LIBELLES_EVOLUTION, LIBELLE_MODE, classesLegende, coloriageClasses, coloriageTete, couleursPour, ecartsAuNiveau, partDe,
@@ -121,6 +122,7 @@ interface PropsZone {
   circonscriptions: boolean
   selection: Selection | undefined
   contour: Feature | undefined
+  contourIndisponible: boolean
   cadrage: Cadrage | null
   libelle: string
   contenu: (survol: Survol) => { titre: string; lignes: string[] }
@@ -283,7 +285,7 @@ export default function App() {
   const communesNommees = territoires.data !== undefined
   const passage = usePassage()
   const circonscriptions = useCirconscriptions(scrutin?.portee === 'circonscription' ? id : undefined)
-  const contourCommune = useContourCommune(selection?.niveau === 'commune' ? selection.code : undefined)
+  const contourCommune = useContourCommune(selection?.niveau === 'commune' || selection?.niveau === 'arrondissement' ? selection.code : undefined)
 
   const scrutinDe = vue.mode === 'evolution' && scrutin
     ? scrutinsAnterieurs(scrutins, scrutin).find((s) => s.id === vue.de) ?? scrutinPrecedent(scrutins, scrutin)
@@ -368,9 +370,10 @@ export default function App() {
     if (chargementBureaux && vue.mode !== 'tete') return null
     const listeBureaux = carteAuBureau ? bureaux.data ?? null : null
     const unite = listeBureaux ? 'bureaux' : 'communes'
-    const poids = (champ: 'exprimes' | 'inscrits') => listeBureaux
-      ? new Map(listeBureaux.map((b) => [b.code_bv, b[champ]]))
-      : new Map(communes.map((c) => [c.code, c[champ]]))
+    // Seuils pondérés par les inscrits (participation) ou les exprimés (score) du niveau le plus fin de la carte.
+    const seuilsSur = (fines: ReadonlyMap<string, Mesure>, champ: 'exprimes' | 'inscrits') => listeBureaux
+      ? seuilsDe(fines, listeBureaux, (b) => b.code_bv, (b) => b[champ])
+      : seuilsDe(fines, communes, (c) => c.code, (c) => c[champ])
     switch (vue.mode) {
       case 'tete': {
         const blocDe = (cand: number) => parCand.get(cand)?.bloc ?? 'NC'
@@ -379,7 +382,7 @@ export default function App() {
       case 'participation': {
         const valeurs = valeursParticipation(agregats.data, listeBureaux)
         const fines = valeurs.bureaux ?? valeurs.communes
-        const seuils = seuilsDe(fines, poids('inscrits'))
+        const seuils = seuilsSur(fines, 'inscrits')
         const couleurs = couleursPour(RAMPE_PARTICIPATION, seuils.length + 1)
         return {
           coloriage: coloriageClasses(valeurs, seuils, couleurs),
@@ -394,7 +397,7 @@ export default function App() {
         if (!cible || !agregatsVoix.data || (listeBureaux && !voix.data)) return null
         const valeurs = valeursScore(agregats.data, agregatsVoix.data, listeBureaux && voix.data ? { liste: listeBureaux, voix: voix.data } : null, cible.retenue)
         const fines = valeurs.bureaux ?? valeurs.communes
-        const seuils = seuilsDe(fines, poids('exprimes'))
+        const seuils = seuilsSur(fines, 'exprimes')
         const couleurs = couleursPour(RAMPE_SCORE[cible.teinte], seuils.length + 1)
         return {
           coloriage: coloriageClasses(valeurs, seuils, couleurs),
@@ -894,6 +897,7 @@ export default function App() {
           circonscriptions={scrutin?.portee === 'circonscription'}
           selection={selection}
           contour={contourCommune.data}
+          contourIndisponible={contourCommune.isError}
           cadrage={cadrage ?? cadrageInitial}
           libelle={`Carte : ${etatCarte?.legende?.type === 'classes' ? etatCarte.legende.titre
             : vue.mode === 'tete' ? 'bloc en tête' : LIBELLE_MODE[vue.mode]}, ${scrutin?.libelle ?? ''}`}

@@ -31,19 +31,27 @@ export function etatTete(
   // Territoire qui réunit plusieurs élections (cantons, circonscriptions…) : le bloc qui totalise le plus de
   // voix, ses candidatures ne s'affrontant pas toutes (décision Q16).
   if (resultat.bloc_en_tete) {
-    if (resultat.egalite_bloc) return { couleur: GRIS.egalite, opacite: 1, hachure: false }
+    if (resultat.egalite_bloc) return EGALITE
     return etatDuBloc(resultat.bloc_en_tete)
   }
   if (resultat.tete === null) return null
-  if (resultat.egalite) return { couleur: GRIS.egalite, opacite: 1, hachure: false }
+  if (resultat.egalite) return EGALITE
   return etatDuBloc(blocDe(resultat.tete))
 }
 
-// Couleurs pleines : l'avance se lit dans l'infobulle et la fiche, pas dans l'intensité (décision du 25/09).
+// Couleurs pleines : l'avance se lit dans l'infobulle et la fiche, pas dans l'intensité (décision du 25/09). Un état
+// par bloc, partagé par tous ses territoires (70 000 bureaux : autant d'objets de moins à chaque coloriage) ; les
+// états ne sont jamais modifiés, seulement recopiés.
+const PAR_BLOC = new Map<Bloc, Etat>()
 function etatDuBloc(bloc: Bloc): Etat {
-  if (estColore(bloc)) return { couleur: COULEUR_BLOC[bloc], opacite: 1, hachure: false }
-  return { couleur: bloc === 'DIV' ? GRIS.divers : GRIS.nonClasse, opacite: 1, hachure: false }
+  let etat = PAR_BLOC.get(bloc)
+  if (!etat) {
+    etat = { couleur: estColore(bloc) ? COULEUR_BLOC[bloc] : bloc === 'DIV' ? GRIS.divers : GRIS.nonClasse, opacite: 1, hachure: false }
+    PAR_BLOC.set(bloc, etat)
+  }
+  return etat
 }
+const EGALITE: Etat = { couleur: GRIS.egalite, opacite: 1, hachure: false }
 
 /**
  * Couleur d'un territoire sur une carte en classes (score, participation, évolution) : la couleur de

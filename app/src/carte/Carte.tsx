@@ -76,6 +76,9 @@ const STYLE: StyleSpecification = {
     communes: {
       type: 'geojson',
       data: `${RACINE_DONNEES}/geo/communes.geojson`,
+      // Marge de tuile réduite (128 par défaut) : moins de tracés dupliqués au bord des tuiles, que chaque coloriage
+      // recalcule (0,3 s de moins sur un téléphone). Les communes sont des surfaces sans contour : rien ne se voit.
+      buffer: 32,
       promoteId: 'code',
       attribution: 'Limites : IGN, Etalab',
     },
@@ -119,7 +122,9 @@ const STYLE: StyleSpecification = {
       paint: { 'line-color': '#3a3a36', 'line-opacity': 0.7, 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.4, 10, 1.4] },
     },
     { id: 'departements-selection', type: 'line', source: 'departements', paint: siSelection(2.5) },
-    { id: 'communes-selection', type: 'line', source: 'communes', paint: siSelection(2.5) },
+    // Contour simplifié d'une commune ou d'un arrondissement, en secours du contour détaillé : par un filtre, pas par
+    // l'état des communes, que chaque coloriage recalcule pour toute couche qui le lit (0,5 s sur un téléphone).
+    { id: 'communes-selection', type: 'line', source: 'communes', filter: communesParmi([]), paint: { 'line-color': ENCRE, 'line-width': 2.5 } },
     { id: 'circonscriptions-selection', type: 'line', source: 'circonscriptions', paint: siSelection(2.5) },
     { id: 'bureaux-selection', type: 'line', source: 'bureaux', 'source-layer': COUCHE_BUREAUX, minzoom: ZOOM_BUREAUX, paint: siSelection(3) },
     { id: 'contour-selection', type: 'line', source: 'contour', paint: { 'line-color': ENCRE, 'line-width': 2.5 } },
@@ -164,8 +169,10 @@ interface Props {
   /** Scrutin législatif : charge et montre la couche des circonscriptions. */
   circonscriptions: boolean
   selection: Selection | undefined
-  /** Contour détaillé de la commune sélectionnée, quand il est arrivé : il remplace le contour simplifié. */
+  /** Contour détaillé de la commune ou de l'arrondissement sélectionné, quand il est arrivé. */
   contour: Feature | undefined
+  /** Contour détaillé indisponible (geo.api.gouv.fr en échec) : le contour simplifié le remplace. */
+  contourIndisponible: boolean
   cadrage: Cadrage | null
   libelle: string
   onSurvol: (survol: Survol | null) => void
@@ -198,13 +205,15 @@ const ecranDe = (element: HTMLElement): Ecran => ({
 })
 const margesDe = (carte: CarteMapLibre, place: Place, cadre: 'france' | 'territoire') => marges(place, ecranDe(carte.getContainer()), cadre)
 
-// Territoire à surligner (les circonscriptions ont leur couche, chargée pour les législatives).
+// Territoire à surligner par son état (les circonscriptions ont leur couche, chargée pour les législatives). Une
+// commune ou un arrondissement a son contour détaillé, à part.
 function cible(selection: Selection): FeatureIdentifier | null {
-  if (selection.niveau === 'bureau') return { source: 'bureaux', sourceLayer: COUCHE_BUREAUX, id: selection.code }
-  const source = {
-    commune: 'communes', arrondissement: 'communes', circonscription: 'circonscriptions', departement: 'departements',
-  }[selection.niveau]
-  return { source, id: selection.code }
+  switch (selection.niveau) {
+    case 'bureau': return { source: 'bureaux', sourceLayer: COUCHE_BUREAUX, id: selection.code }
+    case 'circonscription': return { source: 'circonscriptions', id: selection.code }
+    case 'departement': return { source: 'departements', id: selection.code }
+    default: return null
+  }
 }
 
 const aDesHachures = (etats: ReadonlyMap<string, Etat> | null | undefined) => {
@@ -246,7 +255,7 @@ function motifHachures(pas = 8, ratio = 2) {
 }
 
 export function Carte({
-  coloriage, contours, auBureau, repli, circonscriptions, selection, contour, cadrage, libelle, onSurvol, onClic, onPrete,
+  coloriage, contours, auBureau, repli, circonscriptions, selection, contour, contourIndisponible, cadrage, libelle, onSurvol, onClic, onPrete,
   onEnsemble, onPlan, opacite, repere, visite, onBureauAdresse, legendeRepliee, encartsDeplies, voletReplie,
 }: Props) {
   const conteneur = useRef<HTMLDivElement>(null)
@@ -567,14 +576,15 @@ export function Carte({
     if (!carte || !prete) return
     const precedente = refSelection.current && cible(refSelection.current)
     if (precedente) carte.removeFeatureState(precedente, 'selection')
-    // Le contour détaillé, s'il est là, remplace le contour simplifié de la commune.
-    const detaille = selection?.niveau === 'commune' && contour !== undefined
-    const nouvelle = selection && !detaille ? cible(selection) : null
+    const nouvelle = selection ? cible(selection) : null
     if (nouvelle) carte.setFeatureState(nouvelle, { selection: true })
-    refSelection.current = detaille ? undefined : selection
-    const source = carte.getSource<GeoJSONSource>('contour')
-    source?.setData(detaille ? contour : { type: 'FeatureCollection', features: [] })
-  }, [prete, selection, contour])
+    refSelection.current = selection
+    // Commune ou arrondissement : son contour détaillé, dès qu'il arrive ; le simplifié seulement s'il fait défaut
+    // (changer le filtre recharge toutes les communes : jamais à chaque sélection).
+    const commune = selection?.niveau === 'commune' || selection?.niveau === 'arrondissement' ? selection.code : undefined
+    carte.getSource<GeoJSONSource>('contour')?.setData(commune && contour ? contour : VIDE)
+    carte.setFilter('communes-selection', communesParmi(commune && !contour && contourIndisponible ? [commune] : []))
+  }, [prete, selection, contour, contourIndisponible])
 
   const refCadre = useRef('')
   useEffect(() => {
