@@ -89,7 +89,7 @@ flowchart TB
 | Régler l'opacité des couleurs | Bouton sous le zoom | aucun : préférence gardée par le navigateur | Couleurs des bureaux de 10 à 100 % sur le plan (70 % par défaut) |
 | Replier ou rouvrir le panneau | Languette au bord (panneau à gauche), bouton ▾ du volet ou poignée (volet en bas) | aucun : préférence gardée par le navigateur | Toute la largeur, ou tout l'écran moins la barre du volet ; en vue d'ensemble, la métropole se recadre |
 | Replier la légende | Son titre | aucun : préférence gardée par le navigateur (repliée d'office sous 1 280 px) | En vue d'ensemble, la métropole se recadre dans la place libérée ; repliée, la légende se réduit à son titre |
-| Déplier ou replier les encarts | Bouton sous ◐ (icône d'encart, nommé au survol), puis leur titre | aucun : préférence gardée par le navigateur (dépliés d'office dès 1 500 px, jamais dans le volet) | En vue d'ensemble, la métropole se décale pour leur laisser la place ; dans le volet, ils s'ouvrent sur la carte, à gauche du zoom |
+| Déplier ou replier les encarts | Bouton sous ◐ (icône d'encart, nommé au survol), puis leur titre | aucun : préférence gardée par le navigateur (dépliés d'office dès 1 500 px, jamais dans le volet) | En vue d'ensemble, la métropole se décale pour leur laisser la place ; dans le volet, ils s'ouvrent à gauche du zoom : la métropole se décale sur une tablette, ils se posent sur elle sur un téléphone, trop étroit |
 | Cliquer un département extrême, un raccourci | Vue nationale | `sel` | Cadrée sur le territoire |
 | Cliquer un territoire | Carte | `sel` ; efface `page` | Immobile (le territoire est à l'écran) |
 | Cliquer un territoire dans un encart | Encarts | `sel` | Cadrée sur le territoire |
@@ -129,7 +129,8 @@ flowchart TB
    petite couronne, les cinq départements et les six collectivités d'outre-mer (la Polynésie par Tahiti et Moorea,
    dit sous les encarts), défilent dans une fenêtre basse et se replient sur un bouton sous ◐.
 8. **Choisir un territoire montre sa fiche** : sur mobile, le volet se déplie (par la carte, la recherche ou un
-   lien partagé) ; replié, le panneau se rouvre (ordinateur comme téléphone).
+   lien partagé) ; replié, le panneau se rouvre (ordinateur comme téléphone). Dans le volet, activer la recherche
+   le déplie aussi : le champ monte en haut de l'écran, ses suggestions tiennent au-dessus du clavier.
 9. **Le titre de l'onglet nomme la vue** (« Lyon · Présidentielle 2022, 1er tour · Score · Atlas électoral »),
    pour l'historique, les favoris et les liens partagés.
 10. **Une adresse mène à son bureau de vote** : sa commune (l'arrondissement à Paris, Lyon et Marseille)
@@ -197,3 +198,18 @@ doit tomber sous un élément posé dessus.
 | 390 × 844 | Volet | Légende, dans le volet | 358 px | pointe de l'Alsace sous ◐ |
 | 360 × 640 | Volet | Légende, dans le volet | 274 px | rien |
 | 667 × 375 (petit téléphone à l'horizontale) | Volet, zoom à côté des onglets | — | 168 px (zoom minimal) | — |
+
+## Essais sur le site en ligne (26/09, premier passage)
+
+Position de la métropole déduite du cadrage écrit dans l'adresse (la carte n'est pas inspectable en production).
+
+| Essai | Constat |
+|---|---|
+| Tablette 768 × 1 024 : premier passage | Volet, métropole de 507 px, rien de caché ; légende dépliée dans le volet, encarts sur leur bouton |
+| … encarts dépliés | À gauche du zoom, 480 px de haut ; ils couvraient l'est de la métropole : **corrigé**, elle se décale (421 px) |
+| … volet replié, puis rouvert | Métropole de 737 px, sources sur la barre ; la poignée rouvre le volet |
+| … recherche « Lyon » | Fiche de Lyon ; mais la liste des suggestions débordait sous l'écran : **corrigé**, activer la recherche déplie le volet |
+| 1 440 × 900 : encarts dépliés, fiche Guadeloupe, croix, encarts repliés | Métropole de 586 px, puis 361 px entre légende et encarts ; retour au même cadrage ; 586 px |
+| 1 920 × 1 080 : premier passage | Légende et encarts dépliés, métropole de 841 px, rien de caché |
+| Téléphone 390 × 844 : volet replié, poignée, commune touchée sur la carte | Métropole recentrée, sources sur la barre ; fiche de Clermont-Ferrand, volet déplié ; aucune erreur |
+| Téléphone : recherche « Lyon » | 3 suggestions sur 8 à l'écran, aucune au-dessus d'un clavier : **corrigé** (8 à l'écran, 4 au-dessus d'un clavier de 340 px) |

@@ -30,6 +30,13 @@ describe('marges du cadrage', () => {
     expect(marges({ ...tout, voletReplie: true }, telephone, 'france').bottom).toBe(73 + 36)
   })
 
+  it('décale la métropole pour les encarts dépliés dans le volet d\'une tablette, pas d\'un téléphone', () => {
+    const tablette = { largeur: 768, hauteur: 1024, volet: true }
+    expect(marges(tout, tablette, 'france').right).toBe(332)
+    expect(marges(tout, tablette, 'territoire').right).toBe(16)
+    expect(marges(tout, { largeur: 390, hauteur: 844, volet: true }, 'france').right).toBe(16)
+  })
+
   it('renonce à la place des sources quand l\'écran est trop bas', () => {
     const couche = { largeur: 667, hauteur: 375, volet: true }
     expect(marges(tout, couche, 'france').bottom).toBe(158)

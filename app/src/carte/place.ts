@@ -45,6 +45,7 @@ const ZOOM = 72             // colonne du zoom, de l'opacité et du bouton des e
 const ENCARTS = 298         // encarts dépliés : 24 + 258 (barre de défilement comprise), et 16
 const VOLET_REPLIE = 73     // barre du volet réduit : poignée, en-tête et bordure
 const SOURCES_VOLET = 36    // mention des sources, posée sur le haut du volet
+const ENCARTS_VOLET = 332   // encarts dépliés dans le volet, à gauche de la colonne du zoom : 12 + 45 + 8 + 259, et 8
 // En deçà, la métropole serait illisible : les encarts, puis la légende, se posent alors sur la carte.
 const MINIMUM = 160
 
@@ -55,8 +56,12 @@ const MINIMUM = 160
 export function marges(place: Place, ecran: Ecran, cadre: 'france' | 'territoire'): Marges {
   if (ecran.volet) {
     const volet = place.voletReplie ? VOLET_REPLIE : Math.round(ecran.hauteur * 0.42)
-    const m = { top: 72, bottom: volet + SOURCES_VOLET, left: 16, right: 16 }
+    const m = {
+      top: 72, bottom: volet + SOURCES_VOLET, left: 16, right: cadre === 'france' && place.encartsDeplies ? ENCARTS_VOLET : 16,
+    }
     if (ecran.hauteur - m.top - m.bottom < MINIMUM) m.bottom = volet
+    // Tablette : la métropole se décale pour les encarts ; sur un téléphone, trop étroit, ils se posent sur la carte.
+    if (ecran.largeur - m.left - m.right < MINIMUM) m.right = 16
     return m
   }
   const m = {

@@ -143,7 +143,8 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   largeur (`repliParDefaut` : légende repliée sous 1 280 px, encarts dépliés dès 1 500 px).
 - Cadrage : `marges()` de `carte/place.ts` (testé) laisse la place à ce qui est déplié, pour que rien ne cache la
   métropole : légende à gauche, encarts dépliés à droite (métropole entière seulement : zoomée, la carte les
-  masque), volet et sources en bas ; faute de place, encarts puis légende se posent sur la carte. En vue
+  masque ; dans le volet, sur une tablette seulement), volet et sources en bas ; faute de place, encarts puis
+  légende se posent sur la carte. Dans le volet, activer la recherche le déplie (suggestions au-dessus du clavier). En vue
   d'ensemble, la métropole se recadre quand la place change (`resize`, légende, encarts, volet du téléphone) ; une
   carte zoomée ou le cadrage d'un lien partagé ne bougent pas. Mentions des sources brèves (une ligne de
   téléphone), posées à gauche sur le volet.

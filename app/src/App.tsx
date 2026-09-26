@@ -229,7 +229,11 @@ export default function App() {
   // Recherche, préparée à la première utilisation du champ (normaliser 35 000 noms prend du temps) : à
   // pertinence égale, les communes qui comptent le plus d'inscrits passent devant.
   const [rechercheActive, setRechercheActive] = useState(false)
-  const activerRecherche = useCallback(() => setRechercheActive(true), [])
+  // Dans le volet, le champ monte en haut de l'écran : ses suggestions tiennent au-dessus du clavier.
+  const activerRecherche = useCallback(() => {
+    setRechercheActive(true)
+    if (enVolet()) setDeplie(true)
+  }, [])
   // Index des territoires : les départements suffisent à la vue nationale ; les 35 000 communes (600 Ko)
   // viennent après la carte, sauf pour un lien vers un territoire, qui attend son nom, ou pour la recherche.
   const departements = useDepartements()

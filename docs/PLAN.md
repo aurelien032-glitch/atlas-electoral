@@ -727,7 +727,9 @@ Besançon, les sources de la carte étaient sous le volet, et replier le volet n
 (Q22) : marges de cadrage calculées d'après ce qui est déplié (`carte/place.ts`, testé), volet en bas pour les
 tablettes tenues verticalement, panneau de 320 px à l'horizontale, encarts repliés sur un bouton sous ◐, repli au
 premier passage selon la largeur, sources abrégées et posées sur le volet, cibles d'au moins 24 px (lien
-Méthodologie, noms des encarts). Tableau des tailles dans `parcours-utilisateur.md`.
+Méthodologie, noms des encarts). Tableau des tailles dans `parcours-utilisateur.md`. Essais sur le site en ligne
+le même jour : deux corrections, la recherche déplie le volet (ses suggestions débordaient sous l'écran, sous le
+clavier d'un téléphone) et, dans le volet d'une tablette, la métropole se décale pour les encarts dépliés.
 
 **Direction A codée le 24/09** (`app/`) :
 - panneau éditorial à gauche (volet en bas sur mobile), onglets de mode et légende posés sur la carte, infobulle au survol ;
