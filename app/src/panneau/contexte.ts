@@ -1,7 +1,7 @@
 import { COULEUR_BLOC, GRIS, estColore, type BlocColore } from '../carte/couleurs'
 import type { Repli } from '../carte/repli'
 import type { Index } from '../donnees/territoires'
-import type { Agregat, Bloc, Candidature, ScrutinCatalogue, VoixAgregat } from '../donnees/types'
+import type { Agregat, Bloc, Candidature, ScrutinCatalogue, SourceCorrectif, VoixAgregat } from '../donnees/types'
 import type { Selection } from '../vue'
 
 /** Données du scrutin courant, partagées par les panneaux. */
@@ -15,6 +15,8 @@ export interface Contexte {
   index: Index
   /** Ce que la carte montre à la commune faute de contour de bureau (null tant que les contours n'ont pas été lus). */
   repli: Repli | null
+  /** Découpages locaux des bureaux employés à ce scrutin (Bordeaux Métropole). */
+  sourcesLocales: readonly SourceCorrectif[]
 }
 
 /** Ce que l'utilisateur peut changer depuis le panneau. */

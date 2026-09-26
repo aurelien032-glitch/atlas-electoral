@@ -374,3 +374,16 @@ def test_couverture_de_la_source():
             assert not s["territoires_partiels"] and not s["inscrits_aberrants"], i
     aberrants = {b["code_bv"] for s in catalogue.values() for b in s["inscrits_aberrants"]}
     assert "59512_0164" in aberrants and "75056_JUS1" not in aberrants
+
+
+def test_contours_locaux_de_bordeaux(con):
+    # Découpage en vigueur de Bordeaux Métropole (atlas_pipeline.correctifs) : il doit porter les numéros des
+    # bureaux de 2024, renumérotés depuis les contours de 2022 (135 sur 153 sans contour).
+    chemin = PUBLICATION / "geo" / "correctifs_bureaux.geojson"
+    correctifs = json.loads(chemin.read_text(encoding="utf-8"))
+    codes = [f["properties"]["code_bv"] for f in correctifs["features"]]
+    assert len(codes) == len(set(codes)) and all(c.startswith("33063_") for c in codes)
+    assert correctifs["sources"][0]["licence"] == "Licence Ouverte"
+    for scrutin in ("2024_euro_t1", "2024_legi_t1", "2024_legi_t2"):
+        bordeaux = {r[0] for r in con.sql(f"SELECT code_bv FROM {fichier(scrutin, 'bureaux.parquet')} WHERE code_bv LIKE '33063%'").fetchall()}
+        assert len(bordeaux & set(codes)) >= 0.95 * len(bordeaux), scrutin

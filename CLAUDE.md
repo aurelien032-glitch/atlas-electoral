@@ -28,6 +28,7 @@ cd pipeline && python -m atlas_pipeline.geo                              # conto
 cd pipeline && python -m atlas_pipeline.cog                              # passage des communes vers le COG 2026
 cd pipeline && python -m atlas_pipeline.circonscriptions --source <GeoJSON des bureaux>  # contours (≈ 4 min)
 cd pipeline && python -m atlas_pipeline.encarts                          # encarts petite couronne et outre-mer
+cd pipeline && python -m atlas_pipeline.correctifs                       # contours locaux des bureaux (Bordeaux Métropole)
 cd app && npm run dev        # sert aussi ../publication sous /data
 cd app && npx tsc -b && npm run lint && npm test && npm run build          # avant tout commit
 cd app && npm run preview    # build de production avec les en-têtes de public/_headers (CSP)
@@ -113,8 +114,14 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   commune (de son arrondissement à Paris, Lyon et Marseille), et tout le territoire quand plus de la moitié de ses
   inscrits votent dans un bureau sans contour ; ces contours perdent leur tracé (`commune` dans le feature-state) et
   désignent la commune au survol, au clic et pour une adresse. Note dans la légende et dans la fiche. Il n'existe
-  pas de contours nationaux plus récents (Etalab ne mettra pas les siens à jour ; table de l'Insee quinquennale) :
-  compléments locaux en P1.
+  pas de contours nationaux plus récents (Etalab ne mettra pas les siens à jour ; table de l'Insee quinquennale).
+- Contours locaux (`geo/correctifs_bureaux.geojson`, `atlas_pipeline.correctifs`, décision Q27) : découpage en
+  vigueur de Bordeaux Métropole (Licence Ouverte, lu sans clé ; son historique en exige une), aux numéros de 2024
+  et 2026. Un territoire dont au moins 90 % des bureaux du scrutin y figurent (`SEUIL_CORRECTIF`) est dessiné par eux
+  (source `correctifs`, par-dessus les contours de 2022, rendus transparents) ; légende, fiche et Méthodologie citent
+  la source. Autres villes (Alès et Aurillac en ODbL, Paris…) : P1.
+- Survol et clic : un seul écouteur, qui retient l'élément le plus haut sous le pointeur (`COUCHES_ACTIVES`) ; la
+  sélection d'un bureau se trace sur la source qui le dessine (`cible`).
 - MapLibre 6 est en ESM seul : garder `optimizeDeps.exclude: ['maplibre-gl']`, `worker.format: 'es'` et
   `setWorkerUrl(urlWorker)` (import `?worker&url`), sinon le worker ne se charge pas.
 - La carte (et la feuille de style de MapLibre) est chargée en différé (`React.lazy`) : le panneau s'affiche

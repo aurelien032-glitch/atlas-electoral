@@ -212,7 +212,8 @@ flowchart TB
 | Parcours | Attendu |
 |---|---|
 | `?scrutin=2024_legi_t1&sel=commune:10387` | Troyes dessinée au zoom des bureaux (aucun contour), à la couleur de sa commune ; fiche : « Aucun de ses 30 bureaux n'a de contour de 2022 » |
-| `?scrutin=2024_legi_t1&sel=commune:33063` | Bordeaux peinte en entier (135 bureaux sur 153 sans contour), sans tracé de bureau ; survol : « Bordeaux », bloc le plus voté |
+| `?scrutin=2024_legi_t1&sel=commune:33063` | Bordeaux au bureau, par le découpage en vigueur de Bordeaux Métropole (135 bureaux sur 153 sans contour de 2022) ; survol : « Bordeaux, bureau 2002 » ; la fiche (« un bureau n'y figure pas ») et la légende citent la source |
+| `?scrutin=2024_legi_t1&sel=bureau:33063_2002`, puis `?scrutin=2022_pres_t1&sel=commune:33063` | Contour du bureau tracé sur le découpage local, fiche qui le cite ; en 2022, les contours de 2022 (un bureau sur 148 sans contour) |
 | `?scrutin=2024_legi_t1&sel=arrondissement:75103` | 2e, 3e et 4e arrondissements montrés en entier (bureaux renumérotés), leurs voisins au bureau |
 | Légende en 2022 (au bureau), en 2017 (à la commune), en Évolution | « il en manque pour 0,4 % des inscrits de métropole » ; « ne couvrent que 98,9 % » ; pas de note |
 | `?scrutin=2020_muni_t1&sel=arrondissement:13207`, puis `75102` | Colonne « 1er secteur » (1er et 7e arrondissements), puis « Paris Centre » ; une note nomme les arrondissements du secteur |

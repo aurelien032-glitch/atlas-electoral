@@ -1,3 +1,5 @@
+import type { FeatureCollection, MultiPolygon, Polygon } from 'geojson'
+
 /** Blocs de la grille du ministère (circulaire de février 2026), plus « non classé ». */
 export type Bloc = 'EXG' | 'GAU' | 'CENT' | 'DTE' | 'EXD' | 'DIV' | 'NC'
 
@@ -182,6 +184,23 @@ export interface Circonscription {
   est: number | null
   nord: number | null
 }
+
+/** Source d'un découpage local des bureaux (Bordeaux Métropole…), citée dans la fiche et la légende. */
+export interface SourceCorrectif {
+  commune: string
+  nom: string
+  fiche: string
+  licence: string
+  /** Dernière mise à jour du découpage chez sa source (ISO 8601). */
+  modifie: string | null
+  bureaux: number
+}
+
+/**
+ * Contours locaux des bureaux (geo/correctifs_bureaux.geojson), là où ceux de 2022 ne suivent plus les bureaux :
+ * découpage en vigueur, aux numéros des scrutins récents (décision Q25).
+ */
+export type Correctifs = FeatureCollection<Polygon | MultiPolygon, { code_bv: string }> & { sources: SourceCorrectif[] }
 
 /** Encart de la carte nationale (geo/encarts.json) : chemins SVG précalculés, par code. */
 export interface Encart {

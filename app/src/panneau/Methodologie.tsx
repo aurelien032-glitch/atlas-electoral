@@ -202,8 +202,15 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
             <span>Contours de l'IGN simplifiés par Etalab (découpage au 1er janvier 2026).</span>
           </li>
           <li>
+            <a href="https://opendata.bordeaux-metropole.fr/explore/dataset/el_bureauvote_s/" target="_blank" rel="noreferrer">Bureaux de vote de Bordeaux</a>
+            <span>
+              Découpage en vigueur de Bordeaux Métropole (Licence Ouverte), aux numéros des scrutins de 2024 : il dessine
+              Bordeaux, dont les bureaux ont changé de numéro depuis les contours de 2022.
+            </span>
+          </li>
+          <li>
             <a href="https://geo.api.gouv.fr/decoupage-administratif" target="_blank" rel="noreferrer">Contour détaillé d'une commune</a>
-            <span>API Découpage administratif (geo.api.gouv.fr), interrogée quand une commune est choisie.</span>
+            <span>API Découpage administratif (geo.api.gouv.fr), interrogée quand une commune ou un arrondissement est choisi.</span>
           </li>
           <li>
             <a href="https://geoservices.ign.fr/planign" target="_blank" rel="noreferrer">Fond de plan au zoom des bureaux</a>
@@ -319,7 +326,7 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
 
       <Section titre="Limites connues">
         <ul className="liste">
-          <li>Les contours des bureaux sont indicatifs : reconstitués en 2022 à partir des adresses, ils peuvent s'écarter du découpage réel, et les bureaux créés ou renumérotés depuis n'y figurent pas. Quelques villes en sont absentes (Troyes, Alès, Belfort, Dieppe, Aurillac). La carte montre alors la commune : à la place d'un contour sans résultat, et en entier quand plus de la moitié de ses inscrits votent dans un bureau sans contour. Il n'existe pas de contours nationaux plus récents.</li>
+          <li>Les contours des bureaux sont indicatifs : reconstitués en 2022 à partir des adresses, ils peuvent s'écarter du découpage réel, et les bureaux créés ou renumérotés depuis n'y figurent pas. Quelques villes en sont absentes (Troyes, Alès, Belfort, Dieppe, Aurillac). La carte montre alors la commune : à la place d'un contour sans résultat, et en entier quand plus de la moitié de ses inscrits votent dans un bureau sans contour. Il n'existe pas de contours nationaux plus récents ; à Bordeaux, le découpage en vigueur de Bordeaux Métropole dessine les scrutins de 2024 (il a pu être retouché depuis).</li>
           <li>Paris, Lyon et Marseille : les données ne descendent qu'à la ville ; les résultats par arrondissement sont calculés d'après le numéro des bureaux, qui commence par celui de l'arrondissement (règle vérifiée sur tous les scrutins, à un ou deux bureaux près, laissés à la ville). Jusqu'en 2020, les municipales s'y votaient par secteur : chaque arrondissement montre les listes du sien, et la ville n'a pas de liste « en tête ».</li>
           <li>Nouvelle-Calédonie, Polynésie française, Wallis-et-Futuna : pas de contours de bureaux, résultats à la commune.</li>
           <li>L'offre électorale change d'un scrutin à l'autre : une évolution de bloc peut tenir à l'absence d'une candidature.</li>

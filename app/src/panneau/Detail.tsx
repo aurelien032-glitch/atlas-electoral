@@ -164,6 +164,18 @@ function NoteContours({ ctx, selection }: Pick<Props, 'ctx' | 'selection'>) {
     : selection.code
   const lieu = estArrondissement(territoire) ? "l'arrondissement entier" : 'la commune entière'
   const s = repli.sansContour.get(territoire)
+  // Territoire dessiné par son découpage local (Bordeaux Métropole) : on cite la source.
+  const locale = repli.corriges.has(territoire) ? ctx.sourcesLocales.find((l) => l.commune === territoire) : undefined
+  if (locale) {
+    const manque = s ? ` ${s.bureaux === 1 ? 'Un bureau n\'y figure pas' : `${s.bureaux} bureaux n'y figurent pas`} : ${s.bureaux === 1 ? 'il est compté' : 'ils sont comptés'} ici sans être dessiné${s.bureaux === 1 ? '' : 's'}.` : ''
+    return (
+      <p className="note-bas">
+        {selection.niveau === 'bureau' ? 'Contour' : 'Contours des bureaux'} : découpage en vigueur de{' '}
+        <a href={locale.fiche} target="_blank" rel="noreferrer">{locale.nom}</a> ({locale.licence}), aux numéros de
+        ce scrutin ; il a pu être retouché depuis.{selection.niveau === 'bureau' ? '' : manque}
+      </p>
+    )
+  }
   let texte: string | undefined
   if (selection.niveau === 'bureau') {
     const dessine = repli.territoireDuContour.has(selection.code)
@@ -345,7 +357,8 @@ export function Detail({
       )}
       <p className="note-bas">
         En % des suffrages exprimés.
-        {selection.niveau === 'bureau' && ' Contours de bureaux indicatifs, reconstitués à partir du Répertoire électoral unique (2022).'}
+        {selection.niveau === 'bureau' && !ctx.repli?.corriges.has(arrondissementDu(selection.code) ?? communeDu(selection.code, ctx.index.passage))
+          && ' Contours de bureaux indicatifs, reconstitués à partir du Répertoire électoral unique (2022).'}
         {attribuees && " Nuances attribuées par le projet quand le ministère n'en donne pas."}
         {casLimites.length > 0 && ` Classement signalé comme cas limite : ${casLimites.map((c) => `${nomCandidature(c)} (nuance ${c.nuance}, ${LIBELLE_BLOC[c.bloc].toLowerCase()})`).join(', ')}.`}
       </p>

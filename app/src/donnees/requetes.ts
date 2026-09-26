@@ -4,7 +4,8 @@ import { lireCsv } from './csv'
 import { lireParquet } from './parquet'
 import { estArrondissement } from './territoires'
 import type {
-  Agregat, Bureau, BureauContour, Candidature, Catalogue, Circonscription, CodePostal, Encart, LigneSerie, Manifeste, Passage, Territoire,
+  Agregat, Bureau, BureauContour, Candidature, Catalogue, Circonscription, CodePostal, Correctifs, Encart, LigneSerie, Manifeste,
+  Passage, Territoire,
   VoixAgregat, VoixBureau, VoixPanachage,
 } from './types'
 
@@ -109,6 +110,19 @@ export function useEncarts(actif: boolean) {
       const reponse = await fetch(`${RACINE_DONNEES}/geo/encarts.json`, { signal })
       if (!reponse.ok) throw new Error(`encarts indisponibles (HTTP ${reponse.status})`)
       return ((await reponse.json()) as { encarts: Encart[] }).encarts
+    },
+  })
+}
+
+/** Contours locaux des bureaux (Bordeaux Métropole) : pour les cartes au bureau seulement, après la carte. */
+export function useCorrectifs(actif: boolean) {
+  return useQuery({
+    queryKey: ['geo', 'correctifs_bureaux.geojson'],
+    enabled: actif,
+    queryFn: async ({ signal }) => {
+      const reponse = await fetch(`${RACINE_DONNEES}/geo/correctifs_bureaux.geojson`, { signal })
+      if (!reponse.ok) throw new Error(`contours locaux indisponibles (HTTP ${reponse.status})`)
+      return (await reponse.json()) as Correctifs
     },
   })
 }

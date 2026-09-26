@@ -28,7 +28,14 @@ export interface Repli {
   aLaCommune: ReadonlySet<string>
   /** Carte au bureau : bureaux sans contour, par territoire (seulement ceux qui en ont). */
   sansContour: ReadonlyMap<string, SansContour>
+  /** Carte au bureau : territoires dessinés par leur découpage local (Bordeaux Métropole), aux numéros du scrutin. */
+  corriges: ReadonlySet<string>
+  /** Territoire de chaque contour local. */
+  territoireDuCorrectif: ReadonlyMap<string, string>
 }
+
+/** Part des bureaux d'un territoire que son découpage local doit porter pour le dessiner à ce scrutin. */
+export const SEUIL_CORRECTIF = 0.9
 
 const territoireDe = (codeBv: string, commune: string) => arrondissementDu(codeBv) ?? commune
 // Paris, Lyon et Marseille : la ville n'est jamais peinte, ses arrondissements le sont.
@@ -37,6 +44,10 @@ const VILLES_DECOUPEES = new Set(['75056', '69123', '13055'])
 /** Territoire de chaque contour : calculé une fois, les contours ne changent pas d'un scrutin à l'autre. */
 export const territoiresDesContours = (contours: readonly BureauContour[]): ReadonlyMap<string, string> =>
   new Map(contours.map((c) => [c.code_bv, territoireDe(c.code_bv, c.code_commune)]))
+
+/** Territoire de chaque contour local (numéro de bureau « commune_numéro »). */
+export const territoiresDesCorrectifs = (codes: Iterable<string>): ReadonlyMap<string, string> =>
+  new Map([...codes].map((code) => [code, territoireDe(code, code.split('_')[0])]))
 
 /**
  * Territoires (communes, arrondissements) qui n'ont aucun contour. Calculé sur tous les territoires, pas sur ceux d'un
@@ -63,8 +74,12 @@ export function repli(
   sansDessin: ReadonlySet<string>,
   bureaux: readonly Bureau[] | null,
   communeDu: (codeBv: string) => string,
+  territoireDuCorrectif: ReadonlyMap<string, string> = new Map(),
 ): Repli {
+  const locaux = new Set(territoireDuCorrectif.values())
   const parTerritoire = new Map<string, SansContour>()
+  // Territoires qui ont un découpage local : leurs bureaux absents de ce découpage.
+  const horsCorrectif = new Map<string, { bureaux: number; inscrits: number }>()
   for (const b of bureaux ?? []) {
     const territoire = territoireDe(b.code_bv, communeDu(b.code_bv))
     const s = parTerritoire.get(territoire) ?? { bureaux: 0, inscrits: 0, bureauxTotal: 0, inscritsTotal: 0 }
@@ -75,10 +90,28 @@ export function repli(
       s.inscrits += b.inscrits
     }
     parTerritoire.set(territoire, s)
+    if (locaux.has(territoire) && !territoireDuCorrectif.has(b.code_bv)) {
+      const h = horsCorrectif.get(territoire) ?? { bureaux: 0, inscrits: 0 }
+      h.bureaux++
+      h.inscrits += b.inscrits
+      horsCorrectif.set(territoire, h)
+    }
+  }
+  // Découpage local aux numéros du scrutin (presque tous ses bureaux y figurent) : il dessine le territoire, et ce
+  // qui manque se mesure sur lui.
+  const corriges = new Set<string>()
+  for (const territoire of locaux) {
+    const s = parTerritoire.get(territoire)
+    if (!s) continue
+    const h = horsCorrectif.get(territoire) ?? { bureaux: 0, inscrits: 0 }
+    if (s.bureauxTotal - h.bureaux < SEUIL_CORRECTIF * s.bureauxTotal) continue
+    corriges.add(territoire)
+    s.bureaux = h.bureaux
+    s.inscrits = h.inscrits
   }
   const sansContour = new Map([...parTerritoire].filter(([, s]) => s.bureaux > 0))
   const aLaCommune = new Set([...sansContour]
     .filter(([, s]) => s.inscrits > SEUIL_RENUMEROTATION * s.inscritsTotal || s.bureaux === s.bureauxTotal)
     .map(([territoire]) => territoire))
-  return { territoireDuContour, sansDessin, aLaCommune, sansContour }
+  return { territoireDuContour, sansDessin, aLaCommune, sansContour, corriges, territoireDuCorrectif }
 }

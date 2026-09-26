@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bureau, BureauContour } from '../donnees/types'
-import { repli, territoiresDesContours, territoiresSansDessin } from './repli'
+import { repli, territoiresDesContours, territoiresDesCorrectifs, territoiresSansDessin } from './repli'
 
 const resultat = { inscrits: 0, votants: 0, blancs: 0, nuls: 0, exprimes: 0, tete: null, egalite: false, avance_x10000: null }
 const bureau = (code_bv: string, inscrits: number): Bureau => ({ ...resultat, code_bv, inscrits })
@@ -32,6 +32,18 @@ describe('repli à la commune', () => {
   it('montre en entier un territoire dont la plupart des inscrits votent dans un bureau sans contour', () => {
     const r = repli(contours, sansDessin, [bureau('33063_1001', 400), bureau('33063_1101', 100), bureau('10387_0001', 300)], communeDu)
     expect([...r.aLaCommune].sort()).toEqual(['10387', '33063'])
+  })
+
+  it('dessine un territoire par son découpage local quand il porte les numéros du scrutin', () => {
+    const correctifs = territoiresDesCorrectifs(['33063_1001', '33063_1021'])
+    const bureaux2024 = [bureau('33063_1001', 400), bureau('33063_1021', 100)]
+    const r2024 = repli(contours, sansDessin, bureaux2024, communeDu, correctifs)
+    expect([...r2024.corriges]).toEqual(['33063'])
+    expect(r2024.aLaCommune.has('33063')).toBe(false)
+    expect(r2024.sansContour.has('33063')).toBe(false)
+    // En 2022, les numéros sont ceux des contours d'Etalab : le découpage local ne sert pas.
+    const r2022 = repli(contours, sansDessin, [bureau('33063_1101', 300), bureau('33063_1102', 200)], communeDu, correctifs)
+    expect(r2022.corriges.size).toBe(0)
   })
 
   it("n'a rien à compter sans les bureaux : la carte s'arrête alors à la commune", () => {
