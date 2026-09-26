@@ -137,14 +137,17 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   navigateur, `hashchange`) y ramènent la carte ; un lien qui en porte un n'est pas recadré sur son territoire. Pas
   l'option `hash` de MapLibre : `remove()` efface le fragment, ce que fait le double montage de StrictMode.
 - Deux mises en page (décision Q22), même requête dans `styles.css` et `carte/place.ts` : panneau à gauche
-  (≥ 1 024 px, ou dès 761 px à l'horizontale avec un panneau de 320 px) ; volet en bas (téléphone, tablette tenue
-  verticalement, texte centré sur 640 px). Panneau (languette, fine barre du volet), légende et encarts repliables ;
+  (≥ 1 024 px, ou dès 568 px à l'horizontale avec un panneau de 320 px ; sous 761 px, téléphone tenu ainsi, ce qui
+  est posé sur la carte se resserre comme dans le volet) ; volet en bas (téléphone, tablette tenue verticalement,
+  texte centré sur 640 px). Panneau (languette, fine barre du volet), légende et encarts repliables ;
   préférences dans `preferences.ts` (`localStorage`, jamais dans l'URL) ; au premier passage, repli selon la
   largeur (`repliParDefaut` : légende repliée sous 1 280 px, encarts dépliés dès 1 500 px).
 - Cadrage : `marges()` de `carte/place.ts` (testé) laisse la place à ce qui est déplié, pour que rien ne cache la
   métropole : légende à gauche, encarts dépliés à droite (métropole entière seulement : zoomée, la carte les
   masque ; dans le volet, sur une tablette seulement), volet et sources en bas ; faute de place, encarts puis
-  légende se posent sur la carte. Dans le volet, activer la recherche le déplie (suggestions au-dessus du clavier). En vue
+  légende se posent sur la carte. Les marges suivent le retrait `--cadre-carte` (24 ou 12 px) ; dans le volet, la
+  colonne du zoom ne descend pas jusqu'à la Corse, 32 px suffisent à en dégager l'Alsace. Dans le volet, activer la
+  recherche le déplie (suggestions au-dessus du clavier). En vue
   d'ensemble, la métropole se recadre quand la place change (`resize`, légende, encarts, volet du téléphone) ; une
   carte zoomée ou le cadrage d'un lien partagé ne bougent pas. Mentions des sources brèves (une ligne de
   téléphone), posées à gauche sur le volet.

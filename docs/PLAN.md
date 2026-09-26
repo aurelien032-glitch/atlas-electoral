@@ -729,7 +729,10 @@ tablettes tenues verticalement, panneau de 320 px à l'horizontale, encarts repl
 premier passage selon la largeur, sources abrégées et posées sur le volet, cibles d'au moins 24 px (lien
 Méthodologie, noms des encarts). Tableau des tailles dans `parcours-utilisateur.md`. Essais sur le site en ligne
 le même jour : deux corrections, la recherche déplie le volet (ses suggestions débordaient sous l'écran, sous le
-clavier d'un téléphone) et, dans le volet d'une tablette, la métropole se décale pour les encarts dépliés.
+clavier d'un téléphone) et, dans le volet d'une tablette, la métropole se décale pour les encarts dépliés. Puis
+les deux limites restantes : le téléphone tenu à l'horizontale prend le panneau à gauche dès 568 px de large (la
+métropole passe de 168 à 253 px à 667 × 375 ; en volet, la carte n'avait que 146 px de haut), et dans le volet, la
+métropole se décale de 16 px pour dégager la pointe de l'Alsace de la colonne du zoom.
 
 **Direction A codée le 24/09** (`app/`) :
 - panneau éditorial à gauche (volet en bas sur mobile), onglets de mode et légende posés sur la carte, infobulle au survol ;

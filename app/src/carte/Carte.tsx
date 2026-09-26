@@ -180,7 +180,11 @@ interface Props {
 
 const [OUEST, SUD, EST, NORD] = FRANCE_METROPOLITAINE
 const FRANCE: [[number, number], [number, number]] = [[OUEST, SUD], [EST, NORD]]
-const ecranDe = (element: HTMLElement): Ecran => ({ largeur: element.clientWidth, hauteur: element.clientHeight, volet: enVolet() })
+// Retrait des éléments posés sur la carte, tel que les `@media` de styles.css le fixent pour cet écran.
+const retraitCarte = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cadre-carte')) || 24
+const ecranDe = (element: HTMLElement): Ecran => ({
+  largeur: element.clientWidth, hauteur: element.clientHeight, volet: enVolet(), retrait: retraitCarte(),
+})
 const margesDe = (carte: CarteMapLibre, place: Place, cadre: 'france' | 'territoire') => marges(place, ecranDe(carte.getContainer()), cadre)
 
 // Territoire à surligner (les circonscriptions ont leur couche, chargée pour les législatives).

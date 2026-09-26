@@ -143,8 +143,8 @@ flowchart TB
     légende, encarts) sont gardés par le navigateur ; un lien partagé montre l'affichage par défaut.
 12. **Rien de ce qui est posé sur la carte ne cache la métropole** (décision Q22) : la carte laisse la place à ce
     qui est déplié (légende à gauche, encarts à droite, volet et sources en bas) ; faute de place, légende et
-    encarts sont repliés au premier passage. Panneau à gauche sur ordinateur et à l'horizontale, volet en bas sur
-    téléphone et tablette tenus verticalement.
+    encarts sont repliés au premier passage. Panneau à gauche sur ordinateur et à l'horizontale (dès 568 px de
+    large), volet en bas sur téléphone et tablette tenus verticalement.
 
 ## Comportements assumés
 
@@ -195,9 +195,10 @@ doit tomber sous un élément posé dessus.
 | 1 024 × 768 | Panneau à gauche | — | 468 px | rien |
 | 844 × 390 (téléphone à l'horizontale) | Panneau de 320 px | — | 244 px | rien |
 | 768 × 1 024 (tablette tenue verticalement) | Volet, texte centré | Légende, dans le volet | 506 px | rien |
-| 390 × 844 | Volet | Légende, dans le volet | 358 px | pointe de l'Alsace sous ◐ |
+| 390 × 844 | Volet | Légende, dans le volet | 342 px | rien (la pointe de l'Alsace passait sous ◐ : corrigé le 26/09) |
 | 360 × 640 | Volet | Légende, dans le volet | 274 px | rien |
-| 667 × 375 (petit téléphone à l'horizontale) | Volet, zoom à côté des onglets | — | 168 px (zoom minimal) | — |
+| 740 × 360, 667 × 375 (téléphone à l'horizontale) | Panneau de 320 px, carte resserrée | — | 237 px, 253 px | rien (en volet : 168 px, au zoom minimal) |
+| 568 × 320 (plus petit téléphone à l'horizontale) | Panneau de 320 px, carte resserrée, onglets défilants | — | 176 px | rien |
 
 ## Essais sur le site en ligne (26/09, premier passage)
 

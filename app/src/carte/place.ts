@@ -2,10 +2,10 @@
 // 26/09 : la carte fait de la place à ce qui est déplié plutôt que de passer dessous).
 
 /**
- * Volet en bas (téléphone, tablette tenue verticalement) plutôt que panneau à gauche. Même requête que les
- * `@media` de styles.css.
+ * Volet en bas (téléphone, tablette tenue verticalement) plutôt que panneau à gauche, que prennent aussi les
+ * téléphones tenus à l'horizontale. Même requête que les `@media` de styles.css.
  */
-export const REQUETE_VOLET = '(width < 761px), (width < 1024px) and (orientation: portrait)'
+export const REQUETE_VOLET = '(width < 568px), (width < 1024px) and (orientation: portrait)'
 export const enVolet = () => window.matchMedia(REQUETE_VOLET).matches
 
 /** Métropole et Corse : [ouest, sud, est, nord]. */
@@ -27,6 +27,8 @@ export interface Ecran {
   largeur: number
   hauteur: number
   volet: boolean
+  /** Retrait des éléments posés sur la carte (`--cadre-carte`) : 24 px, 12 sur un téléphone. */
+  retrait: number
 }
 
 export interface Marges {
@@ -36,16 +38,19 @@ export interface Marges {
   right: number
 }
 
-// Encombrement des éléments posés sur la carte (styles.css), écart compris.
-const ONGLETS = 84          // en haut : 24 + 48, et 12
-const LEGENDE = 320         // dépliée, à gauche : 24 + 270, et 26
-const LEGENDE_REPLIEE = 72  // repliée, une ligne en bas à gauche (24 + 58) : elle peut mordre sur l'Espagne
-const SOURCES = 40          // mention des sources, en bas à droite : 10 + 24, et 6
-const ZOOM = 72             // colonne du zoom, de l'opacité et du bouton des encarts : 24 + 45, et 3
-const ENCARTS = 298         // encarts dépliés : 24 + 258 (barre de défilement comprise), et 16
-const VOLET_REPLIE = 73     // barre du volet réduit : poignée, en-tête et bordure
-const SOURCES_VOLET = 36    // mention des sources, posée sur le haut du volet
-const ENCARTS_VOLET = 332   // encarts dépliés dans le volet, à gauche de la colonne du zoom : 12 + 45 + 8 + 259, et 8
+// Encombrement des éléments posés sur la carte (styles.css), écart compris, au-delà du retrait.
+const ONGLETS = 48 + 12        // en haut
+const LEGENDE = 270 + 26       // dépliée, à gauche
+const LEGENDE_REPLIEE = 58 - 10 // repliée, une ligne en bas à gauche : elle peut mordre de 10 px sur l'Espagne
+const SOURCES = 40             // mention des sources, en bas à droite : 10 + 24, et 6
+const ZOOM = 45 + 3            // colonne du zoom, de l'opacité et du bouton des encarts
+const ENCARTS = 258 + 16       // encarts dépliés (barre de défilement comprise)
+const VOLET_REPLIE = 73        // barre du volet réduit : poignée, en-tête et bordure
+const SOURCES_VOLET = 36       // mention des sources, posée sur le haut du volet
+// Dans le volet, la colonne du zoom ne descend pas jusqu'à la Corse : il suffit de dégager la pointe nord de
+// l'Alsace (Lauterbourg), plutôt que de réserver toute la colonne (la métropole perdrait 14 % de sa largeur).
+const COLONNE_VOLET = 32
+const ENCARTS_VOLET = 332      // encarts dépliés dans le volet, à gauche de la colonne du zoom : 12 + 45 + 8 + 259, et 8
 // En deçà, la métropole serait illisible : les encarts, puis la légende, se posent alors sur la carte.
 const MINIMUM = 160
 
@@ -57,21 +62,23 @@ export function marges(place: Place, ecran: Ecran, cadre: 'france' | 'territoire
   if (ecran.volet) {
     const volet = place.voletReplie ? VOLET_REPLIE : Math.round(ecran.hauteur * 0.42)
     const m = {
-      top: 72, bottom: volet + SOURCES_VOLET, left: 16, right: cadre === 'france' && place.encartsDeplies ? ENCARTS_VOLET : 16,
+      top: ecran.retrait + ONGLETS, bottom: volet + SOURCES_VOLET, left: 16,
+      right: cadre === 'france' && place.encartsDeplies ? ENCARTS_VOLET : COLONNE_VOLET,
     }
     if (ecran.hauteur - m.top - m.bottom < MINIMUM) m.bottom = volet
     // Tablette : la métropole se décale pour les encarts ; sur un téléphone, trop étroit, ils se posent sur la carte.
-    if (ecran.largeur - m.left - m.right < MINIMUM) m.right = 16
+    if (ecran.largeur - m.left - m.right < MINIMUM) m.right = COLONNE_VOLET
     return m
   }
+  const r = ecran.retrait
   const m = {
-    top: ONGLETS,
-    bottom: place.legendeRepliee ? LEGENDE_REPLIEE : SOURCES,
-    left: place.legendeRepliee ? 24 : LEGENDE,
-    right: cadre === 'france' && place.encartsDeplies ? ENCARTS : ZOOM,
+    top: r + ONGLETS,
+    bottom: place.legendeRepliee ? r + LEGENDE_REPLIEE : SOURCES,
+    left: r + (place.legendeRepliee ? 0 : LEGENDE),
+    right: r + (cadre === 'france' && place.encartsDeplies ? ENCARTS : ZOOM),
   }
-  if (ecran.largeur - m.left - m.right < MINIMUM) m.right = ZOOM
-  if (ecran.largeur - m.left - m.right < MINIMUM) m.left = 24
+  if (ecran.largeur - m.left - m.right < MINIMUM) m.right = r + ZOOM
+  if (ecran.largeur - m.left - m.right < MINIMUM) m.left = r
   return m
 }
 
