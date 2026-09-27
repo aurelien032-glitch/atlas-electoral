@@ -22,7 +22,7 @@ Le prototype v0 (FastAPI + DuckDB) est conservé sous le tag `prototype-v0` : ne
 ## Commandes
 
 ```bash
-cd pipeline && python -m atlas_pipeline.construire && python -m pytest   # données, séries + 641 tests
+cd pipeline && python -m atlas_pipeline.construire && python -m pytest   # données, séries + ≈ 650 tests
 cd pipeline && python -m atlas_pipeline.series                           # séries seules (≈ 15 s)
 cd pipeline && python -m atlas_pipeline.geo                              # contours Etalab + index des territoires
 cd pipeline && python -m atlas_pipeline.cog                              # passage des communes vers le COG 2026

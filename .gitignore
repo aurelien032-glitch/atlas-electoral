@@ -1,14 +1,7 @@
-# Données volumineuses (à régénérer via l'ETL / sources open data)
-Data/
+# Données : ni copie locale des sources ni base DuckDB persistante (le pipeline lit les sources à distance)
 *.duckdb
 *.duckdb.wal
 *.parquet
-api/seed/
-api/storage/
-
-# Sorties de debug
-api/*_output.txt
-api/gis_audit.csv
 
 # Python
 __pycache__/
