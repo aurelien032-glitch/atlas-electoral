@@ -22,8 +22,8 @@ import {
   useTerritoires, useVoix,
 } from './donnees/requetes'
 import {
-  arrondissementDu, communeDu, departementDe, emprise, indexer, lesArrondissements, secteurDe, selectionDeCommune, titreDe,
-  villeDe,
+  arrondissementDu, communeDu, departementDe, emprise, indexer, lesArrondissements, nomCourtCirconscription, secteurDe,
+  selectionDeCommune, titreDe, villeDe,
 } from './donnees/territoires'
 import {
   plusieursElections, raisonPlusieursElections, scrutinParDefaut, scrutinPrecedent, scrutinsAnterieurs, voteParSecteur,
@@ -723,7 +723,11 @@ export default function App() {
     const parent = (niveau: Agregat['niveau'], code: string, nom: string): Parent | undefined => {
       const a = trouver(niveau, code)
       const v = voixDe(niveau, code)
-      return a && v ? { nom, exprimes: exprimesPourParts(a), voix: new Map(v.map((l) => [l.cand, l.voix])) } : undefined
+      return a && v ? {
+        nom, exprimes: exprimesPourParts(a), voix: new Map(v.map((l) => [l.cand, l.voix])),
+        // « Gironde, 2e circonscription » prendrait aux noms la place de leur colonne.
+        court: niveau === 'circonscription' ? nomCourtCirconscription(code) : undefined,
+      } : undefined
     }
     // Commune au panachage : ses candidats viennent du fichier du département (undefined au chargement).
     const panachees = auPanachage ? panachage.data?.filter((l) => l.commune === communeChoisie) : undefined

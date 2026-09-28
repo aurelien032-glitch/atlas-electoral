@@ -119,6 +119,12 @@ export function lesArrondissements(codes: readonly string[]): string {
   return `les ${rangs.slice(0, -1).join(', ')} et ${rangs[rangs.length - 1]} arrondissements`
 }
 
+/** Rang d'une circonscription : « 69-01 » → « 1re », « 69-14 » → « 14e ». */
+const rangCirconscription = (code: string) => {
+  const numero = Number(code.split('-')[1])
+  return `${numero}${numero === 1 ? 're' : 'e'}`
+}
+
 /** Nom affiché d'un territoire sélectionné : « Lyon, bureau 0816 », « Lyon », « Rhône, 2e circonscription ». */
 export function titreDe(selection: Selection, index: Pick<Index, 'noms' | 'passage'>): string {
   if (selection.niveau === 'bureau') {
@@ -129,11 +135,13 @@ export function titreDe(selection: Selection, index: Pick<Index, 'noms' | 'passa
   // Hors des législatives de 2012 et après, l'index ne contient pas les circonscriptions : leur nom se déduit du code.
   if (nom === undefined && selection.niveau === 'circonscription') {
     const departement = departementDeCirconscription(selection.code)
-    const numero = Number(selection.code.split('-')[1])
-    return `${index.noms.get(departement) ?? departement}, ${numero}${numero === 1 ? 're' : 'e'} circonscription`
+    return `${index.noms.get(departement) ?? departement}, ${rangCirconscription(selection.code)} circonscription`
   }
   return nom ?? selection.code
 }
 
 /** Département d'une circonscription (« 69-02 » → « 69 » ; « ZX-01 » : Saint-Barthélemy et Saint-Martin). */
 export const departementDeCirconscription = (code: string) => code.split('-')[0]
+
+/** Intitulé court d'une circonscription, pour une colonne étroite : « 69-02 » → « 2e circ. », sans coupure. */
+export const nomCourtCirconscription = (code: string) => `${rangCirconscription(code)}\u00a0circ.`

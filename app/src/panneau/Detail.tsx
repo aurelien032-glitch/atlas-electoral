@@ -16,6 +16,8 @@ import { SignalementsTerritoire } from './Signalements'
 
 export interface Parent {
   nom: string
+  /** Intitulé court de la colonne (« 2e circ. ») ; le nom complet reste lu par un lecteur d'écran. */
+  court?: string
   exprimes: number
   voix: ReadonlyMap<number, number>
   /** Secteur de plusieurs arrondissements, aux municipales par secteur : ses arrondissements (« les 1er et 7e arrondissements »). */
@@ -283,7 +285,7 @@ export function Detail({
     const ici = somme(tries.map((l) => [l.cand, l.voix]))
     const ailleurs = parent ? somme(parent.voix) : undefined
     rangees = [...ici].sort((a, b) => b[1] - a[1]).map(([bloc, voix]) => ({
-      cle: bloc, nom: LIBELLE_BLOC[bloc], couleur: couleurDuBloc(bloc), part: voix / exprimesPourParts(resultat),
+      cle: bloc, nom: LIBELLE_BLOC[bloc], couleur: couleurDuBloc(bloc), voix, part: voix / exprimesPourParts(resultat),
       partParent: ailleurs && parent ? (ailleurs.get(bloc) ?? 0) / parent.exprimes : undefined,
       marquee: cible?.bloc === bloc,
     }))
@@ -293,7 +295,7 @@ export function Detail({
       if (c) presentes.push(c)
       const voixParent = parent?.voix.get(l.cand)
       return {
-        cle: String(l.cand), nom: nom(l.cand), couleur: couleurDuBloc(c?.bloc ?? 'NC'), part: l.voix / resultat.exprimes,
+        cle: String(l.cand), nom: nom(l.cand), couleur: couleurDuBloc(c?.bloc ?? 'NC'), voix: l.voix, part: l.voix / resultat.exprimes,
         mention: c?.elu ? (c.sexe === 'F' ? 'élue' : 'élu') : undefined,
         // Au panachage, des dizaines de candidats sans nuance : la ligne n'apprendrait rien.
         detail: c && !panachage ? nuanceCourte(c) : undefined,
@@ -326,7 +328,7 @@ export function Detail({
       <SignalementsTerritoire ctx={ctx} selection={selection} />
       {lignes === undefined
         ? <p className="note">Chargement des voix…</p>
-        : <Barres lignes={rangees} legende={`Résultats, ${titre}`} entete={parBloc ? 'Bloc' : 'Candidature'} parent={parent?.nom} />}
+        : <Barres lignes={rangees} legende={`Résultats, ${titre}`} entete={parBloc ? 'Bloc' : 'Candidature'} parent={parent?.nom} parentCourt={parent?.court} />}
       {secteurs && (
         <p className="note-bas">
           Jusqu'en 2020, les municipales de Paris, Lyon et Marseille se votaient par secteur : chaque liste ne se

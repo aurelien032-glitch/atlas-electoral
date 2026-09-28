@@ -1,9 +1,11 @@
-import { formatPart } from '../format'
+import { formatNombre, formatPart } from '../format'
 
 export interface LigneResultat {
   cle: string
   nom: string
   couleur: string
+  /** Voix dans le territoire, écrites sous la part. */
+  voix: number
   /** Part des exprimés (0 à 1) dans le territoire, et dans le territoire parent pour comparer. */
   part: number
   partParent?: number
@@ -22,10 +24,12 @@ interface Props {
   entete?: string
   /** Intitulé de la colonne de comparaison (« Lyon », « France »), absent s'il n'y en a pas. */
   parent?: string
+  /** Intitulé affiché à sa place quand il est long (« 2e circ. ») ; le complet reste lu par un lecteur d'écran. */
+  parentCourt?: string
 }
 
 /** Résultats en tableau : la barre répète la valeur écrite, elle n'en est jamais la seule trace. */
-export function Barres({ lignes, legende, entete = 'Candidature', parent }: Props) {
+export function Barres({ lignes, legende, entete = 'Candidature', parent, parentCourt }: Props) {
   const max = Math.max(...lignes.map((l) => l.part), 0.0001)
   return (
     <table className="barres">
@@ -35,7 +39,13 @@ export function Barres({ lignes, legende, entete = 'Candidature', parent }: Prop
           <th scope="col">{entete}</th>
           <th scope="col" aria-hidden="true" />
           <th scope="col" className="nombre">Ici</th>
-          {parent && <th scope="col" className="nombre">{parent}</th>}
+          {parent && (
+            <th scope="col" className="nombre">
+              {parentCourt
+                ? <><span aria-hidden="true">{parentCourt}</span><span className="visuellement-cache">{parent}</span></>
+                : parent}
+            </th>
+          )}
         </tr>
       </thead>
       <tbody>
@@ -48,7 +58,10 @@ export function Barres({ lignes, legende, entete = 'Candidature', parent }: Prop
             <td className="barre" aria-hidden="true">
               <span style={{ width: `${(100 * l.part) / max}%`, background: l.couleur }} />
             </td>
-            <td className="nombre fort">{formatPart(l.part)}</td>
+            <td className="nombre">
+              <span className="fort">{formatPart(l.part)}</span>
+              <span className="sous-ligne">{formatNombre(l.voix)} voix</span>
+            </td>
             {parent && <td className="nombre discret">{l.partParent === undefined ? '—' : formatPart(l.partParent)}</td>}
           </tr>
         ))}

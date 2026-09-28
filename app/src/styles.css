@@ -125,21 +125,24 @@ p, li { text-wrap: pretty; }
 .chiffres span { font-size: var(--t-petit); color: var(--encre-2); }
 .chiffres-note { grid-column: 1 / -1; margin: 0; font-size: var(--t-petit); color: var(--encre-2); }
 
-/* Résultats en tableau, barre comprise. */
+/* Résultats en tableau, barre comprise. Cellules calées sur leur première ligne : part, comparaison et barre face au
+   nom ; nuance et voix dessous. */
 .barres { width: 100%; border-collapse: collapse; }
-.barres thead th { font-size: var(--t-petit); font-weight: 400; color: var(--encre-2); text-align: left; padding: 0 0 8px; }
-/* Colonnes de chiffres : en-tête et valeurs calés à droite, séparés de la colonne voisine. */
-.barres thead th.nombre { text-align: right; padding-left: 12px; }
-.barres th[scope='row'] { font-weight: 400; text-align: left; padding: 4px 12px 4px 0; }
-.barres td { padding: 4px 0; }
+.barres thead th { font-size: var(--t-petit); font-weight: 400; color: var(--encre-2); text-align: left; padding: 0 0 8px; vertical-align: bottom; }
+/* Colonnes de chiffres : en-tête et valeurs calés à droite, séparés de la colonne voisine. Un long en-tête
+   (« Alpes-de-Haute-Provence ») passe à la ligne plutôt que de prendre la place des noms. */
+.barres thead th.nombre { text-align: right; padding-left: 12px; white-space: normal; }
+.barres th[scope='row'] { font-weight: 400; text-align: left; padding: 4px 12px 4px 0; vertical-align: top; }
+.barres td { padding: 4px 0; vertical-align: top; }
 .barres td.nombre { padding-left: 12px; }
 .barres .barre { width: 22%; padding-right: 12px; }
-.barres .barre span { display: block; height: 8px; border-radius: 2px; min-width: 2px; }
-.barres .barre { background: linear-gradient(var(--piste), var(--piste)) no-repeat left center / calc(100% - 12px) 8px; }
+/* Barre et piste centrées sur la première ligne (1lh : hauteur d'une ligne de texte). */
+.barres .barre span { display: block; height: 8px; border-radius: 2px; min-width: 2px; margin-top: calc((1lh - 8px) / 2); }
+.barres .barre { background: linear-gradient(var(--piste), var(--piste)) no-repeat content-box left calc((1lh - 8px) / 2) / 100% 8px; }
 .nombre { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; padding-left: 12px; }
 .fort { font-weight: 600; }
 .discret { color: var(--encre-2); }
-.barres tr.marquee th, .barres tr.marquee td.fort { text-decoration: underline; text-underline-offset: 3px; }
+.barres tr.marquee th, .barres tr.marquee .fort { text-decoration: underline; text-underline-offset: 3px; }
 
 .extremes {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px;

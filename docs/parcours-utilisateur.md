@@ -218,6 +218,17 @@ flowchart TB
 | Lecteur d'écran : saut au contenu principal | Le panneau des résultats (`main`), pas la carte ; la carte est la région « Carte : bloc en tête, … » |
 | `?scrutin=2024_legi_t1&sel=bureau:33063_2002` au téléphone | La fiche s'affiche d'un bloc ; « Au fil des scrutins » n'apparaît qu'après, dessous (décalage 0,02) |
 
+## Voix dans les tableaux de résultats (28/09, 1 280 × 800 et 390 × 844)
+
+| Parcours | Attendu |
+|---|---|
+| `?scrutin=2022_pres_t1&sel=departement:59` | Sous chaque part, les voix en petit (« 29,3 % », « 373 127 voix ») ; nom, part, comparaison (« France », 23,2 %) et barre alignés sur la première ligne ; un seul nom sur deux lignes à 1 280 × 800 |
+| `?scrutin=2022_pres_t2` (aperçu) | « 58,5 % », « 18 768 639 voix » |
+| `?scrutin=2024_legi_t1&sel=departement:59` | Par bloc : « Extrême droite 40,1 % », « 455 931 voix » |
+| `?scrutin=2024_legi_t1&sel=bureau:33063_2002` au téléphone | Colonne « 2e circ. » (lue « Gironde, 2e circonscription »), aucun nom coupé, pas de défilement horizontal |
+| `?scrutin=2022_pres_t1&mode=score&sel=departement:59` | La ligne ciblée souligne le nom et la part, pas les voix |
+| Largeur de 320 px | Le tableau tient (272 px), sans défilement horizontal |
+
 ## Repli à la commune et secteurs (26/09, 1 280 × 800)
 
 | Parcours | Attendu |

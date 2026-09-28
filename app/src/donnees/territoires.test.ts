@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  arrondissementDu, estArrondissement, lesArrondissements, secteurDe, selectionDeCommune, titreDe, villeDe,
+  arrondissementDu, estArrondissement, lesArrondissements, nomCourtCirconscription, secteurDe, selectionDeCommune, titreDe,
+  villeDe,
 } from './territoires'
 
 describe('territoire d’une adresse', () => {
@@ -23,6 +24,12 @@ describe('titre d’un territoire choisi', () => {
   it('nomme une circonscription absente de l’index (scrutin qui n’est pas une législative)', () => {
     expect(titreDe({ niveau: 'circonscription', code: '69-01' }, index)).toBe('Rhône, 1re circonscription')
     expect(titreDe({ niveau: 'circonscription', code: '69-14' }, index)).toBe('Rhône, 14e circonscription')
+  })
+
+  it('abrège une circonscription pour l’en-tête d’une colonne, sans coupure entre rang et mot', () => {
+    expect(nomCourtCirconscription('33-02')).toBe('2e\u00a0circ.')
+    expect(nomCourtCirconscription('971-01')).toBe('1re\u00a0circ.')
+    expect(nomCourtCirconscription('ZZ-11')).toBe('11e\u00a0circ.')
   })
 })
 

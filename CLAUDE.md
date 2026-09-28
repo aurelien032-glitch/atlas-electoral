@@ -236,6 +236,10 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   fond papier `#F6F4EF`. Palettes dans `app/src/carte/couleurs.ts`.
 - Couleur toujours doublée (légende, panneau de détail, vue tableau à venir). Charte sobre et neutre, sans
   codes visuels de l'État (DSFR, Marianne).
+- Tableaux de résultats (`panneau/Barres.tsx`, décision Q31) : part en gras, voix en petit dessous ; pas de colonne
+  « Voix » (elle coupait la moitié des noms). Cellules calées sur leur première ligne (barre et piste centrées par
+  `1lh`) ; un long en-tête de comparaison passe à la ligne, celui d'une circonscription s'abrège (« 2e circ. »,
+  `nomCourtCirconscription`, nom complet masqué pour les lecteurs d'écran).
 - Direction visuelle « A · Éditorial » : Newsreader (titres) et Source Sans 3 (texte), **auto-hébergées** par
   `@fontsource-variable` (pas de Google Fonts : aucune requête vers un tiers).
 - Typographie (25/09) : **une seule échelle de 6 tailles**, variables `--t-*` de `styles.css` (12, 14, 16, 18,

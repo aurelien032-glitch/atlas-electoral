@@ -69,7 +69,7 @@ function ApercuTete({ ctx }: Props) {
     phrase = tetes.length === 0 ? '' : `${enumerer(tetes.map(([cand, n], i) =>
       i === 0 ? `${nom(cand)} arrive en tête dans ${n} ${pluriel(n, 'département')}` : `${nom(cand)} dans ${n}`))}.`
     lignes = [...ctx.candidats].sort((a, b) => b.voix_total - a.voix_total).map((c) => ({
-      cle: String(c.cand), nom: nomCandidature(c), couleur: couleurDuBloc(c.bloc), part: c.voix_total / france.exprimes,
+      cle: String(c.cand), nom: nomCandidature(c), couleur: couleurDuBloc(c.bloc), voix: c.voix_total, part: c.voix_total / france.exprimes,
       detail: nuanceCourte(c),
     }))
   } else {
@@ -98,7 +98,7 @@ function ApercuTete({ ctx }: Props) {
     const sommes = new Map<Bloc, number>()
     for (const c of ctx.candidats) sommes.set(c.bloc, (sommes.get(c.bloc) ?? 0) + c.voix_total)
     lignes = [...sommes].sort((a, b) => b[1] - a[1]).map(([b, voix]) => ({
-      cle: b, nom: LIBELLE_BLOC[b], couleur: couleurDuBloc(b), part: voix / exprimesPourParts(france),
+      cle: b, nom: LIBELLE_BLOC[b], couleur: couleurDuBloc(b), voix, part: voix / exprimesPourParts(france),
     }))
   }
   const visibles = tout ? lignes : lignes.slice(0, 5)
