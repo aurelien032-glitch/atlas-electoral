@@ -62,6 +62,9 @@ cd app && npm run build && npm run preview   # http://localhost:4173, données l
 - `app/public/robots.txt` ouvre tout le site aux moteurs et donne l'adresse du plan du site (`/sitemap.xml` :
   accueil, Méthodologie, vue nationale de chaque scrutin ; le sélecteur de scrutin n'est pas un lien qu'un robot
   suivrait). Les adresses propres à chaque déploiement reçoivent de Cloudflare `X-Robots-Tag: noindex`.
+- IndexNow (Bing, Yandex, Seznam, Naver…), sans compte : la clé publique `app/public/5f1185e309d72f01c4f9adc5945c01ad.txt`
+  prouve que l'envoi vient de l'éditeur ; la dernière étape de « Publier » leur signale les adresses du plan du site
+  (un échec n'y annule rien). Google n'utilise pas IndexNow : il lit le plan du site déclaré dans Search Console.
 - Aperçus de partage (Open Graph) dans `app/index.html`, lus sans JavaScript, donc les mêmes pour toutes les vues ;
   image `app/public/partage.png` (1 200 × 630). Ni `og:url` ni lien canonique : chaque vue partagée deviendrait un
   doublon de l'accueil.

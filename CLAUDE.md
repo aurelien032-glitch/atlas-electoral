@@ -45,8 +45,11 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
 Bêta ouverte (décision Q32, [docs/ouverture-beta.md](docs/ouverture-beta.md)) : pastille « bêta » dans l'en-tête ;
 « Signaler une erreur » ouvre un ticket GitHub pré-rempli avec la vue (`panneau/Signaler.tsx`, formulaire
 `.github/ISSUE_TEMPLATE/erreur.yml`) ; plan du site écrit par `construire` (`publication/sitemap.xml`, posé à la
-racine par `Publier`) ; aperçus de partage dans `app/index.html` (image `public/partage.png`), sans `og:url` ni lien
-canonique (chaque vue partagée deviendrait un doublon de l'accueil).
+racine par `Publier`, qui le signale ensuite aux moteurs IndexNow : clé publique `app/public/<clé>.txt`) ; propriété
+Google Search Console prouvée par `app/public/googleb31fea893cb9d56d.html` (Google revérifie : ne jamais le retirer,
+pas plus que la clé IndexNow) ; aperçus de
+partage dans `app/index.html` (image `public/partage.png`), sans `og:url` ni lien canonique (chaque vue partagée
+deviendrait un doublon de l'accueil).
 
 ## Règles de données
 

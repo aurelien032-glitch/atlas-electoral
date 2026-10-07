@@ -24,11 +24,13 @@ Elles passent par des comptes personnels : à faire soi-même, dans cet ordre.
 1. **Cloudflare** : l'anonymat de l'éditeur particulier suppose que l'hébergeur connaisse son identité (loi pour
    la confiance dans l'économie numérique). Vérifier que le profil du compte « Atlas électoral » porte nom, adresse
    et téléphone.
-2. **Google Search Console** (search.google.com/search-console) : ajouter une propriété « Préfixe d'URL »
-   `https://atlas-electoral.pages.dev/`, méthode « Fichier HTML ». Le fichier `google….html` téléchargé va dans
-   `app/public/` (le confier à Claude), puis « Publier » ; ensuite « Valider », et soumettre `sitemap.xml` dans
-   « Sitemaps ».
-3. **Bing Webmaster Tools** (bing.com/webmasters) : importer la propriété depuis Search Console.
+2. **Google Search Console** (search.google.com/search-console) : propriété « Préfixe d'URL »
+   `https://atlas-electoral.pages.dev/` ajoutée le 07/10, méthode « Fichier HTML » ; le fichier
+   `app/public/googleb31fea893cb9d56d.html` est publié et doit y rester (Google revérifie). Ensuite « Valider », et
+   soumettre `sitemap.xml` dans « Sitemaps ».
+3. **Bing** et les autres moteurs IndexNow : rien à faire, « Publier » leur signale le plan du site à chaque
+   publication. Bing Webmaster Tools (bing.com/webmasters) n'est utile que pour suivre les statistiques ; il demande
+   un compte.
 4. **data.gouv.fr** : publier une réutilisation (texte ci-dessous) depuis son compte, avec l'image
    `app/public/partage.png`.
 5. **GitHub** : champ « Website » du dépôt (`gh repo edit --homepage https://atlas-electoral.pages.dev`).

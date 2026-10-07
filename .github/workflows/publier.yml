@@ -94,3 +94,22 @@ jobs:
             || npx --yes wrangler@4 pages project create "$PROJET_PAGES" --production-branch=main
           npx --yes wrangler@4 pages deploy app/dist --project-name="$PROJET_PAGES" --branch=main \
             --commit-hash="$GITHUB_SHA" --commit-message="Publication $GITHUB_RUN_NUMBER"
+
+      - name: Plan du site signalé aux moteurs IndexNow (Bing…)
+        # Clé publique : son fichier, à la racine du site (app/public), prouve que l'envoi vient de l'éditeur. Le site
+        # est déjà en ligne : un échec ici n'annule rien.
+        continue-on-error: true
+        env:
+          INDEXNOW_CLE: 5f1185e309d72f01c4f9adc5945c01ad
+        run: |
+          python - <<'EOF'
+          import json, os, re, urllib.request
+          site, cle = "https://atlas-electoral.pages.dev", os.environ["INDEXNOW_CLE"]
+          adresses = re.findall(r"<loc>([^<]+)</loc>", open("app/dist/sitemap.xml", encoding="utf-8").read())
+          corps = json.dumps({"host": "atlas-electoral.pages.dev", "key": cle, "keyLocation": f"{site}/{cle}.txt",
+                              "urlList": adresses}).encode()
+          requete = urllib.request.Request("https://api.indexnow.org/indexnow", data=corps,
+                                           headers={"Content-Type": "application/json; charset=utf-8"})
+          with urllib.request.urlopen(requete, timeout=30) as reponse:
+              print(f"IndexNow : {len(adresses)} adresses signalées, réponse {reponse.status}")
+          EOF
