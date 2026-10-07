@@ -26,10 +26,11 @@ Elles passent par des comptes personnels : à faire soi-même, dans cet ordre.
    et téléphone.
 2. **Google Search Console** (search.google.com/search-console) : propriété « Préfixe d'URL »
    `https://atlas-electoral.pages.dev/` ajoutée le 07/10, méthode « Fichier HTML » ; le fichier
-   `app/public/googleb31fea893cb9d56d.html` est publié et doit y rester (Google revérifie). Ensuite « Valider », et
-   soumettre `sitemap.xml` dans « Sitemaps ».
+   `app/public/googleb31fea893cb9d56d.html` est publié et doit y rester (Google revérifie). **Fait le 07/10** :
+   propriété validée, `sitemap.xml` soumis dans « Sitemaps » (Cloudflare redirige le fichier vers son adresse sans
+   `.html` ; Google suit les redirections qui restent sur le même domaine).
 3. **Bing** et les autres moteurs IndexNow : rien à faire, « Publier » leur signale le plan du site à chaque
-   publication. Bing Webmaster Tools (bing.com/webmasters) n'est utile que pour suivre les statistiques ; il demande
+   publication (premier envoi le 07/10 : 58 adresses, réponse 202). Bing Webmaster Tools (bing.com/webmasters) n'est utile que pour suivre les statistiques ; il demande
    un compte.
 4. **data.gouv.fr** : publier une réutilisation (texte ci-dessous) depuis son compte, avec l'image
    `app/public/partage.png`.
