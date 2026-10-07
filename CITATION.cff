@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: >-
+  Pour citer ce projet : « Atlas électoral (atlas-electoral.pages.dev), conçu par Aurélien Nogent
+  (hydroforge.fr), d’après les résultats officiels du ministère de l’Intérieur », avec le lien de la vue citée.
+type: software
+title: Atlas électoral
+abstract: >-
+  Les résultats des élections françaises, de la France entière jusqu'au bureau de vote, établis à partir
+  des données officielles publiées sur data.gouv.fr.
+authors:
+  - given-names: Aurélien
+    family-names: Nogent
+    website: "https://hydroforge.fr"
+repository-code: "https://github.com/aurelien032-glitch/atlas-electoral"
+url: "https://atlas-electoral.pages.dev"
+keywords:
+  - élections
+  - résultats électoraux
+  - bureau de vote
+  - données ouvertes
+  - France
+version: 0.1.0-beta
+date-released: "2026-10-07"
