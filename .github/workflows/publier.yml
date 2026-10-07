@@ -22,6 +22,10 @@ jobs:
   publier:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Le dépôt affiche le site en ligne sous « Deployments » (07/10/2026).
+    environment:
+      name: production
+      url: https://atlas-electoral.pages.dev
     steps:
       - uses: actions/checkout@v7
 
