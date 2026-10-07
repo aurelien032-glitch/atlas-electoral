@@ -39,7 +39,7 @@ cd ../app && npm install && npm run dev
 
 ## Licence
 
-© 2026 Aurélien Nogent ([hydroforge.fr](https://hydroforge.fr)). Code sous licence [GNU AGPL v3.0](LICENSE) — toute version modifiée mise à disposition en ligne doit publier son code source.
+© 2026 Aurélien Nogent ([hydroforge.fr](https://hydroforge.fr)). Code source consultable, tous droits réservés (fichier [`LICENSE`](LICENSE)) : toute réutilisation par une organisation, notamment commerciale, est soumise à l'accord de l'auteur ([demande](https://hydroforge.fr/contact/)).
 
 Les données électorales proviennent de sources publiques sous [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence/).
 Seul fichier publié sous une autre licence : `geo/correctifs_bureaux_odbl.geojson`, tiré des « Périmètres des bureaux

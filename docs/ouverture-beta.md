@@ -65,7 +65,7 @@ Elles passent par des comptes personnels : à faire soi-même, dans cet ordre.
 >
 > Les chiffres viennent des fichiers du ministère de l'Intérieur publiés sur data.gouv.fr ; les totaux sont
 > rapprochés des totaux officiels et les manques de la source sont signalés, jamais corrigés. Le site ne fait ni
-> prévision ni commentaire. Code ouvert (AGPL-3.0) : https://github.com/aurelien032-glitch/atlas-electoral
+> prévision ni commentaire. Code consultable : https://github.com/aurelien032-glitch/atlas-electoral
 
 ## Textes d'annonce
 
@@ -83,7 +83,7 @@ Elles passent par des comptes personnels : à faire soi-même, dans cet ordre.
 > Pour chaque commune, circonscription ou bureau : participation, voix et parts de chaque candidature, nuance
 > officielle, comparaison avec le territoire qui l'englobe, évolution d'un scrutin à l'autre. Les données viennent du
 > ministère de l'Intérieur via data.gouv.fr ; la page Méthodologie cite chaque source et dit ce qui a été vérifié.
-> Pas de prévision, pas de commentaire, ni cookie ni mesure d'audience ; le code est ouvert (AGPL-3.0).
+> Pas de prévision, pas de commentaire, ni cookie ni mesure d'audience ; le code est consultable sur GitHub.
 >
 > C'est une bêta : si un chiffre, une carte ou un classement vous semble faux, le lien « Signaler une erreur » de
 > chaque fiche ouvre un ticket public.

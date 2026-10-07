@@ -1,6 +1,8 @@
 # Atlas électoral — guide pour Claude
 
-Dataviz publique et open source (AGPL-3.0) des résultats électoraux français, jusqu'au bureau de vote.
+Dataviz publique des résultats électoraux français, jusqu'au bureau de vote. Code consultable, tous droits
+réservés depuis le 07/10/2026 (décision de l'auteur : pas d'usage commercial ni par une organisation sans son accord ;
+l'AGPL-3.0 d'origine est abandonnée).
 Les décisions et leurs raisons sont dans [docs/PLAN.md](docs/PLAN.md) : il fait foi. Tout nouveau choix
 structurant y est consigné (section concernée et tableau des questions ouvertes). Le parcours (vues, commandes,
 règles de cohérence) est dans [docs/parcours-utilisateur.md](docs/parcours-utilisateur.md) : le mettre à jour à

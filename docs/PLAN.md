@@ -213,7 +213,7 @@ Règles communes :
 
 ### Contexte
 
-Il faut afficher des cartes jusqu'au bureau de vote (environ 70 000 polygones) pour des dizaines de scrutins, auprès de quatre publics, sans serveur à maintenir, pour 0 €. Le site doit encaisser des pics d'audience les soirs d'élection et rester reproductible. Le projet est open source (AGPL).
+Il faut afficher des cartes jusqu'au bureau de vote (environ 70 000 polygones) pour des dizaines de scrutins, auprès de quatre publics, sans serveur à maintenir, pour 0 €. Le site doit encaisser des pics d'audience les soirs d'élection et rester reproductible. Le projet était open source (AGPL) ; depuis le 07/10/2026, son code est consultable sous « tous droits réservés » (décision de l'auteur).
 
 ### Options étudiées
 

@@ -373,7 +373,7 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
       <Section titre="Code et licences">
         <ul className="liste">
           <li>
-            Code source sous licence AGPL-3.0 : <a href={DEPOT} target="_blank" rel="noreferrer">github.com/aurelien032-glitch/atlas-electoral</a>.
+            Code source consultable, tous droits réservés (réutilisation soumise à l'accord de l'auteur) : <a href={DEPOT} target="_blank" rel="noreferrer">github.com/aurelien032-glitch/atlas-electoral</a>.
             Le <a href={`${DEPOT}/blob/main/docs/PLAN.md`} target="_blank" rel="noreferrer">plan du projet</a> y détaille chaque décision.
           </li>
           <li>
