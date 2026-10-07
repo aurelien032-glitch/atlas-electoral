@@ -3,9 +3,12 @@ import csv
 import json
 import re
 from pathlib import Path
+from xml.etree import ElementTree
 
 import duckdb
 import pytest
+
+from atlas_pipeline.config import SITE
 
 RACINE = Path(__file__).resolve().parents[2]
 PUBLICATION = RACINE / "publication" / "v1"
@@ -215,6 +218,15 @@ def test_passage_vers_des_communes_de_2026(con):
     inconnues = con.sql(f"""SELECT count(*) FROM read_csv({passage}, all_varchar = true)
                             WHERE actuel NOT IN (SELECT code FROM {t} WHERE niveau = 'commune')""").fetchone()[0]
     assert inconnues == 0
+
+
+def test_plan_du_site_liste_chaque_scrutin():
+    plan = PUBLICATION.parent / "sitemap.xml"
+    if not plan.exists():
+        pytest.skip("lancer d'abord python -m atlas_pipeline.construire")
+    espace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+    adresses = [u.findtext("s:loc", namespaces=espace) for u in ElementTree.parse(plan).getroot().findall("s:url", espace)]
+    assert adresses == [f"{SITE}/", f"{SITE}/?page=methodologie"] + [f"{SITE}/?scrutin={s}" for s in SCRUTINS]
 
 
 LEGISLATIVES = [s for s in SCRUTINS if manifeste(s)["portee"] == "circonscription"]

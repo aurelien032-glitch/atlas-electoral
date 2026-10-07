@@ -4,6 +4,7 @@ import { RACINE_DONNEES, useCorrectifs, useManifeste, useReferentiel } from '../
 import { grouper } from '../donnees/scrutins'
 import type { Bloc, Catalogue, Manifeste, ScrutinCatalogue } from '../donnees/types'
 import { formatNombre, formatPart } from '../format'
+import { DEPOT, Signaler } from './Signaler'
 
 interface Props {
   catalogue: Catalogue
@@ -13,8 +14,6 @@ interface Props {
   onScrutin: (id: string) => void
   onRetour: () => void
 }
-
-const DEPOT = 'https://github.com/aurelien032-glitch/atlas-electoral'
 
 /** Sources lues au build : leur version (date de dernière modification) vient de sources.lock.json. */
 const SOURCES = [
@@ -190,6 +189,16 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
           chiffre vient d'une source publique, citée ici ; le site n'ajoute ni prévision ni commentaire.
         </p>
       </div>
+
+      <Section titre="Version bêta">
+        <p>
+          Le site est ouvert en version bêta : ses chiffres sont rapprochés des totaux officiels et contrôlés à chaque
+          publication, mais des erreurs peuvent subsister. Un chiffre, une carte ou un classement vous semble faux ?
+          Chaque fiche a un lien « Signaler une erreur » : il ouvre un ticket public sur le dépôt du projet, l'adresse
+          de la vue déjà remplie (un compte GitHub, gratuit, est nécessaire).
+        </p>
+        <p className="signaler"><Signaler texte="Signaler une erreur" /></p>
+      </Section>
 
       <Section titre="Sources">
         <ul className="liste-sources">
@@ -369,6 +378,26 @@ export function Methodologie({ catalogue, scrutin, noms, onScrutin, onRetour }: 
           </li>
           <li>
             Fichiers publiés par le site (Parquet et JSON) : <a href={`${RACINE_DONNEES}/scrutins.json`}>catalogue des scrutins</a>.
+          </li>
+        </ul>
+      </Section>
+
+      <Section titre="Mentions légales et vie privée">
+        <ul className="liste">
+          <li>
+            Éditeur : un particulier, à titre non professionnel, qui a communiqué son identité à l'hébergeur (loi pour la
+            confiance dans l'économie numérique). Contact : les <a href={`${DEPOT}/issues`} target="_blank" rel="noreferrer">tickets du dépôt</a>.
+          </li>
+          <li>Hébergeur : Cloudflare, Inc., 101 Townsend Street, San Francisco, CA 94107, États-Unis ; +1 888 993 5273.</li>
+          <li>
+            Ni cookie ni mesure d'audience. Vos réglages d'affichage (panneau, légende, encarts, opacité) restent dans
+            votre navigateur.
+          </li>
+          <li>
+            Pour afficher la carte, votre navigateur demande des fichiers à data.gouv.fr (contours des bureaux, stockés
+            chez OVHcloud), à l'IGN (fond de plan ; une adresse tapée dans la recherche est envoyée à son géocodeur) et à
+            geo.api.gouv.fr (contour d'une commune). Comme tout hébergeur, Cloudflare reçoit l'adresse IP des visiteurs
+            pour servir le site.
           </li>
         </ul>
       </Section>

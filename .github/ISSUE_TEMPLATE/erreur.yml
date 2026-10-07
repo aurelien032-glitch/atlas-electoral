@@ -1,0 +1,47 @@
+# Formulaire ouvert par le lien « Signaler une erreur » du site (app/src/panneau/Signaler.tsx), qui remplit le titre et
+# le champ « lien » avec la vue affichée.
+name: Signaler une erreur
+description: Un chiffre, une carte ou un classement qui semble faux, ou un problème sur le site.
+title: "Erreur : "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de prendre le temps de signaler une erreur. Ce ticket est **public** : n'y mettez pas d'information personnelle.
+  - type: input
+    id: lien
+    attributes:
+      label: Page concernée
+      description: Remplie d'office par le lien « Signaler une erreur » du site ; sinon, collez l'adresse de la page.
+      placeholder: https://atlas-electoral.pages.dev/?scrutin=…
+    validations:
+      required: true
+  - type: dropdown
+    id: nature
+    attributes:
+      label: Nature du problème
+      options:
+        - Un chiffre ou un résultat
+        - Le classement d'une candidature (nuance, famille, bloc)
+        - La carte (contours, couleurs, affichage)
+        - Le site (lien, bouton, lenteur, accessibilité)
+        - Autre
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Ce qui ne va pas
+      description: Ce que vous voyez, et ce que vous attendiez.
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source officielle (facultatif)
+      description: Le lien d'un résultat officiel qui montre l'écart, s'il y en a un.
+  - type: input
+    id: appareil
+    attributes:
+      label: Appareil et navigateur (facultatif)
+      placeholder: ex. iPhone et Safari, ordinateur et Firefox

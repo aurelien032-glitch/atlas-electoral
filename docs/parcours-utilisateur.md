@@ -229,6 +229,20 @@ flowchart TB
 | `?scrutin=2022_pres_t1&mode=score&sel=departement:59` | La ligne ciblée souligne le nom et la part, pas les voix |
 | Largeur de 320 px | Le tableau tient (272 px), sans défilement horizontal |
 
+## Ouverture de la bêta (07/10, 1 280 × 800 et 320 × 640)
+
+| Parcours | Attendu |
+|---|---|
+| En-tête du panneau | « Atlas électoral » et une pastille « bêta » (lue « Atlas électoral bêta ») ; à 320 px, la pastille passe sous le nom |
+| Fiche (`?scrutin=2024_legi_t1&sel=bureau:33063_2002`), bas du panneau | Lien « Signaler une erreur sur cette fiche » (lu « …, ticket GitHub, nouvel onglet ») : nouvel onglet sur le formulaire du dépôt, titre « Erreur : Bordeaux, bureau 2002 · Législatives 2024, 1er tour » et champ « Page concernée » remplis |
+| Aperçu (`?scrutin=2022_pres_t1`) | Lien « Signaler une erreur », vue de l'aperçu remplie |
+| `?page=methodologie` | Première section « Version bêta » (avec son lien), dernière « Mentions légales et vie privée » (éditeur, hébergeur, ni cookie ni mesure d'audience, services appelés) |
+| Lien du site partagé sur une messagerie | Aperçu : « Atlas électoral », description, image de la participation par département |
+| `/robots.txt`, `/sitemap.xml` (site en ligne) | Plan du site déclaré ; 58 adresses : accueil, Méthodologie, 56 scrutins |
+| Carte au clavier, réticule sur la mer ou un pays voisin | Annonce « Aucun territoire au centre de la carte. » ; Entrée ne choisit rien |
+| Carte au clavier sur un territoire | Annonce « Saint-Marien. En tête : Marine Le Pen. Extrême droite, avance nette, 13,4 points » (pas de « pts » ni de point médian), une seule fois |
+| Recherche « Rennes », flèche bas | Option lue « Rennes, Ille-et-Vilaine » |
+
 ## Repli à la commune et secteurs (26/09, 1 280 × 800)
 
 | Parcours | Attendu |

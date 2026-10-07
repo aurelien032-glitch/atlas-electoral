@@ -33,7 +33,7 @@ import {
   type VoixPanachage,
 } from './donnees/types'
 import type { Mesure } from './calculs/parts'
-import { formatEcart, formatPart, formatPourcent, unitePoints } from './format'
+import { formatEcart, formatPart, formatPourcent, pourLaVoix, unitePoints } from './format'
 import {
   LIBELLES_EVOLUTION, LIBELLE_MODE, classesLegende, coloriageClasses, coloriageTete, couleursPour, ecartsAuNiveau, partDe,
   partsAuNiveau, seuilsDe, valeursEvolution, valeursParticipation, valeursScore, type Coloriage, type Mode, type Valeurs,
@@ -44,6 +44,7 @@ import { SANS_DEPART, type Actions, type Contexte } from './panneau/contexte'
 import { Detail, EnteteFiche, type Parent } from './panneau/Detail'
 import { Methodologie } from './panneau/Methodologie'
 import { Reglages } from './panneau/Reglages'
+import { Signaler } from './panneau/Signaler'
 import type { Adresse } from './recherche/adresses'
 import { indexerCodesPostaux, preparer } from './recherche/chercher'
 import { Recherche } from './recherche/Recherche'
@@ -155,6 +156,7 @@ function ZoneCarte({
   lancee, contenu, encarts, onChoisirEncart, onCadrer, encartsReplies, onBoutonEncarts, onPrete, onClic, ...props
 }: PropsZone) {
   const [survol, setSurvol] = useState<Survol | null>(null)
+  const [horsCarte, setHorsCarte] = useState(false)
 
   // Encarts dépliés : seulement dans la vue d'ensemble. Une fois la carte zoomée sur une région, ils la
   // masqueraient sans rien lui apprendre ; leur bouton, lui, reste, pour revenir à la France entière.
@@ -171,12 +173,14 @@ function ZoneCarte({
   return (
     <div className="zone-carte-fond">
       {/* Clavier : le territoire au réticule, annoncé au lecteur d'écran. */}
-      <p className="visuellement-cache" aria-live="polite">{survol?.clavier && bulle ? [bulle.titre, ...bulle.lignes].join('. ') : ''}</p>
+      <p className="visuellement-cache" aria-live="polite">{survol?.clavier && bulle
+        ? [bulle.titre, ...bulle.lignes].map(pourLaVoix).join('. ')
+        : horsCarte ? 'Aucun territoire au centre de la carte.' : ''}</p>
       {lancee && (
         <GardeCarte onEchec={onPrete}>
           <Suspense fallback={null}>
             <Carte
-              {...props} onSurvol={setSurvol} onClic={onClic} onPrete={onPrete} onEnsemble={setEnsemble} onPlan={setPlan}
+              {...props} onSurvol={setSurvol} onClic={onClic} onHorsCarte={setHorsCarte} onPrete={onPrete} onEnsemble={setEnsemble} onPlan={setPlan}
               opacite={opacite} encartsDeplies={!encartsReplies}
             />
           </Suspense>
@@ -865,7 +869,7 @@ export default function App() {
           <span className="visuellement-cache">{voletReplie ? 'Rouvrir le volet' : deplie ? 'Réduire le volet' : 'Agrandir le volet'}</span>
         </button>
         <header className="panneau-entete">
-          <span className="marque">Atlas électoral</span>
+          <span className="marque">Atlas électoral <span className="mention">bêta</span></span>
           <a href={lienMethodologie} aria-current={vue.page === 'methodologie' ? 'page' : undefined}
             onClick={(e) => { e.preventDefault(); modifierUrl({ page: 'methodologie' }); setDeplie(true) }}>Méthodologie</a>
           {/* Téléphone : le volet descend jusqu'à une fine barre, pour voir toute la carte. */}
@@ -925,6 +929,9 @@ export default function App() {
               precision={selection?.niveau === 'bureau' ? (arrondissementDuBureau ? "à l'arrondissement" : 'à la commune') : undefined}
               fusion={niveauSerie === 'commune' && index.fusionnees.has(codeSerie)}
             />
+          )}
+          {vue.page !== 'methodologie' && ctx && !ficheEnAttente && (
+            <p className="signaler"><Signaler texte={selection ? 'Signaler une erreur sur cette fiche' : 'Signaler une erreur'} /></p>
           )}
           {!chargement && !ficheEnAttente && <p className="sources">
             Résultats : ministère de l'Intérieur, via data.gouv.fr. Contours des bureaux : data.gouv.fr (répertoire

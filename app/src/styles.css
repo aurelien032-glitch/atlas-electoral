@@ -68,6 +68,8 @@ a:hover, .lien:hover { color: var(--encre-2); }
   margin: 0; font-size: var(--t-note); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--encre-2);
 }
 .marque { color: var(--encre); }
+/* Pastille « bêta » : l'espace qui la précède (lue par un lecteur d'écran) fait la moitié de l'écart. */
+.marque .mention { margin-left: 4px; }
 /* Cible d'au moins 24 px de haut (44 px dans le volet, au doigt). */
 .panneau-entete a { display: inline-flex; align-items: center; min-height: 24px; }
 .panneau-corps {
@@ -219,6 +221,8 @@ p, li { text-wrap: pretty; }
 .note { margin: 0; font-size: var(--t-petit); color: var(--encre-2); }
 .note-bas, .sources { margin: 0; font-size: var(--t-note); color: var(--encre-2); }
 .sources { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--filet); }
+.signaler { margin: 0; font-size: var(--t-petit); }
+.signaler .lien { display: inline-flex; align-items: center; min-height: 24px; }
 .alerte { margin: 0; font-size: var(--t-petit); color: var(--alerte); }
 .alerte p { margin: 0 0 8px; }
 .alerte .detail-erreur { font-size: var(--t-note); color: var(--encre-2); }

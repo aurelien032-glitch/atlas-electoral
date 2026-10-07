@@ -229,6 +229,8 @@ interface Props {
   libelle: string
   onSurvol: (survol: Survol | null) => void
   onClic: (survol: Survol) => void
+  /** Clavier : le réticule ne désigne aucun territoire (mer, pays voisin), à dire au lecteur d'écran. */
+  onHorsCarte: (hors: boolean) => void
   /** Style chargé : les téléchargements qui attendaient la carte peuvent partir. */
   onPrete: () => void
   /** Vue d'ensemble (la métropole entière, ou presque, à l'écran) : celle des encarts. */
@@ -338,7 +340,7 @@ function motifHachures(pas = 8, ratio = 2) {
 }
 
 export function Carte({
-  coloriage, contours, auBureau, repli, correctifs, emprisesDepartements, onApprocheBureaux, circonscriptions, selection, contour, contourIndisponible, cadrage, libelle, onSurvol, onClic, onPrete,
+  coloriage, contours, auBureau, repli, correctifs, emprisesDepartements, onApprocheBureaux, circonscriptions, selection, contour, contourIndisponible, cadrage, libelle, onSurvol, onClic, onHorsCarte, onPrete,
   onEnsemble, onPlan, opacite, repere, visite, onBureauAdresse, legendeRepliee, encartsDeplies, voletReplie,
 }: Props) {
   const conteneur = useRef<HTMLDivElement>(null)
@@ -858,11 +860,13 @@ export function Carte({
       reticule.style.left = `${c.x}px`
       reticule.style.top = `${c.y}px`
       const t = territoire(c)
+      onHorsCarte(!t)
       onSurvol(t && { ...t, clavier: true })
     }
     const quitterClavier = () => {
       if (reticule.hidden) return
       reticule.hidden = true
+      onHorsCarte(false)
       onSurvol(null)
     }
     const touche = (e: KeyboardEvent) => {
@@ -891,7 +895,7 @@ export function Carte({
       carte.off('resize', suivreCentre)
       reticule.remove()
     }
-  }, [prete, auBureau, onSurvol, onClic])
+  }, [prete, auBureau, onSurvol, onClic, onHorsCarte])
 
   return <div ref={conteneur} className="carte" role="region" aria-label={libelle} />
 }

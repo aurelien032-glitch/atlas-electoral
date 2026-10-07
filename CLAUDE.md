@@ -39,7 +39,14 @@ En local, faute de DuckDB sous Python 3.12, `construire`, `correctifs` et les te
 
 Mise en ligne : [docs/mise-en-ligne.md](docs/mise-en-ligne.md). Workflows `Vérifications` (chaque envoi) et
 `Publier` (à la main : reconstruit tout depuis les sources, contrôle, déploie sur Cloudflare Pages). Tout
-nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/public/_headers`.
+nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/public/_headers` et à la section
+« Mentions légales et vie privée » de la Méthodologie.
+
+Bêta ouverte (décision Q32, [docs/ouverture-beta.md](docs/ouverture-beta.md)) : pastille « bêta » dans l'en-tête ;
+« Signaler une erreur » ouvre un ticket GitHub pré-rempli avec la vue (`panneau/Signaler.tsx`, formulaire
+`.github/ISSUE_TEMPLATE/erreur.yml`) ; plan du site écrit par `construire` (`publication/sitemap.xml`, posé à la
+racine par `Publier`) ; aperçus de partage dans `app/index.html` (image `public/partage.png`), sans `og:url` ni lien
+canonique (chaque vue partagée deviendrait un doublon de l'accueil).
 
 ## Règles de données
 
@@ -152,7 +159,11 @@ nouveau service appelé par le navigateur doit être ajouté à la CSP de `app/p
   (`Survol.clavier`, région `aria-live` de `ZoneCarte`), Entrée le choisit. Le territoire choisi, d'où que ce soit, est
   annoncé (`annonceSelection`, `role="status"`). Pas de décalage de mise en page : tant que la fiche attend ses
   chiffres (`ficheEnAttente`), elle n'affiche que son en-tête, et chronologie et sources attendent ; place de la barre
-  de défilement réservée (`scrollbar-gutter`). Lighthouse : 100 en accessibilité sur les vues principales.
+  de défilement réservée (`scrollbar-gutter`). Lighthouse : 100 en accessibilité sur les vues principales. Essai NVDA
+  le 07/10 (Q32) : l'infobulle est visuelle (`aria-hidden`), seule la région annoncée parle, réécrite par `pourLaVoix`
+  (« points », pas de point médian), et dit « Aucun territoire au centre de la carte » hors du territoire
+  (`onHorsCarte`) ; options de recherche nommées par `aria-label` ; texte masqué ajouté à un lien : commencer par une
+  virgule (une espace en tête disparaît du nom lu).
 - MapLibre 6 est en ESM seul : garder `optimizeDeps.exclude: ['maplibre-gl']`, `worker.format: 'es'` et
   `setWorkerUrl(urlWorker)` (import `?worker&url`), sinon le worker ne se charge pas.
 - La carte (et la feuille de style de MapLibre) est chargée en différé (`React.lazy`) : le panneau s'affiche

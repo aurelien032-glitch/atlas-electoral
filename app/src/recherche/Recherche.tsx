@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useId, useMemo, useState, type KeyboardEvent } from 'react'
 import type { Territoire } from '../donnees/types'
+import { pourLaVoix } from '../format'
 import { chercherAdresses, ressembleAUneAdresse, type Adresse } from './adresses'
 import { chercher, type Entree } from './chercher'
 
@@ -90,38 +91,31 @@ export function Recherche({ entrees, postaux, onActiver, onChoisir, onChoisirAdr
       erreur ? 'adresses indisponibles pour le moment' : '',
     ].filter(Boolean).join(' ; ')
 
-  const option = (s: Suggestion, i: number) => (
-    <li
-      key={s.type === 'territoire' ? s.entree.territoire.code : s.adresse.id}
-      id={`${id}-${i}`}
-      role="option"
-      aria-selected={i === actif}
-      // Au clic, le champ garderait sinon le focus perdu avant que la suggestion soit choisie.
-      onMouseDown={(e) => {
-        e.preventDefault()
-        choisir(s)
-      }}
-    >
-      {s.type === 'territoire'
-        ? (
-          <>
-            <span>{s.entree.territoire.nom}</span>
-            <span className="discret">
-              {s.entree.territoire.niveau === 'departement'
-                ? `département (${s.entree.territoire.code})`
-                : s.entree.territoire.niveau === 'circonscription' ? 'circonscription'
-                  : [s.entree.departement, s.entree.precision].filter(Boolean).join(' · ')}
-            </span>
-          </>
-        )
-        : (
-          <>
-            <span>{s.adresse.nom}</span>
-            <span className="discret">{s.adresse.precision}</span>
-          </>
-        )}
-    </li>
-  )
+  const option = (s: Suggestion, i: number) => {
+    const nom = s.type === 'territoire' ? s.entree.territoire.nom : s.adresse.nom
+    const precision = s.type === 'adresse' ? s.adresse.precision
+      : s.entree.territoire.niveau === 'departement' ? `département (${s.entree.territoire.code})`
+        : s.entree.territoire.niveau === 'circonscription' ? 'circonscription'
+          : [s.entree.departement, s.entree.precision].filter(Boolean).join(' · ')
+    return (
+      <li
+        key={s.type === 'territoire' ? s.entree.territoire.code : s.adresse.id}
+        id={`${id}-${i}`}
+        role="option"
+        aria-selected={i === actif}
+        // Nom lu : deux blocs côte à côte s'y colleraient (« RennesIlle-et-Vilaine »).
+        aria-label={precision ? `${nom}, ${pourLaVoix(precision)}` : nom}
+        // Au clic, le champ garderait sinon le focus perdu avant que la suggestion soit choisie.
+        onMouseDown={(e) => {
+          e.preventDefault()
+          choisir(s)
+        }}
+      >
+        <span>{nom}</span>
+        <span className="discret">{precision}</span>
+      </li>
+    )
+  }
   const nombreTerritoires = resultats.length
 
   return (

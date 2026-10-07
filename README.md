@@ -3,14 +3,15 @@
 Visualisation interactive et publique des résultats des élections françaises (présidentielles, législatives,
 européennes, municipales…), de la France entière jusqu'au **bureau de vote**, à partir des données officielles.
 
-> **En construction.** La conception, les choix et leurs raisons sont décrits dans le
-> [plan de conception](docs/PLAN.md).
+> **En ligne, en version bêta : [atlas-electoral.pages.dev](https://atlas-electoral.pages.dev).** Une erreur ?
+> [Signalez-la](https://github.com/aurelien032-glitch/atlas-electoral/issues/new?template=erreur.yml) (ticket public).
+> La conception, les choix et leurs raisons sont décrits dans le [plan de conception](docs/PLAN.md).
 
 ## Organisation
 
 | Dossier | Contenu |
 |---|---|
-| [`pipeline/`](pipeline/README.md) | Python + DuckDB : lit les résultats officiels de data.gouv.fr à distance et publie des fichiers compacts (16 Mo pour 7 tours de scrutin), contrôlés par 58 tests |
+| [`pipeline/`](pipeline/README.md) | Python + DuckDB : lit les résultats officiels de data.gouv.fr à distance et publie des fichiers compacts (56 tours de scrutin, environ 170 Mo), contrôlés par environ 650 tests |
 | [`referentiels/`](referentiels/README.md) | Grille des nuances politiques, attributions, totaux officiels, liste des bureaux des contours |
 | [`app/`](app/README.md) | Site statique : React, TypeScript, Vite, MapLibre GL JS |
 | [`docs/`](docs/PLAN.md) | Plan de conception et décisions |

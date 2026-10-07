@@ -8,6 +8,8 @@ RACINE = Path(__file__).resolve().parents[2]
 REFERENTIELS = RACINE / "referentiels"
 PUBLICATION = RACINE / "publication" / "v1"
 CONTOURS_CODES = REFERENTIELS / "contours_bureaux_2022.parquet"
+# Adresse du site en ligne (plan du site pour les moteurs de recherche).
+SITE = "https://atlas-electoral.pages.dev"
 PASSAGE_COMMUNES = REFERENTIELS / "passage_communes_2026.csv"
 
 # Ressources data.gouv.fr. Le lien pérenne suit toujours la version courante du fichier.

@@ -61,10 +61,11 @@ jobs:
         run: |
           npm ci
           npm run build
-      - name: Données déposées à côté du site (/data/v1)
+      - name: Données déposées à côté du site (/data/v1) et plan du site à sa racine
         run: |
           mkdir -p app/dist/data
           cp -r publication/v1 app/dist/data/v1
+          cp publication/sitemap.xml app/dist/sitemap.xml
           echo "$(find app/dist -type f | wc -l) fichiers, $(du -sh app/dist | cut -f1)"
 
       - name: Rapport qualité (manifestes et contrôles)

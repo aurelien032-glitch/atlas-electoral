@@ -12,7 +12,8 @@ conservée. Pour chaque scrutin, écrit dans publication/v1/<scrutin>/ :
   panachage/<dép>.parquet   municipales jusqu'en 2020 : candidats des communes au panachage, chargés
                          à l'ouverture de la fiche d'une commune (hors des fichiers principaux)
   scrutin.json           manifeste : compteurs, totaux, contrôles, empreintes SHA-256
-ainsi que publication/v1/scrutins.json (catalogue) et sources.lock.json (versions des sources).
+ainsi que publication/v1/scrutins.json (catalogue) et sources.lock.json (versions des sources), et
+publication/sitemap.xml, le plan du site que le workflow « Publier » pose à sa racine.
 
 Usage, depuis le dossier pipeline/ :
     python -m atlas_pipeline.construire                  # tous les scrutins (1999 à 2026)
@@ -26,11 +27,12 @@ import shutil
 import time
 from datetime import date
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 import duckdb
 
 from .config import (CIRCONSCRIPTIONS_DES_DONNEES, CONTOURS_CODES, LIEN_PERENNE, PASSAGE_COMMUNES, PUBLICATION,
-                     REFERENTIELS, RESSOURCES, SCRUTINS, SEUIL_CARTE_BUREAUX, SEUIL_CORRECTIF, Scrutin)
+                     REFERENTIELS, RESSOURCES, SCRUTINS, SEUIL_CARTE_BUREAUX, SEUIL_CORRECTIF, SITE, Scrutin)
 from .correctifs import territoire_du_bureau
 from .sources import verrouiller
 
@@ -630,6 +632,16 @@ def restreindre_passage(con, sortie: Path) -> None:
     con.sql(f"COPY passage_publiee TO {chemin_sql(passage)} (FORMAT parquet, COMPRESSION zstd)")
 
 
+def ecrire_plan_du_site(chemin: Path, catalogue: dict) -> None:
+    """Plan du site pour les moteurs de recherche : l'accueil, la Méthodologie et la vue nationale de chaque scrutin.
+    Le sélecteur de scrutin n'est pas un lien : sans ce plan, un robot ne trouverait que le scrutin par défaut."""
+    jour = catalogue["genere_le"][:10]
+    adresses = [f"{SITE}/", f"{SITE}/?page=methodologie"] + [f"{SITE}/?scrutin={s['id']}" for s in catalogue["scrutins"]]
+    urls = "".join(f"  <url><loc>{escape(a)}</loc><lastmod>{jour}</lastmod></url>\n" for a in adresses)
+    chemin.write_text('<?xml version="1.0" encoding="UTF-8"?>\n'
+                      f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{urls}</urlset>\n', encoding="utf-8")
+
+
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("scrutins", nargs="*", help="identifiants à construire (défaut : toute la v1)")
@@ -688,6 +700,7 @@ def main(argv=None) -> None:
         "scrutins": [existants[s.id] for s in SCRUTINS if s.id in existants],
     }
     chemin.write_text(json.dumps(catalogue, ensure_ascii=False, indent=2), encoding="utf-8")
+    ecrire_plan_du_site(args.sortie.parent / "sitemap.xml", catalogue)
     restreindre_passage(con, args.sortie)
 
     # Les séries relisent tous les tours publiés : elles suivent chaque construction, même partielle.

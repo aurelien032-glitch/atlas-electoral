@@ -22,6 +22,11 @@ export function formatEcart(points: number, n = 1): string {
 /** « point » ou « points » après un écart arrondi : le pluriel commence à 2 (1,5 point ; 2,0 points). */
 export const unitePoints = (points: number, n = 1) => (Math.abs(Number(points.toFixed(n))) >= 2 ? 'points' : 'point')
 
+/** Une ligne de l'infobulle telle qu'un lecteur d'écran doit la dire : « pts » s'épellerait, le point médian se lirait. */
+export const pourLaVoix = (ligne: string) => ligne
+  .replaceAll(' · ', ', ')
+  .replace(/(\d+(?:,\d+)?) pts\b/g, (_, n: string) => `${n} ${unitePoints(Number(n.replace(',', '.')))}`)
+
 /** Seuil de légende, sans zéros inutiles : 15 → « 15 », 0,5 → « 0,5 ». */
 export const formatSeuil = (s: number) => s.toLocaleString('fr-FR', { maximumFractionDigits: 2 })
 
