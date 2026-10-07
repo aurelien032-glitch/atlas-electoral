@@ -1,11 +1,18 @@
 """Fonctions du pipeline, sans données publiées : ces tests tournent aussi dans la CI « Vérifications »."""
+import gzip
+import io
+import json
+import urllib.error
+
 import duckdb
+import pytest
 
 from atlas_pipeline.circonscriptions import DEPARTEMENTS_DU_MINISTERE
 from atlas_pipeline.construire import departement_de
 from atlas_pipeline.correctifs import numero, territoire_du_bureau
 from atlas_pipeline.correctifs import simplifier as simplifier_anneau
 from atlas_pipeline.encarts import chemin, simplifier
+from atlas_pipeline import geo
 from atlas_pipeline.geo import arrondissement_municipal
 
 
@@ -49,3 +56,44 @@ def test_territoire_d_un_bureau_local():
 def test_simplification_d_un_anneau_ferme():
     carre = [[0, 0], [0.5, 0.000001], [1, 0], [1, 1], [0, 1], [0, 0]]
     assert simplifier_anneau(carre, 0.00001) == [[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]
+
+
+def _reponses(monkeypatch, suite):
+    """`urlopen` rend, appel après appel, les éléments de `suite` : une exception est levée, un dict est servi
+    comme un GeoJSON compressé. Les pauses entre essais sont supprimées."""
+    appels = []
+
+    def urlopen(requete, timeout):
+        element = suite[len(appels)]
+        appels.append(requete.full_url)
+        if isinstance(element, Exception):
+            raise element
+        return io.BytesIO(gzip.compress(json.dumps(element).encode()))
+
+    monkeypatch.setattr(geo.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(geo.time, "sleep", lambda _: None)
+    return appels
+
+
+def _erreur(code):
+    return urllib.error.HTTPError("https://exemple", code, "erreur", {}, None)
+
+
+def test_contours_retentes_apres_une_erreur_serveur(monkeypatch):
+    appels = _reponses(monkeypatch, [_erreur(500), _erreur(503), {"features": []}])
+    assert geo.telecharger("regions-1000m") == {"features": []}
+    assert len(appels) == 3
+
+
+def test_contours_sans_nouvel_essai_sur_une_erreur_4xx(monkeypatch):
+    appels = _reponses(monkeypatch, [_erreur(404), {"features": []}])
+    with pytest.raises(urllib.error.HTTPError):
+        geo.telecharger("regions-1000m")
+    assert len(appels) == 1
+
+
+def test_contours_abandonnes_apres_le_dernier_essai(monkeypatch):
+    appels = _reponses(monkeypatch, [_erreur(500)] * geo.ESSAIS)
+    with pytest.raises(urllib.error.HTTPError):
+        geo.telecharger("regions-1000m")
+    assert len(appels) == geo.ESSAIS

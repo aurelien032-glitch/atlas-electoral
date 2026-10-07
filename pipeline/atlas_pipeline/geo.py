@@ -13,6 +13,7 @@ import gzip
 import json
 import tempfile
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -63,11 +64,24 @@ def arrondissement_municipal(code: str) -> bool:
     return "75101" <= code <= "75120" or "69381" <= code <= "69389" or "13201" <= code <= "13216"
 
 
+ESSAIS = 4
+
+
 def telecharger(nom: str) -> dict:
+    """Le stockage d'Etalab répond parfois 500 ou 503 d'un appel à l'autre (publication du 07/10/2026 interrompue
+    deux fois, sur deux fichiers différents) : une erreur serveur, un délai ou une connexion coupée sont retentés,
+    avec une pause croissante, comme dans `correctifs.lire`. Une réponse 4xx ne changera pas en réessayant."""
     url = SOURCE.format(millesime=MILLESIME, nom=nom)
-    requete = urllib.request.Request(url, headers={"User-Agent": "atlas-electoral-pipeline"})
-    with urllib.request.urlopen(requete, timeout=120) as reponse:
-        return json.loads(gzip.decompress(reponse.read()))
+    for essai in range(ESSAIS):
+        try:
+            requete = urllib.request.Request(url, headers={"User-Agent": "atlas-electoral-pipeline"})
+            with urllib.request.urlopen(requete, timeout=120) as reponse:
+                return json.loads(gzip.decompress(reponse.read()))
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as erreur:
+            if essai == ESSAIS - 1 or (isinstance(erreur, urllib.error.HTTPError) and 400 <= erreur.code < 500):
+                raise
+            time.sleep(10 * (essai + 1))
+    raise AssertionError
 
 
 def departement_de(code_commune: str) -> str:
