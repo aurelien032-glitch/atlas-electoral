@@ -28,7 +28,10 @@ Elles passent par des comptes personnels : à faire soi-même, dans cet ordre.
    `https://atlas-electoral.pages.dev/` ajoutée le 07/10, méthode « Fichier HTML » ; le fichier
    `app/public/googleb31fea893cb9d56d.html` est publié et doit y rester (Google revérifie). **Fait le 07/10** :
    propriété validée, `sitemap.xml` soumis dans « Sitemaps » (Cloudflare redirige le fichier vers son adresse sans
-   `.html` ; Google suit les redirections qui restent sur le même domaine).
+   `.html` ; Google suit les redirections qui restent sur le même domaine). **Relevé du 14/10 (Q33)** : une seule
+   page indexée (l'accueil) ; le plan du site n'avait été lu qu'une fois, le 07/10, en échec (« Impossible de
+   récupérer le sitemap », 0 page découverte) alors que le fichier est valide : renvoyé le 14/10. À relire dans
+   « Sitemaps » (57 pages attendues) puis « Pages » (vues indexées ou « Page en double »).
 3. **Bing** et les autres moteurs IndexNow : rien à faire, « Publier » leur signale le plan du site à chaque
    publication (premier envoi le 07/10 : 58 adresses, réponse 202). Bing Webmaster Tools (bing.com/webmasters) n'est utile que pour suivre les statistiques ; il demande
    un compte.

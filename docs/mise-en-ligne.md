@@ -66,7 +66,8 @@ cd app && npm run build && npm run preview   # http://localhost:4173, données l
   prouve que l'envoi vient de l'éditeur ; la dernière étape de « Publier » leur signale les adresses du plan du site
   (un échec n'y annule rien). Google n'utilise pas IndexNow : il lit le plan du site déclaré dans Search Console.
 - Aperçus de partage (Open Graph) dans `app/index.html`, lus sans JavaScript, donc les mêmes pour toutes les vues ;
-  image `app/public/partage.png` (1 200 × 630). Ni `og:url` ni lien canonique : chaque vue partagée deviendrait un
-  doublon de l'accueil.
+  image `app/public/partage.png` (1 200 × 630). Pas d'`og:url` : chaque vue partagée deviendrait un doublon de
+  l'accueil. Le lien canonique et la description de chaque vue sont posés par l'application (`app/src/referencement.ts`,
+  décision Q33) : Google exécute le JavaScript, les aperçus de partage non.
 - Ouverture de la bêta (décision Q32) : ce qui est en place, démarches de l'éditeur (Search Console, data.gouv.fr,
   annonce) et textes prêts à publier dans [ouverture-beta.md](ouverture-beta.md).

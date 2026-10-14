@@ -50,6 +50,7 @@ import { indexerCodesPostaux, preparer } from './recherche/chercher'
 import { Recherche } from './recherche/Recherche'
 import { Chevron } from './Chevron'
 import { garderOpacite, garderRepli, opaciteGardee, repliGarde } from './preferences'
+import { adresseCanonique, descriptionDe, poserReferencement } from './referencement'
 import { useUrl } from './url'
 import { ecrireSelection, lireCadre, lireVue, type Selection } from './vue'
 
@@ -709,6 +710,12 @@ export default function App() {
       : [selection && titreDe(selection, index), scrutin?.libelle, vue.mode === 'tete' ? undefined : LIBELLE_MODE[vue.mode]]
     document.title = [...morceaux, 'Atlas électoral'].filter(Boolean).join(' · ')
   }, [vue.page, vue.mode, selection, scrutin, index])
+
+  // Adresse canonique et description pour les moteurs de recherche : sans elles, les 56 vues du plan du site
+  // passeraient pour des variantes de l'accueil.
+  useEffect(() => {
+    poserReferencement(adresseCanonique(vue.page, scrutin, scrutins), descriptionDe(vue.page, scrutin, scrutins))
+  }, [vue.page, scrutin, scrutins])
 
   const ctx: Contexte | null = scrutin && agregats.data && candidats.data
     ? {

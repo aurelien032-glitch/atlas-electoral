@@ -634,9 +634,14 @@ def restreindre_passage(con, sortie: Path) -> None:
 
 def ecrire_plan_du_site(chemin: Path, catalogue: dict) -> None:
     """Plan du site pour les moteurs de recherche : l'accueil, la Méthodologie et la vue nationale de chaque scrutin.
-    Le sélecteur de scrutin n'est pas un lien : sans ce plan, un robot ne trouverait que le scrutin par défaut."""
+    Le sélecteur de scrutin n'est pas un lien : sans ce plan, un robot ne trouverait que le scrutin par défaut.
+    Seules y figurent les adresses canoniques que l'application déclare (`referencement.ts`) : le scrutin par défaut
+    (premier tour de la dernière présidentielle) est l'accueil."""
     jour = catalogue["genere_le"][:10]
-    adresses = [f"{SITE}/", f"{SITE}/?page=methodologie"] + [f"{SITE}/?scrutin={s['id']}" for s in catalogue["scrutins"]]
+    premiers_tours = [s for s in catalogue["scrutins"] if s["id"].split("_")[1] == "pres" and s["id"].endswith("_t1")]
+    par_defaut = max(premiers_tours, key=lambda s: s["date"])["id"]
+    adresses = [f"{SITE}/", f"{SITE}/?page=methodologie"] + [
+        f"{SITE}/?scrutin={s['id']}" for s in catalogue["scrutins"] if s["id"] != par_defaut]
     urls = "".join(f"  <url><loc>{escape(a)}</loc><lastmod>{jour}</lastmod></url>\n" for a in adresses)
     chemin.write_text('<?xml version="1.0" encoding="UTF-8"?>\n'
                       f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{urls}</urlset>\n', encoding="utf-8")

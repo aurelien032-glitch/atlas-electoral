@@ -226,7 +226,8 @@ def test_plan_du_site_liste_chaque_scrutin():
         pytest.skip("lancer d'abord python -m atlas_pipeline.construire")
     espace = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
     adresses = [u.findtext("s:loc", namespaces=espace) for u in ElementTree.parse(plan).getroot().findall("s:url", espace)]
-    assert adresses == [f"{SITE}/", f"{SITE}/?page=methodologie"] + [f"{SITE}/?scrutin={s}" for s in SCRUTINS]
+    # Le scrutin par défaut de l'application (app/src/donnees/scrutins.ts) est l'accueil : son adresse canonique est « / ».
+    assert adresses == [f"{SITE}/", f"{SITE}/?page=methodologie"] + [f"{SITE}/?scrutin={s}" for s in SCRUTINS if s != "2022_pres_t1"]
 
 
 LEGISLATIVES = [s for s in SCRUTINS if manifeste(s)["portee"] == "circonscription"]
